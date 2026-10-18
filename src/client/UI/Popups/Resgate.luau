@@ -9,6 +9,7 @@ local UI = script.Parent.Parent
 local C = require(UI.Componentes)
 local Visual = require(UI.Visual)
 local Estado = require(UI.Estado)
+local Sons = require(UI.Sons)
 local Avisos = require(script.Parent.Avisos)
 
 local Cores = Tema.Cores
@@ -29,6 +30,7 @@ function Resgate.mostrar(id: string)
 		return
 	end
 	versao += 1
+	Sons.tocar("resgate")
 	local minha = versao
 	for _, f in fotoPai:GetChildren() do
 		if f:IsA("ViewportFrame") then

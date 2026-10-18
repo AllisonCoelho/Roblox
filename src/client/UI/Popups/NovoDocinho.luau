@@ -11,6 +11,7 @@ local Remotos = require(Shared.Remotos)
 local UI = script.Parent.Parent
 local C = require(UI.Componentes)
 local Visual = require(UI.Visual)
+local Sons = require(UI.Sons)
 
 local Cores = Tema.Cores
 local NovoDocinho = {}
@@ -75,6 +76,7 @@ local function proximo()
 		end
 	end
 	camada.Visible = true
+	Sons.tocar("novo")
 	raiosEscala.Scale = 0.3
 	TweenService:Create(raiosEscala, TweenInfo.new(0.45, Enum.EasingStyle.Back), { Scale = 1 })
 		:Play()

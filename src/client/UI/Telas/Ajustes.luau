@@ -9,6 +9,7 @@ local C = require(UI.Componentes)
 local Escala = require(UI.Escala)
 local Navegacao = require(UI.Navegacao)
 local Tutorial = require(UI.Popups.Tutorial)
+local Estado = require(UI.Estado)
 
 local Cores = Tema.Cores
 local Ajustes = {}
@@ -69,12 +70,37 @@ function Ajustes.montar()
 	end
 	pintar()
 
-	C.novo("Frame", {
+	-- Sons: liga/desliga efeitos e música (fica salvo no servidor, em estado.config)
+	local linhaSons = C.novo("Frame", {
 		BackgroundTransparency = 1,
-		Size = UDim2.fromOffset(1, 10),
+		Size = UDim2.new(1, 0, 0, 70),
 		LayoutOrder = 3,
 		Parent = coluna,
 	})
+	C.lista(linhaSons, Enum.FillDirection.Horizontal, 14, Enum.HorizontalAlignment.Center)
+	local function botaoSom(chave: string, icone: string, texto: string, ordem: number)
+		local b = C.botao({
+			cor = "verde",
+			icone = icone,
+			texto = texto,
+			tamanho = UDim2.fromOffset(300, 60),
+			tamanhoTexto = 22,
+			ordem = ordem,
+			pai = linhaSons,
+			aoClicar = function()
+				local estado = Estado.atual
+				local atual = if estado then estado.config[chave] ~= false else true
+				Estado.pedir("Configurar", chave, not atual)
+			end,
+		})
+		Estado.aoMudar(function(estado)
+			local ligado = estado.config[chave] ~= false
+			b.definirCor(if ligado then "verde" else "cinza")
+			b.definirTexto(texto .. (if ligado then ": SIM" else ": NÃO"))
+		end)
+	end
+	botaoSom("sons", "🔊", "EFEITOS", 1)
+	botaoSom("musica", "🎵", "MÚSICA", 2)
 	C.botao({
 		cor = "azul",
 		icone = "🎁",

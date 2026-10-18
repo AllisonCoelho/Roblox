@@ -10,6 +10,7 @@ local UI = script.Parent.Parent
 local C = require(UI.Componentes)
 local Visual = require(UI.Visual)
 local Estado = require(UI.Estado)
+local Sons = require(UI.Sons)
 
 local Cores = Tema.Cores
 local Chuva = {}
@@ -32,6 +33,7 @@ function Chuva.restante(): number?
 end
 
 function Chuva.mostrar()
+	Sons.tocar("chuva")
 	versao += 1
 	local minha = versao
 	quadro.Visible = true

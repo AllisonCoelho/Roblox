@@ -47,6 +47,7 @@ export type Estado = {
 	tutorialFeito: boolean,
 	premios: { [string]: boolean }, -- prêmios únicos já pegos (ex.: álbum completo)
 	renascimentos: number,
+	config: { [string]: boolean }, -- preferências (sons, música)
 	ultimaVez: number,
 	-- Docinho comprado na esteira e ainda não entregue na vitrine (nil quando não há).
 	-- Fica salvo: se o jogador sair ou cair carregando, recebe as moedas de volta.
@@ -85,6 +86,7 @@ function Economia.padrao(): Estado
 		tutorialFeito = false,
 		premios = {},
 		renascimentos = 0,
+		config = { sons = true, musica = true },
 		ultimaVez = 0,
 	}
 end

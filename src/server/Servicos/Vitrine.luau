@@ -219,6 +219,17 @@ function Vitrine.iniciar()
 		ultimoTeleporte[player] = nil
 	end)
 
+	-- Preferências do jogador (só chaves conhecidas e valores verdadeiro/falso)
+	Acoes.registrar("Configurar", function(player, chave: any, valor: any)
+		if (chave ~= "sons" and chave ~= "musica") or type(valor) ~= "boolean" then
+			return false, "Ajuste inválido"
+		end
+		return Dados.alterar(player, function(estado)
+			estado.config[chave] = valor
+			return true
+		end)
+	end)
+
 	Acoes.registrar("ConcluirTutorial", function(player)
 		return Dados.alterar(player, function(estado)
 			estado.tutorialFeito = true

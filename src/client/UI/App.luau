@@ -9,6 +9,7 @@ local Estado = require(script.Parent.Estado)
 local Escala = require(script.Parent.Escala)
 local Visual = require(script.Parent.Visual)
 local Navegacao = require(script.Parent.Navegacao)
+local Sons = require(script.Parent.Sons)
 local Telas = script.Parent.Telas
 local Popups = script.Parent.Popups
 local HUD = require(Telas.HUD)
@@ -81,6 +82,9 @@ end
 function App.iniciar()
 	Estado.iniciar()
 	Visual.iniciar()
+	Estado.aoMudar(function(estado)
+		Sons.aplicar(estado.config.sons ~= false, estado.config.musica ~= false)
+	end)
 
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "Docinhos"
