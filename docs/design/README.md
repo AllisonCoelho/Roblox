@@ -2,7 +2,10 @@
 
 Jogo de coleção de **personagens de doces brasileiros**. Loop simples para crianças
 (pegar, levar, ver as moedas subindo) com profundidade para os mais velhos
-(raridades, variantes, álbum, eventos semanais).
+(raridades, variantes, álbum, eventos, Renascer e Ranking).
+
+**Para lançar:** veja o [checklist do dono](../lancamento/README.md) (IDs de passe, produtos e
+emblemas, ícone, miniaturas, descrição e questionário).
 
 ## Loop principal
 
@@ -10,8 +13,9 @@ Jogo de coleção de **personagens de doces brasileiros**. Loop simples para cri
 2. **Carregue até a sua vitrine** (você anda mais devagar carregando).
 3. **A vitrine gera moedas por segundo**, até offline (2 h, ou mais com a melhoria Caixa Maior).
 4. **Melhore a vitrine** e compre Docinhos mais raros.
-5. *(Fase 3)* **Resgate:** com o escudo desligado, outro jogador pode levar um Docinho;
+5. **Resgate:** com o escudo desligado, outro jogador pode levar um Docinho;
    tocando nele no caminho, o Docinho volta.
+6. **Renascer:** com moedas suficientes, recomeça as moedas e ganha renda extra para sempre.
 
 ## Telas
 
@@ -25,21 +29,25 @@ Jogo de coleção de **personagens de doces brasileiros**. Loop simples para cri
 | HUD no PC | [05](05-hud-pc.png) | `src/client/UI/Telas/HUD.luau` |
 | HUD no celular | [06](06-hud-celular.png) | `src/client/UI/Telas/HUD.luau` (layout compacto) |
 | Álbum (Docinhopédia) | [07](07-album.png) | `src/client/UI/Telas/Album.luau` |
-| Loja | [08](08-loja.png) | `src/client/UI/Telas/Loja.luau` |
+| Loja | [08](08-loja.png) · [granulados](11-loja-granulados.png) | `src/client/UI/Telas/Loja.luau` |
 | Popups | [09](09-popups.png) | `src/client/UI/Popups/*` |
 
 Também existem os painéis **Meus Docinhos** (vitrine, caixa e venda), **Missões**,
-**Presentes**, **Códigos** e **Ajustes**.
+**Presentes**, **Códigos**, **Ajustes** (tamanho da tela, efeitos e música), **Renascer** e **Ranking**.
 
-## Economia (valores iniciais, para balancear)
+## Economia (ajustada pela [simulação](balanceamento.md))
 
-- **Moedas:** vêm da vitrine. **Granulados:** moeda rara (missões, presentes, códigos).
-- **Vitrine:** 8 espaços + 4 por nível (5 níveis).
+- **Moedas:** vêm da vitrine. **Granulados:** moeda rara (missões, presentes, códigos, álbum,
+  Renascer e pacotes com Robux).
+- **Vitrine:** 8 espaços + 4 por nível (5 níveis: 5 mil, 25 mil, 150 mil, 750 mil, 4 mi).
 - **Escudo:** 60 s + 15 s por nível; depois recarrega 30 s.
 - **Variantes:** Dourado (x2 de renda, 1 em 20) e Arco-íris (x5, 1 em 200).
-- **Passe Confeiteiro VIP:** 2x moedas. O `gamePassId` está `0` em
-  `src/shared/Dados/Loja.luau` até o passe ser criado no Roblox.
-- **Chuva de Doces:** todo sábado às 15h (Brasília), por 10 minutos.
+- **Passe Confeiteiro VIP:** 2x moedas, coroa VIP no personagem e +10 granulados no presente diário.
+- **Pacotes de granulados:** 120, 400, 1.100 e 3.000 (Developer Products).
+  IDs de passe, produtos e emblemas ficam `0` até serem criados no Roblox (ver o checklist).
+- **Renascer:** 2,5 mi de moedas (x4 a cada vez); +25% de renda para sempre e granulados.
+  Mantém Docinhos, álbum e o tamanho da vitrine.
+- **Chuva de Doces:** todo sábado às 15h (Brasília), por 10 minutos. **Chuvisco:** 1 minuto a cada 20.
 
 ## Como testar no Studio
 
@@ -65,7 +73,9 @@ Com `ModoTeste = true` em `src/shared/Config.luau` (vale **só no Studio**):
 ## Testes automáticos
 
 `python3 testes/rodar.py` testa a lógica compartilhada (formatação, agenda do evento,
-missões, economia, loja) e a trava de sessão do DataStore, fora do Roblox. Precisa do
+missões, economia, loja, compras, conquistas, mapa, esteira, resgate, chuva) e a trava de sessão
+do DataStore, fora do Roblox. `python3 testes/rodar.py simulacao` roda a
+[simulação de balanceamento](balanceamento.md). Precisa do
 executável `luau` no PATH. O workflow `.github/workflows/testes.yml` roda esses testes,
 o StyLua, a análise de tipos (luau-lsp) e o build em cada PR.
 
@@ -90,7 +100,8 @@ O que só dá para ver dentro do jogo está no [checklist de playtest](playtest.
 
 - **Chuva de Doces de verdade:** no sábado às 15h (ou com F3 no Studio), Docinhos caem em pontos
   livres do mapa a cada 1,2 s (com sorte dobrada para raros). Depois de pousar, quem encosta
-  primeiro ganha de graça na vitrine (vitrine cheia vira 5 granulados). Ficam 20 s no chão.
+  primeiro ganha de graça na vitrine (com a vitrine cheia, é vendido na hora por moedas).
+  Ficam 20 s no chão. O Docinho **Secreto** só cai na chuva de sábado.
   O servidor marca `workspace.ChuvaAte`; a faixa e a contagem do HUD seguem esse atributo.
 - **Resgate entre jogadores** (regras em `src/shared/Dados/Resgate.luau`): segure E por 1,5 s num
   Docinho da vitrine de outro jogador para levá-lo. Proteções para o público infantil:
@@ -106,7 +117,23 @@ O que só dá para ver dentro do jogo está no [checklist de playtest](playtest.
   As paredes laterais subiram para 10 studs para não dar para pular por cima.
 - **Caixa e escudo** têm esperas separadas: pisar num e logo no outro funciona.
 
-## Próximas fases
+## Pronto para lançar (fase 4)
+
+- **Renascer** (painel com confirmação em dois toques) e **Ranking** (placar do servidor e recorde
+  mundial de renda/s num OrderedDataStore; `leaderstats` com Renda/s, Álbum e Renascimentos).
+- **Sons** em todos os botões, avisos, Docinho novo, chuva e resgate; efeitos e música podem ser
+  desligados em Ajustes (fica salvo).
+- **Trilha-guia** no chão: leva à esteira quando a vitrine está vazia, à vitrine quando está
+  carregando e ao Docinho mais perto durante a chuva.
+- **Prêmio do álbum completo** (500 granulados), **venda segura** (o servidor confere qual Docinho
+  está sendo vendido) e o **Secreto** obtenível na chuva de sábado.
+- **Granulados com Robux** (ProcessReceipt que só confirma depois de salvar e nunca entrega a
+  mesma compra duas vezes) e **coroa VIP**.
+- **Conquistas** com emblemas do Roblox (`src/shared/Dados/Conquistas.luau`).
+- **Chuvisco de Doces** a cada 20 minutos e **balanceamento** pela simulação.
+
+## Próximos passos
 
 1. **Modelos 3D:** ver [modelos-3d.md](modelos-3d.md).
-2. **Balanceamento:** preços, rendas e pesos da esteira com dados de playtest.
+2. **Lançamento:** [checklist do dono](../lancamento/README.md).
+3. **Depois de lançar:** ajustar números com os dados reais do painel de Análise.

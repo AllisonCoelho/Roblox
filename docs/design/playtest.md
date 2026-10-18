@@ -31,13 +31,14 @@ Com `ModoTeste = false` e *Enable Studio Access to API Services* ligado:
 ## 3. Painéis
 
 - [ ] Abrem com animação, um por vez; fecham no X, no fundo escuro e no Esc
-- [ ] **Loja:** as 3 abas; comprar com e sem moedas (sem moedas aparece "Faltam ...")
+- [ ] **Loja:** as 4 abas; comprar com e sem moedas (sem moedas aparece "Faltam ...")
 - [ ] **Meus Docinhos:** COLETAR soma no contador; Vender pede "CERTEZA?" antes
 - [ ] **Álbum:** silhueta nos não descobertos; tocar num Docinho troca o detalhe; abas Dourados e Arco-íris
 - [ ] **Missões:** PEGAR só quando completa; depois mostra "FEITO ✓"
 - [ ] **Presentes:** PEGAR uma vez; depois "Volte em ..."
 - [ ] **Códigos:** `DOCINHOS` funciona uma vez; código errado mostra o aviso
 - [ ] **Ajustes:** trocar Automático / Celular / Computador muda o layout na hora
+- [ ] **Ajustes:** EFEITOS desliga os sons na hora; MÚSICA só toca se houver id em `Sons.luau`
 
 ## 4. Popups (teclas de teste)
 
@@ -83,5 +84,37 @@ Resgate e escudo (aba Test → 2 Players; jogadores A e B):
 - [ ] A liga o escudo: o portão azul aparece; B não passa; A passa normalmente
 - [ ] B dentro da vitrine de A quando A liga o escudo: B é levado para fora
 - [ ] Pisar no caixa e logo no escudo: os dois funcionam (esperas separadas)
+
+## 7. Pronto para lançar (fase 4)
+
+Progressão:
+
+- [ ] **Renascer:** o botão do menu tem bolinha quando dá para renascer; o primeiro toque pede
+      confirmação; depois moedas e melhorias (menos a vitrine) zeram, os Docinhos ficam e a
+      renda sobe 25%
+- [ ] **Ranking:** a coluna do servidor lista os jogadores por renda/s; no Studio a coluna do mundo
+      mostra o aviso de que só aparece no jogo publicado
+- [ ] O placar do Roblox (Tab) mostra Renda/s, Álbum e Renasc.
+- [ ] **Álbum:** com todos os Docinhos, o botão do prêmio dá 500 granulados uma vez só
+- [ ] **Vender** um Docinho enquanto outro jogador resgata outro da sua vitrine: vende o certo
+
+Guia, sons e chuva:
+
+- [ ] **Trilha-guia:** vitrine vazia → aponta a esteira; carregando → aponta a sua vitrine;
+      durante a chuva → aponta o Docinho pousado mais perto
+- [ ] Todo botão faz clique; aviso de sucesso, erro e raro, Docinho novo, chuva e resgate têm som
+- [ ] HUD mostra "Chuvisco de Doces · em mm:ss"; quando começa aparece um aviso (não a faixa
+      grande) e caem menos Docinhos por 1 minuto
+- [ ] Vitrine cheia e pegar um Docinho na chuva: "Vendemos o Docinho por N moedas"
+
+Loja, VIP e conquistas:
+
+- [ ] O **+** dos granulados no HUD abre a Loja direto na aba **Granulados**
+- [ ] Com `productId = 0`: "Este pacote chega em breve!" e nada é cobrado
+- [ ] Com um `productId` de verdade (compra de teste no Studio): os granulados entram uma vez e
+      aparece "+N granulados! Obrigado 💖"
+- [ ] Com o passe VIP (`gamePassId` de verdade): coroa "👑 VIP" em cima do personagem, também
+      depois de resetar; presente diário com "+10 ✨ VIP"
+- [ ] Primeiro Docinho de um jogador novo: aviso "🍬 Conquista: Primeiro Docinho!"
 
 Anote o que falhar com print e a plataforma (PC/celular).
