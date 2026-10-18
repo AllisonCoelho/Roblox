@@ -1,16 +1,16 @@
--- Chuva de Doces (evento de sábado): Docinhos caem do céu em pontos livres do mapa
--- e quem encosta primeiro leva de graça para a vitrine. Contas puras e testáveis.
+-- Chuva de Doces (sábado) e Chuvisco (a cada 20 min, ver Evento.luau): Docinhos caem do céu
+-- em pontos livres do mapa e quem encosta primeiro leva de graça. Contas puras e testáveis.
 local Mapa = require(script.Parent.Mapa)
 
 local Chuva = {}
 
-Chuva.Intervalo = 1.2 -- segundos entre dois Docinhos caindo
+Chuva.Intervalo = 1.2 -- segundos entre dois Docinhos caindo (chuva grande)
+Chuva.IntervaloChuvisco = 2.5 -- no chuvisco caem menos, sem sorte extra e sem o Secreto
 Chuva.MaximoNoChao = 25 -- limite de Docinhos esperando no chão
 Chuva.Queda = 2 -- segundos caindo
 Chuva.AlturaQueda = 60 -- de onde caem (studs acima do chão)
 Chuva.TempoNoChao = 20 -- quanto tempo ficam no chão antes de sumir
 Chuva.DistanciaPegar = 5 -- encostar a esta distância pega o Docinho
-Chuva.GranuladosSeCheia = 5 -- prêmio no lugar do Docinho se a vitrine estiver cheia
 -- O Secreto só existe na chuva: peso 0,15 (perto de 0,13% por Docinho, ~1 a cada sábado)
 Chuva.PesoSecreto = 0.15
 Chuva.Area = 110 -- metade do quadrado onde podem cair

@@ -130,7 +130,7 @@ end
 
 -- Renascer: zera moedas, caixa e melhorias (menos o tamanho da vitrine) e dá renda extra
 -- para sempre. Os Docinhos e o álbum continuam (perder Docinhos frustraria as crianças).
-Economia.RenascerCustoBase = 1000000
+Economia.RenascerCustoBase = 2500000 -- 1º renascer perto de 50 min (testes/simulacao.luau)
 Economia.RenascerCustoFator = 4
 Economia.RenascerBonus = 0.25 -- +25% de renda por renascimento
 Economia.RenascerGranulados = 50 -- vezes o número do renascimento

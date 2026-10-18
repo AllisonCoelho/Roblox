@@ -35,6 +35,25 @@ a, f = Evento.estado(SAB + 600)
 igual("evento acabou", a, false); igual("evento proxima semana", f, 7 * 86400 - 600)
 a, f = Evento.estado(SAB - 86400 * 3)
 igual("evento quarta", a, false); igual("evento falta 3 dias", f, 86400 * 3)
+-- Chuvisco a cada 20 minutos; a grande de sábado tem prioridade
+local g
+a, f, g = Evento.chuva(SAB + 60)
+igual("chuva grande ativa", a, true); igual("chuva grande resta", f, 540); igual("é a grande", g, true)
+local Q = SAB - 86400 * 3 -- quarta, 18:00 UTC (múltiplo de 20 min)
+a, f, g = Evento.chuva(Q + 10)
+igual("chuvisco ativo", a, true); igual("chuvisco resta", f, Evento.ChuviscoDuracao - 10); igual("chuvisco não é grande", g, false)
+a, f, g = Evento.chuva(Q + Evento.ChuviscoDuracao)
+igual("chuvisco acabou", a, false); igual("próximo chuvisco", f, Evento.ChuviscoIntervalo - Evento.ChuviscoDuracao); igual("próximo é chuvisco", g, false)
+a, f, g = Evento.chuva(SAB - 300)
+igual("antes da grande", a, false); igual("grande em 5 min", f, 300); igual("próxima é a grande", g, true)
+a, f, g = Evento.chuva(SAB + 600)
+igual("depois da grande", a, false); igual("depois da grande vem chuvisco", g, false)
+local chuviscosNoDia = 0
+for s = 0, 86400 - 1, 30 do
+  local at, _, gr = Evento.chuva(Q - 18 * 3600 + s)
+  if at and not gr and s % 1200 == 0 then chuviscosNoDia += 1 end
+end
+igual("72 chuviscos por dia", chuviscosNoDia, 72)
 
 local Presentes = req("Presentes")
 local MEIA_NOITE_BRT = 1792292400 -- 2026-10-18 03:00:00 UTC = 00:00 em Brasília
@@ -378,8 +397,8 @@ igual("sem o Secreto não está completo", Economia.albumCompleto(eAlbum), false
 igual("padrão tem prêmios vazios", next(Economia.padrao().premios), nil)
 
 -- Renascer --------------------------------------------------------------------
-igual("primeiro renascer custa 1 mi", Economia.custoRenascer(0), 1000000)
-igual("segundo custa 4 mi", Economia.custoRenascer(1), 4000000)
+igual("primeiro renascer custa 2,5 mi", Economia.custoRenascer(0), 2500000)
+igual("segundo custa 10 mi", Economia.custoRenascer(1), 10000000)
 igual("sem renascer: x1", Economia.multiplicadorRenascer(0), 1)
 igual("2 renascimentos: x1,5", Economia.multiplicadorRenascer(2), 1.5)
 local eR = Economia.padrao()

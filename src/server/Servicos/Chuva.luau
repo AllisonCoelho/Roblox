@@ -1,4 +1,4 @@
--- Chuva de Doces (sábado 15h, ver Shared/Dados/Evento.luau): Docinhos caem em pontos livres
+-- Chuva de Doces (sábado 15h) e Chuvisco (ver Shared/Dados/Evento.luau): Docinhos caem em pontos livres
 -- do mapa e quem encosta primeiro ganha de graça na vitrine.
 -- Como na esteira, cada Docinho fica parado no servidor (no ponto de pouso) e o cliente
 -- anima a queda pelo tempo; o servidor só deixa pegar depois que pousou.
@@ -12,6 +12,7 @@ local ChuvaDados = require(Shared.Dados.Chuva)
 local EsteiraDados = require(Shared.Dados.Esteira)
 local Evento = require(Shared.Dados.Evento)
 local Modelos = require(Shared.Dados.Modelos)
+local Formato = require(Shared.Formato)
 local Remotos = require(Shared.Remotos)
 local Dados = require(script.Parent.Dados)
 local Vitrine = require(script.Parent.Vitrine)
@@ -35,18 +36,18 @@ local function agora(): number
 	return workspace:GetServerTimeNow()
 end
 
--- Está chovendo agora? (pela agenda de sábado ou forçado pelo teste)
--- Devolve também quando acaba, para os clientes mostrarem a contagem
-local function estado(): (boolean, number)
+-- Está chovendo agora? (pela agenda ou forçado pelo teste, que conta como chuva grande)
+-- Devolve também quando acaba, para os clientes mostrarem a contagem, e se é a grande
+local function estado(): (boolean, number, boolean)
 	local t = os.time()
-	local ativo, falta = Evento.estado(t)
-	if ativo then
-		return true, t + falta
-	end
 	if forcadoAte > t then
-		return true, forcadoAte
+		return true, forcadoAte, true
 	end
-	return false, 0
+	local ativo, falta, grande = Evento.chuva(t)
+	if ativo then
+		return true, t + falta, grande
+	end
+	return false, 0, false
 end
 
 local function remover(uid: number)
@@ -58,7 +59,7 @@ local function remover(uid: number)
 	end
 end
 
-local function soltar()
+local function soltar(grande: boolean)
 	if quantidade >= ChuvaDados.MaximoNoChao then
 		return
 	end
@@ -68,10 +69,10 @@ local function soltar()
 	if not pouso then
 		return
 	end
-	-- Na chuva a sorte é maior: raros pesam o dobro
+	-- Na chuva grande a sorte é maior (raros pesam o dobro) e o Secreto pode cair
 	local id, variante = EsteiraDados.sortear(function()
 		return aleatorio:NextNumber()
-	end, true, ChuvaDados.PesoSecreto)
+	end, grande, if grande then ChuvaDados.PesoSecreto else nil)
 	proximoUid += 1
 	local uid = proximoUid
 	local modelo = Modelos.criar(id)
@@ -120,15 +121,16 @@ local function pegar(player: Player, uid: number, item: Item)
 			texto = "Você pegou " .. (if d then d.nome else "um Docinho") .. " na chuva!",
 		})
 	else
+		-- Vitrine cheia: vende na hora pelo mesmo valor da vitrine (moedas, não granulados,
+		-- para a chuva não virar uma fonte de granulados)
+		local valor = EsteiraDados.valorVenda(item.id, item.variante)
 		Dados.alterar(player, function(e)
-			e.granulados += ChuvaDados.GranuladosSeCheia
+			e.moedas += valor
 			return true
 		end)
 		Remotos.evento("Aviso"):FireClient(player, {
 			tipo = "info",
-			texto = "Vitrine cheia! Você ganhou "
-				.. ChuvaDados.GranuladosSeCheia
-				.. " granulados.",
+			texto = "Vitrine cheia! Vendemos o Docinho por " .. Formato.curto(valor) .. " moedas.",
 		})
 	end
 end
@@ -162,14 +164,21 @@ end
 function Chuva.iniciar(pastaChuva: Folder)
 	pasta = pastaChuva
 	local chovendoAntes = false
+	local fimAntes = 0
 	task.spawn(function()
 		local ultimoSolto = 0
 		while true do
 			task.wait(0.2)
-			local chovendo, fim = estado()
+			local chovendo, fim, grande = estado()
+			local fimAtual = if chovendo then fim else 0
+			if fimAtual ~= fimAntes then
+				-- Os clientes mostram a faixa e a contagem a partir destes atributos
+				-- (ChuvaGrande antes, porque o cliente reage à mudança de ChuvaAte)
+				workspace:SetAttribute("ChuvaGrande", grande)
+				workspace:SetAttribute("ChuvaAte", fimAtual)
+				fimAntes = fimAtual
+			end
 			if chovendo ~= chovendoAntes then
-				-- Os clientes mostram a faixa e a contagem a partir deste atributo
-				workspace:SetAttribute("ChuvaAte", if chovendo then fim else 0)
 				chovendoAntes = chovendo
 				if not chovendo then
 					for uid in itens do
@@ -179,9 +188,12 @@ function Chuva.iniciar(pastaChuva: Folder)
 			end
 			if chovendo then
 				local t = os.clock()
-				if t - ultimoSolto >= ChuvaDados.Intervalo then
+				local intervalo = if grande
+					then ChuvaDados.Intervalo
+					else ChuvaDados.IntervaloChuvisco
+				if t - ultimoSolto >= intervalo then
 					ultimoSolto = t
-					local ok, erro = pcall(soltar)
+					local ok, erro = pcall(soltar, grande)
 					if not ok then
 						warn("[Chuva] " .. tostring(erro))
 					end

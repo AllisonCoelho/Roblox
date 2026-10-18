@@ -1,4 +1,4 @@
--- Faixa grande quando a Chuva de Doces começa (sábado)
+-- Faixa grande quando a Chuva de Doces começa (sábado); o Chuvisco só mostra um aviso
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
@@ -11,6 +11,7 @@ local C = require(UI.Componentes)
 local Visual = require(UI.Visual)
 local Estado = require(UI.Estado)
 local Sons = require(UI.Sons)
+local Avisos = require(script.Parent.Avisos)
 
 local Cores = Tema.Cores
 local Chuva = {}
@@ -117,8 +118,17 @@ function Chuva.montar(raiz: Frame)
 
 	-- O servidor marca workspace.ChuvaAte quando a chuva começa (pela agenda ou pelo teste)
 	workspace:GetAttributeChangedSignal("ChuvaAte"):Connect(function()
-		if Chuva.restante() then
+		if not Chuva.restante() then
+			return
+		end
+		if workspace:GetAttribute("ChuvaGrande") == true then
 			Chuva.mostrar()
+		else
+			Sons.tocar("chuva")
+			Avisos.mostrar(
+				"info",
+				"🌧️ Chuvisco de Doces! Corra e pegue os Docinhos que caem do céu."
+			)
 		end
 	end)
 end

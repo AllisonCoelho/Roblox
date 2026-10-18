@@ -2,6 +2,7 @@
 
 Uso: python3 testes/rodar.py   (precisa do executável `luau` no PATH:
 https://github.com/luau-lang/luau/releases)
+     python3 testes/rodar.py simulacao   (simulação de balanceamento, ver testes/simulacao.luau)
 
 Junta os módulos com versões falsas de Color3/Random e roda testes/logica.luau.
 """
@@ -88,10 +89,15 @@ for nome, path in mods.items():
     # tipos exportados não podem ficar dentro de função: remove 'export ' (vira tipo local)
     src = src.replace("export type", "type")
     out.append(f'MODS["{nome}"] = function()\n local script = fakeScript()\n local require = req\n{src}\nend\n')
-out.append(open(os.path.join(repo, 'testes', 'logica.luau'), encoding='utf-8').read())
-open(os.path.join(repo, 'dist', 'testes.luau'), 'w', encoding='utf-8').write("\n".join(out))
+simulacao = len(sys.argv) > 1 and sys.argv[1] == 'simulacao'
+alvo = 'simulacao.luau' if simulacao else 'logica.luau'
+out.append(open(os.path.join(repo, 'testes', alvo), encoding='utf-8').read())
+saida = os.path.join(repo, 'dist', alvo)
+open(saida, 'w', encoding='utf-8').write("\n".join(out))
 
-resultado = subprocess.run(['luau', os.path.join(repo, 'dist', 'testes.luau')], capture_output=True, text=True)
+resultado = subprocess.run(['luau', saida], capture_output=True, text=True)
 print(resultado.stdout, end='')
 print(resultado.stderr, end='', file=sys.stderr)
+if simulacao:
+    sys.exit(resultado.returncode)
 sys.exit(1 if resultado.returncode != 0 or ' 0 falhas' not in resultado.stdout else 0)

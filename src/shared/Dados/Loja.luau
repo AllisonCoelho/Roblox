@@ -50,7 +50,8 @@ Loja.Melhorias = {
 		descricao = "+4 espaços para Docinhos",
 		icone = "🏪",
 		cor = "ouro",
-		custos = { 5000, 20000, 50000, 200000, 1000000 },
+		-- Ajustado pela simulação (testes/simulacao.luau): nível máximo perto de 1 h de jogo
+		custos = { 5000, 25000, 150000, 750000, 4000000 },
 	},
 	{
 		id = "escudo",

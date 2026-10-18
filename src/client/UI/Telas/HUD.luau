@@ -177,7 +177,7 @@ function HUD.montar(raiz: Frame, acoes: Acoes)
 	C.cantosRedondos(iconeEvento)
 	C.contorno(iconeEvento, 3)
 	C.emoji("🌧️", 26, { Size = UDim2.fromScale(1, 1), Parent = iconeEvento })
-	C.textoEscuro({
+	local nomeEvento = C.textoEscuro({
 		Text = Evento.Nome,
 		Font = Tema.Fonte,
 		TextSize = 22,
@@ -574,15 +574,18 @@ function HUD.montar(raiz: Frame, acoes: Acoes)
 	local function relogios()
 		local estado = Estado.atual
 		local agora = Estado.agora()
-		local ativo, falta = Evento.estado(agora)
+		local ativo, falta, grande = Evento.chuva(agora)
 		-- O servidor manda quando a chuva está de fato acontecendo (agenda ou teste)
 		local fimChuva = workspace:GetAttribute("ChuvaAte")
 		if type(fimChuva) == "number" and fimChuva > agora then
 			ativo, falta = true, fimChuva - agora
+			grande = workspace:GetAttribute("ChuvaGrande") == true
 		end
+		nomeEvento.Text = if grande then Evento.Nome else Evento.NomeChuvisco
 		tempoEvento.Text = if ativo
 			then "acontecendo · " .. Formato.tempo(falta)
-			else "sábado · " .. Formato.tempo(falta)
+			elseif grande then "sábado · " .. Formato.tempo(falta)
+			else "em " .. Formato.tempo(falta)
 		iconeEvento.BackgroundColor3 = if ativo then Cores.Menta else Cores.Rosa
 		if not estado then
 			return
