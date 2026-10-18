@@ -1,6 +1,9 @@
 -- Carrega, guarda e salva os dados de cada jogador (DataStore).
--- O servidor é a única fonte da verdade; o cliente só recebe cópias pelo remote "Estado".
+-- O servidor é a única fonte da verdade; o cliente só recebe cópias pelo remote "Estado"
+-- (e pode pedir uma cópia a qualquer momento com a RemoteFunction "ObterEstado").
+-- Uma trava de sessão (Servicos/Sessao.luau) impede dois servidores de salvarem o mesmo jogador.
 local DataStoreService = game:GetService("DataStoreService")
+local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -9,14 +12,21 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Economia = require(Shared.Dados.Economia)
 local Remotos = require(Shared.Remotos)
+local Sessao = require(script.Parent.Sessao)
 
 type Estado = Economia.Estado
 
 local Dados = {}
 
 local NOME_STORE = "Docinhos_v1"
-local INTERVALO_AUTOSAVE = 120
+local INTERVALO_AUTOSAVE = 60 -- também renova a trava (bem abaixo de Sessao.EXPIRA)
 local TENTATIVAS = 3
+-- Se outro servidor ainda está com a trava (o jogador acabou de trocar de servidor),
+-- esperamos ele salvar e soltar: 8 tentativas x 5 s
+local TENTATIVAS_TRAVA = 8
+local ESPERA_TRAVA = 5
+-- No Studio o JobId é vazio; um id aleatório evita que duas sessões de teste se confundam
+local JOB_ID = if game.JobId ~= "" then game.JobId else "studio-" .. HttpService:GenerateGUID(false)
 
 -- No Studio com ModoTeste, nada é salvo: os dados vivem só na memória
 local usarDataStore = not (RunService:IsStudio() and Config.ModoTeste)
@@ -26,6 +36,8 @@ local estados: { [Player]: Estado } = {}
 -- Jogadores cujo carregamento falhou: nunca salvamos por cima do que está no DataStore
 local semSalvar: { [Player]: boolean } = {}
 local envioPendente: { [Player]: boolean } = {}
+-- Número da versão enviada ao cliente: ele ignora cópias mais velhas que a que já tem
+local revisao: { [Player]: number } = {}
 -- Lista simples de funções (BindableEvent copiaria a tabela do estado e as mudanças se perderiam)
 local aoCarregar: { (Player, Estado) -> () } = {}
 
@@ -99,26 +111,96 @@ local function estadoDeTeste(): Estado
 	return e
 end
 
+-- Pega a trava e lê o registro. Devolve:
+--   "ok", registro  |  "ocupado" (outro servidor não soltou)  |  "erro" (DataStore fora do ar)
+local function travarELer(player: Player): (string, Sessao.Registro?)
+	for tentativa = 1, TENTATIVAS_TRAVA do
+		local registro: Sessao.Registro? = nil
+		local motivo: string? = nil
+		local ok = comTentativas(function()
+			return (store :: DataStore):UpdateAsync(chave(player), function(atual)
+				registro, motivo = Sessao.travar(atual, JOB_ID, os.time())
+				return registro -- nil cancela a gravação
+			end)
+		end)
+		if not ok then
+			return "erro", nil
+		end
+		if registro then
+			return "ok", registro
+		end
+		if not player.Parent or tentativa == TENTATIVAS_TRAVA then
+			break
+		end
+		warn(
+			string.format(
+				"[Dados] %s ainda está em outro servidor (%s); esperando",
+				player.Name,
+				tostring(motivo)
+			)
+		)
+		task.wait(ESPERA_TRAVA)
+	end
+	return "ocupado", nil
+end
+
+-- Grava no DataStore só se a trava ainda for deste servidor. liberar = true solta a trava.
+local function gravar(player: Player, dados: any, liberar: boolean): boolean
+	local motivo: string? = nil
+	local ok = comTentativas(function()
+		return (store :: DataStore):UpdateAsync(chave(player), function(atual)
+			local novo
+			novo, motivo = Sessao.salvar(atual, JOB_ID, os.time(), dados, liberar)
+			return novo
+		end)
+	end)
+	if ok and motivo == "sem_trava" then
+		-- Outro servidor assumiu este jogador: paramos de salvar aqui para não sobrescrever
+		semSalvar[player] = true
+		if not liberar then
+			warn(
+				"[Dados] trava de " .. player.Name .. " é de outro servidor; salvamento cancelado"
+			)
+		end
+		return false
+	end
+	return ok
+end
+
 function Dados.carregar(player: Player)
 	local estado: Estado
 	if store then
-		local ok, resultado = comTentativas(function()
-			return (store :: DataStore):GetAsync(chave(player))
-		end)
-		if not ok then
+		local resultado, registro = travarELer(player)
+		if resultado == "ocupado" then
+			if player.Parent then
+				player:Kick(
+					"Seu progresso ainda está sendo salvo em outro servidor. Entre de novo em alguns segundos!"
+				)
+			end
+			return
+		elseif resultado == "erro" or not registro then
 			-- Joga com dados vazios, mas sem salvar, para não apagar o progresso real
 			semSalvar[player] = true
 			estado = Economia.padrao()
 			warn("[Dados] não consegui carregar " .. player.Name .. "; jogando sem salvar")
 		else
-			estado = if type(resultado) == "table" then resultado else Economia.padrao()
+			local dados = registro.dados
+			estado = if type(dados) == "table" then dados else Economia.padrao()
 			completar(estado :: any, Economia.padrao() :: any)
+		end
+		if not player.Parent then
+			-- Saiu enquanto carregava: solta a trava sem mudar nada
+			if not semSalvar[player] and registro then
+				gravar(player, registro.dados, true)
+			end
+			semSalvar[player] = nil
+			return
 		end
 	else
 		estado = if Config.ModoTeste then estadoDeTeste() else Economia.padrao()
-	end
-	if not player.Parent then
-		return -- saiu enquanto carregava
+		if not player.Parent then
+			return
+		end
 	end
 	estados[player] = estado
 	for _, fn in aoCarregar do
@@ -136,18 +218,19 @@ function Dados.carregar(player: Player)
 	end
 end
 
-function Dados.salvar(player: Player)
+-- Salva o jogador. liberar = true (saída do jogo) também solta a trava da sessão.
+function Dados.salvar(player: Player, liberar: boolean?)
 	local estado = estados[player]
 	if not estado or not store or semSalvar[player] then
 		return
 	end
 	estado.ultimaVez = os.time()
-	local copia = table.clone(estado)
-	comTentativas(function()
-		return (store :: DataStore):UpdateAsync(chave(player), function()
-			return copia
-		end)
-	end)
+	gravar(player, table.clone(estado), liberar == true)
+end
+
+-- Cópia atual para o cliente que pediu (handshake de entrada). nil enquanto carrega.
+function Dados.instantaneo(player: Player): (Estado?, number)
+	return estados[player], revisao[player] or 0
 end
 
 function Dados.de(player: Player): Estado?
@@ -164,7 +247,9 @@ function Dados.enviar(player: Player)
 		envioPendente[player] = nil
 		local estado = estados[player]
 		if estado and player.Parent then
-			Remotos.evento("Estado"):FireClient(player, estado)
+			local rev = (revisao[player] or 0) + 1
+			revisao[player] = rev
+			Remotos.evento("Estado"):FireClient(player, estado, rev)
 		end
 	end)
 end
@@ -183,6 +268,10 @@ function Dados.alterar(player: Player, fn: (Estado) -> (boolean, string?)): (boo
 end
 
 function Dados.iniciar()
+	-- O cliente pede o estado ao abrir; se ainda está carregando, recebe nil e tenta de novo
+	Remotos.funcao("ObterEstado").OnServerInvoke = function(player: Player)
+		return Dados.instantaneo(player)
+	end
 	Players.PlayerAdded:Connect(function(player)
 		Dados.carregar(player)
 	end)
@@ -190,17 +279,18 @@ function Dados.iniciar()
 		task.spawn(Dados.carregar, player)
 	end
 	Players.PlayerRemoving:Connect(function(player)
-		Dados.salvar(player)
+		Dados.salvar(player, true)
 		estados[player] = nil
 		semSalvar[player] = nil
 		envioPendente[player] = nil
+		revisao[player] = nil
 	end)
 	game:BindToClose(function()
 		local pendentes = 0
 		for player in estados do
 			pendentes += 1
 			task.spawn(function()
-				Dados.salvar(player)
+				Dados.salvar(player, true)
 				pendentes -= 1
 			end)
 		end

@@ -23,7 +23,7 @@ local App = {}
 local player = Players.LocalPlayer
 
 -- A vitrine do jogador é um Model/Part dentro de workspace.Vitrines com o atributo Dono = UserId.
--- (Ela será criada pela parte de jogabilidade; até lá o botão só avisa.)
+-- Aqui ela só é lida para a seta do HUD; ir até ela é pedido ao servidor.
 local function minhaVitrine(): PVInstance?
 	local pasta = workspace:FindFirstChild("Vitrines")
 	if not pasta then
@@ -42,15 +42,13 @@ local function posicaoVitrine(): Vector3?
 	return v and v:GetPivot().Position
 end
 
+-- Quem move o personagem é o servidor (ele confere dono da vitrine, intervalo e estado)
 local function irParaVitrine()
-	local v = minhaVitrine()
-	local personagem = player.Character
-	if not v or not personagem then
-		Avisos.mostrar("info", "Sua vitrine aparece quando o mapa estiver pronto!")
-		return
-	end
 	Navegacao.fechar()
-	personagem:PivotTo(v:GetPivot() * CFrame.new(0, 5, 8))
+	local ok, msg = Estado.pedir("IrParaVitrine")
+	if not ok and msg then
+		Avisos.mostrar("info", msg)
+	end
 end
 
 -- Teclas de teste (só no Studio com Config.ModoTeste)

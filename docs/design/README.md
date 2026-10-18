@@ -64,7 +64,11 @@ Com `ModoTeste = true` em `src/shared/Config.luau` (vale **só no Studio**):
 ## Testes automáticos
 
 `python3 testes/rodar.py` testa a lógica compartilhada (formatação, agenda do evento,
-missões, economia, loja) fora do Roblox. Precisa do executável `luau` no PATH.
+missões, economia, loja) e a trava de sessão do DataStore, fora do Roblox. Precisa do
+executável `luau` no PATH. O workflow `.github/workflows/testes.yml` roda esses testes,
+o StyLua, a análise de tipos (luau-lsp) e o build em cada PR.
+
+O que só dá para ver dentro do jogo está no [checklist de playtest](playtest.md).
 
 ## Próximas fases
 

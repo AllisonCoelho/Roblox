@@ -19,6 +19,7 @@ mods = {
  "Economia": "src/shared/Dados/Economia.luau",
  "Missoes": "src/shared/Dados/Missoes.luau",
  "Loja": "src/shared/Dados/Loja.luau",
+ "Sessao": "src/server/Servicos/Sessao.luau",
 }
 out = ['''
 -- stubs do Roblox

@@ -89,4 +89,41 @@ for _, dia in Presentes.Dias do
   if dia.docinho then igual("docinho do presente existe", Catalogo.docinho(dia.docinho) ~= nil, true) end
 end
 
+-- Trava de sessão do DataStore -------------------------------------------------
+local Sessao = req("Sessao")
+local T = 1000000
+local r = Sessao.travar(nil, "A", T)
+igual("trava em registro vazio", r and r.sessao and r.sessao.jobId, "A")
+local ocupado, motivo = Sessao.travar(r, "B", T + 10)
+igual("outro servidor fica de fora", ocupado, nil)
+igual("motivo ocupado", motivo, "ocupado")
+local roubado = Sessao.travar({ sessao = { jobId = "B", ts = T } }, "A", T + Sessao.EXPIRA)
+igual("trava abandonada pode ser assumida", roubado and roubado.sessao.jobId, "A")
+local renovado = Sessao.travar({ sessao = { jobId = "A", ts = T } }, "A", T + 5)
+igual("mesmo servidor renova a trava", renovado and renovado.sessao.ts, T + 5)
+local antigo = Sessao.normalizar({ versao = 1, moedas = 5 })
+igual("formato antigo vira envelope", antigo.dados and antigo.dados.moedas, 5)
+igual("formato antigo sem trava", antigo.sessao, nil)
+
+local salvo = Sessao.salvar({ sessao = { jobId = "A", ts = T } }, "A", T + 60, { moedas = 9 }, false)
+igual("salva com a trava", salvo and salvo.dados.moedas, 9)
+igual("salvar renova a trava", salvo and salvo.sessao.ts, T + 60)
+local solto = Sessao.salvar({ sessao = { jobId = "A", ts = T } }, "A", T + 60, { moedas = 9 }, true)
+igual("sair solta a trava", solto and solto.sessao, nil)
+local negado, m2 = Sessao.salvar({ sessao = { jobId = "B", ts = T } }, "A", T, { moedas = 1 }, false)
+igual("não salva com trava de outro", negado, nil)
+igual("motivo sem_trava", m2, "sem_trava")
+igual("não salva sem trava", (Sessao.salvar({ dados = {} }, "A", T, {}, false)), nil)
+
+-- Troca rápida de servidor: A tem a trava, B espera; A sai e solta; B entra;
+-- um autosave atrasado de A não pode sobrescrever B.
+local banco = Sessao.travar(nil, "A", T)
+igual("B espera enquanto A joga", (Sessao.travar(banco, "B", T + 1)), nil)
+banco = Sessao.salvar(banco, "A", T + 2, { moedas = 100 }, true)
+banco = Sessao.travar(banco, "B", T + 3)
+igual("B entra depois que A solta", banco and banco.sessao.jobId, "B")
+igual("B recebe o progresso salvo por A", banco and banco.dados.moedas, 100)
+igual("autosave atrasado de A é recusado", (Sessao.salvar(banco, "A", T + 4, { moedas = 1 }, false)), nil)
+igual("B continua com o progresso certo", banco and banco.dados.moedas, 100)
+
 print(string.format("%d testes, %d falhas", total, falhas))

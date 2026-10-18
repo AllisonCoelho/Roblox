@@ -45,11 +45,40 @@ function Estado.pedir(acao: string, ...: any): (boolean, string?)
 	return sucesso == true, msg
 end
 
+-- Revisão da cópia que temos: cópias com número menor ou igual chegaram atrasadas
+local revisaoAtual = -1
+
+local function receber(novo: any, revisao: any)
+	if type(novo) ~= "table" then
+		return
+	end
+	local rev = if type(revisao) == "number" then revisao else revisaoAtual + 1
+	if rev <= revisaoAtual then
+		return
+	end
+	revisaoAtual = rev
+	Estado.atual = novo
+	for _, fn in ouvintes do
+		task.spawn(fn, novo)
+	end
+end
+
 function Estado.iniciar()
-	Remotos.evento("Estado").OnClientEvent:Connect(function(novo: Economia.Estado)
-		Estado.atual = novo
-		for _, fn in ouvintes do
-			task.spawn(fn, novo)
+	-- 1) Ouve as atualizações do servidor
+	Remotos.evento("Estado").OnClientEvent:Connect(receber)
+	-- 2) Handshake: pede a cópia atual em vez de depender de um envio que pode ter
+	--    acontecido antes deste script começar. Repete até os dados terminarem de carregar.
+	task.spawn(function()
+		local espera = 0.5
+		local funcao = Remotos.funcao("ObterEstado")
+		while not Estado.atual do
+			local ok, estado, revisao = pcall(funcao.InvokeServer, funcao)
+			if ok and estado then
+				receber(estado, revisao)
+			else
+				task.wait(espera)
+				espera = math.min(espera * 2, 5)
+			end
 		end
 	end)
 end

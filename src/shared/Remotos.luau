@@ -12,6 +12,7 @@ Remotos.Eventos = {
 }
 Remotos.Funcoes = {
 	"Acao", -- cliente -> servidor: pedido validado no servidor; devolve (ok, mensagem)
+	"ObterEstado", -- cliente -> servidor: cópia do estado atual (nil se ainda carregando) e a revisão
 }
 
 local NOME_PASTA = "Remotos"

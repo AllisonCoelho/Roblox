@@ -13,6 +13,24 @@ local Missoes = require(script.Parent.Missoes)
 local Vitrine = {}
 
 local FRACAO_VENDA = 0.5
+local INTERVALO_TELEPORTE = 3 -- segundos entre dois "ir para a vitrine"
+
+local ultimoTeleporte: { [Player]: number } = {}
+
+-- Vitrine do jogador no mapa: filho de workspace.Vitrines com o atributo Dono = UserId.
+-- O atributo é colocado pelo servidor quando a vitrine é dada ao jogador.
+function Vitrine.daJogador(player: Player): PVInstance?
+	local pasta = workspace:FindFirstChild("Vitrines")
+	if not pasta then
+		return nil
+	end
+	for _, v in pasta:GetChildren() do
+		if v:IsA("PVInstance") and v:GetAttribute("Dono") == player.UserId then
+			return v
+		end
+	end
+	return nil
+end
 
 -- Coloca um Docinho na vitrine e no álbum. Usado pela esteira, presentes e eventos.
 -- Devolve false se a vitrine estiver cheia.
@@ -140,6 +158,33 @@ function Vitrine.iniciar()
 			Missoes.progredir(player, "ligar_escudo", 1)
 		end
 		return ok, msg
+	end)
+
+	Acoes.registrar("IrParaVitrine", function(player)
+		local agora = os.clock()
+		local ultimo = ultimoTeleporte[player]
+		if ultimo and agora - ultimo < INTERVALO_TELEPORTE then
+			return false, "Espere um pouquinho para usar de novo"
+		end
+		local vitrine = Vitrine.daJogador(player)
+		if not vitrine then
+			return false, "Sua vitrine aparece quando o mapa estiver pronto!"
+		end
+		local personagem = player.Character
+		local humanoide = personagem and personagem:FindFirstChildOfClass("Humanoid")
+		if not personagem or not humanoide or humanoide.Health <= 0 then
+			return false, "Espere renascer para voltar à vitrine"
+		end
+		-- Carregando um Docinho não vale teletransportar: tem que levar andando
+		if player:GetAttribute("Carregando") then
+			return false, "Leve o Docinho andando até a vitrine!"
+		end
+		ultimoTeleporte[player] = agora
+		personagem:PivotTo(vitrine:GetPivot() * CFrame.new(0, 5, 8))
+		return true
+	end)
+	Players.PlayerRemoving:Connect(function(player)
+		ultimoTeleporte[player] = nil
 	end)
 
 	Acoes.registrar("ConcluirTutorial", function(player)
