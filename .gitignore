@@ -1,0 +1,8 @@
+*.rbxl
+*.rbxlx
+*.rbxm
+*.rbxmx
+/dist/
+.env
+.env.*
+!.env.example

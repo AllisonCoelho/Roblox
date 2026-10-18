@@ -1,0 +1,64 @@
+{
+  "name": "Roblox",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "Shared": {
+        "$path": "src/shared"
+      }
+    },
+    "ServerScriptService": {
+      "Server": {
+        "$path": "src/server"
+      }
+    },
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "Client": {
+          "$path": "src/client"
+        }
+      }
+    },
+    "Workspace": {
+      "Baseplate": {
+        "$className": "Part",
+        "$properties": {
+          "Anchored": true,
+          "Locked": true,
+          "Position": [
+            0,
+            -1,
+            0
+          ],
+          "Size": [
+            256,
+            2,
+            256
+          ],
+          "Color": [
+            0.27,
+            0.49,
+            0.32
+          ]
+        }
+      },
+      "SpawnLocation": {
+        "$className": "SpawnLocation",
+        "$properties": {
+          "Anchored": true,
+          "Position": [
+            0,
+            0.5,
+            0
+          ],
+          "Size": [
+            8,
+            1,
+            8
+          ],
+          "Neutral": true
+        }
+      }
+    }
+  }
+}
