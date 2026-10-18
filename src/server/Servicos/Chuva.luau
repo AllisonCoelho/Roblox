@@ -200,7 +200,10 @@ function Chuva.iniciar(pastaChuva: Folder)
 				end
 			end
 			if quantidade > 0 then
-				verificarPegadas()
+				local ok, erro = pcall(verificarPegadas)
+				if not ok then
+					warn("[Chuva] " .. tostring(erro))
+				end
 			end
 		end
 	end)

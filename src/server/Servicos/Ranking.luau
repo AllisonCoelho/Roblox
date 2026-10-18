@@ -24,8 +24,9 @@ local store = if usarStore then DataStoreService:GetOrderedDataStore(NOME_STORE)
 local enviado: { [Player]: number } = {} -- último valor mandado ao ranking global
 local nomes: { [number]: string } = {}
 
+-- Sem boosts temporários: um boost de 15 min não pode virar recorde para sempre
 local function rendaInteira(estado: Economia.Estado): number
-	return math.floor(Economia.rendaPorSegundo(estado, os.time()))
+	return math.floor(Economia.rendaPermanente(estado))
 end
 
 local function descobertos(estado: Economia.Estado): number

@@ -110,6 +110,8 @@ O que só dá para ver dentro do jogo está no [checklist de playtest](playtest.
   - quem foi resgatado fica 60 s imune; quem resgatou espera 30 s para resgatar de novo;
   - o dono que **encostar** em quem está levando recupera o Docinho na hora;
   - se quem resgatou cair ou sair do jogo, o Docinho volta para o dono.
+  - na entrega o servidor confere se a viagem desde o resgate foi possível andando; quem se
+    teletransporta perde o Docinho, que volta para o dono.
   O Docinho que volta não conta de novo no álbum. Não há moedas de compensação
   (evita que dois amigos fabriquem moedas resgatando um do outro).
 - **Portão do escudo:** com o escudo ligado o portão bloqueia todo mundo menos o dono

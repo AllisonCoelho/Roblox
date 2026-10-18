@@ -312,6 +312,12 @@ local function contexto(mudar)
   return c
 end
 igual("resgate permitido no caso normal", (Resgate.pode(contexto())), true)
+-- Entrega de Docinho resgatado: teleporte é recusado, andar de verdade passa
+igual("andar na velocidade passa", Resgate.rapidoDemais(110, 10, 11), false)
+igual("andar com folga de rede passa", Resgate.rapidoDemais(11 * 10 * Resgate.FolgaVelocidade + Resgate.MargemStuds, 10, 11), false)
+igual("teleporte é recusado", Resgate.rapidoDemais(150, 1, 11), true)
+igual("pertinho logo depois passa (margem)", Resgate.rapidoDemais(Resgate.MargemStuds, 0, 11), false)
+igual("tempo negativo não ajuda", Resgate.rapidoDemais(50, -5, 11), true)
 local casos = {
   { "própria vitrine", { mesmoJogador = true } },
   { "sem vitrine", { temVitrine = false } },
@@ -408,5 +414,13 @@ igual("renda com renascer", Economia.rendaPorSegundo(eR, 0), 450)
 eR.passes.vip = true
 igual("renascer soma com VIP", Economia.rendaPorSegundo(eR, 0), 900)
 igual("padrão começa sem renascer", Economia.padrao().renascimentos, 0)
+local eB = Economia.padrao()
+eB.vitrine = { { id = "brigadeiro", variante = "normal" } }
+eB.boosts.moedas2x = 2000
+igual("boost conta na renda de agora", Economia.rendaPorSegundo(eB, 1000), 600)
+igual("boost não conta na renda do ranking", Economia.rendaPermanente(eB), 300)
+eB.passes.vip = true
+eB.renascimentos = 2
+igual("ranking conta VIP e renascer", Economia.rendaPermanente(eB), 300 * 1.5 * 2)
 
 print(string.format("%d testes, %d falhas", total, falhas))

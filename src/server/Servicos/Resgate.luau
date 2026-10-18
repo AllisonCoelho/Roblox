@@ -87,6 +87,7 @@ local function resgatar(player: Player, indiceLote: any, slot: any): (boolean, s
 	end)
 	ultimoResgateFeito[player] = agora
 	ultimoResgateSofrido[dono] = agora
+	Esteira.marcarSaida(player, raiz.Position)
 	Esteira.atualizarCarga(player)
 	Remotos.evento("Resgate"):FireClient(dono, { id = d.id })
 	local nome = (Catalogo.docinho(d.id) or { nome = "Docinho" }).nome

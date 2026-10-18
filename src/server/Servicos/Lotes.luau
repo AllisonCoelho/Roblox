@@ -434,7 +434,10 @@ function Lotes.iniciar(vitrines: Folder)
 
 	task.spawn(function()
 		while true do
-			atualizarRotulos()
+			local ok, erro = pcall(atualizarRotulos)
+			if not ok then
+				warn("[Lotes] " .. tostring(erro))
+			end
 			task.wait(0.5)
 		end
 	end)

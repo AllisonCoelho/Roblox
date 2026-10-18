@@ -11,6 +11,10 @@ Resgate.RecargaQuemResgata = 30 -- segundos entre dois resgates do mesmo jogador
 Resgate.ImunidadeVitima = 60 -- segundos sem poder ser resgatado de novo
 Resgate.MinimoNaVitrine = 3 -- vitrines com menos Docinhos que isso são de iniciante (protegidas)
 Resgate.DistanciaRecuperar = 7 -- o dono encosta no outro a esta distância e recupera
+-- Na entrega, a viagem desde o resgate tem que caber na velocidade de quem carrega
+-- (com folga para pulos e atraso de rede). Mais rápido que isso = teleporte: o Docinho volta.
+Resgate.FolgaVelocidade = 1.5
+Resgate.MargemStuds = 12
 
 export type Contexto = {
 	agora: number,
@@ -25,6 +29,12 @@ export type Contexto = {
 	distancia: number, -- de quem resgata até o pedestal
 	slotValido: boolean, -- o pedestal tem mesmo um Docinho
 }
+
+-- A distância (em linha reta) percorrida em "segundos" é impossível andando a "velocidade"?
+function Resgate.rapidoDemais(distancia: number, segundos: number, velocidade: number): boolean
+	return distancia
+		> velocidade * math.max(segundos, 0) * Resgate.FolgaVelocidade + Resgate.MargemStuds
+end
 
 -- Devolve (true) ou (false, motivo para mostrar ao jogador)
 function Resgate.pode(c: Contexto): (boolean, string?)

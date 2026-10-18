@@ -10,6 +10,7 @@ local Catalogo = require(Shared.Dados.Catalogo)
 local Economia = require(Shared.Dados.Economia)
 local EsteiraDados = require(Shared.Dados.Esteira)
 local Mapa = require(Shared.Dados.Mapa)
+local ResgateDados = require(Shared.Dados.Resgate)
 local Modelos = require(Shared.Dados.Modelos)
 local Formato = require(Shared.Formato)
 local Remotos = require(Shared.Remotos)
@@ -221,7 +222,36 @@ end
 
 -- Tira a carga de um jogador que não conseguiu entregar (caiu, saiu, vitrine cheia, foi alcançado):
 -- Docinho comprado -> as moedas voltam; Docinho resgatado -> volta para a vitrine do dono.
+-- De onde e quando saiu cada Docinho resgatado (só na memória): na entrega conferimos se a
+-- viagem foi possível andando, para quem se teletransporta não levar sem o dono ter chance
+local saidaResgate: { [Player]: { t: number, pos: Vector3 } } = {}
+
+function Esteira.marcarSaida(player: Player, posicao: Vector3)
+	saidaResgate[player] = { t = os.clock(), pos = posicao }
+end
+
+local function viagemImpossivel(player: Player, estado: Economia.Estado): boolean
+	local saida = saidaResgate[player]
+	local carga = estado.carregando
+	if not saida or not carga or not carga.origem then
+		return false
+	end
+	local personagem = player.Character
+	local raiz = personagem and personagem:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not raiz then
+		return false
+	end
+	local velocidade = Economia.VelocidadeCarregando
+		+ Economia.nivel(estado, "tenis") * Economia.VelocidadePorNivelTenis
+	return ResgateDados.rapidoDemais(
+		(raiz.Position - saida.pos).Magnitude,
+		os.clock() - saida.t,
+		velocidade
+	)
+end
+
 function Esteira.devolver(player: Player, motivo: string)
+	saidaResgate[player] = nil
 	local carga: Economia.Carga? = nil
 	local ok = Dados.alterar(player, function(estado)
 		carga = estado.carregando
@@ -265,6 +295,12 @@ function Esteira.devolver(player: Player, motivo: string)
 end
 
 local function entregar(player: Player)
+	local estado = Dados.de(player)
+	if estado and viagemImpossivel(player, estado) then
+		Esteira.devolver(player, "O Docinho chegou rápido demais.")
+		return
+	end
+	saidaResgate[player] = nil
 	local carga: Economia.Carga? = nil
 	Dados.alterar(player, function(estado)
 		carga = estado.carregando
@@ -379,25 +415,34 @@ function Esteira.iniciar(pastaItens: Folder)
 		aoEntrar(player)
 	end
 
+	Players.PlayerRemoving:Connect(function(player)
+		saidaResgate[player] = nil
+	end)
+
 	-- Entrega: quem chega na própria vitrine carregando, entrega
+	local function verificarEntregas()
+		for _, player in Players:GetPlayers() do
+			local estado = Dados.de(player)
+			local indice = Lotes.indiceDe(player)
+			local personagem = player.Character
+			local raiz = personagem and personagem:FindFirstChild("HumanoidRootPart") :: BasePart?
+			if
+				estado
+				and estado.carregando
+				and indice
+				and raiz
+				and Mapa.dentroDoLote(indice, raiz.Position)
+			then
+				entregar(player)
+			end
+		end
+	end
 	task.spawn(function()
 		while true do
 			task.wait(0.25)
-			for _, player in Players:GetPlayers() do
-				local estado = Dados.de(player)
-				local indice = Lotes.indiceDe(player)
-				local personagem = player.Character
-				local raiz = personagem
-					and personagem:FindFirstChild("HumanoidRootPart") :: BasePart?
-				if
-					estado
-					and estado.carregando
-					and indice
-					and raiz
-					and Mapa.dentroDoLote(indice, raiz.Position)
-				then
-					entregar(player)
-				end
+			local ok, erro = pcall(verificarEntregas)
+			if not ok then
+				warn("[Esteira] erro na entrega: " .. tostring(erro))
 			end
 		end
 	end)

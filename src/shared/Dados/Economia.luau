@@ -154,13 +154,26 @@ function Economia.multiplicadorMoedas(estado: Estado, agora: number): number
 	return m
 end
 
--- Moedas por segundo de toda a vitrine, já com VIP e boosts
-function Economia.rendaPorSegundo(estado: Estado, agora: number): number
+local function somaVitrine(estado: Estado): number
 	local total = 0
 	for _, d in estado.vitrine do
 		total += Catalogo.rendaDe(d.id, d.variante)
 	end
-	return total * Economia.multiplicadorMoedas(estado, agora)
+	return total
+end
+
+-- Moedas por segundo de toda a vitrine, já com VIP e boosts
+function Economia.rendaPorSegundo(estado: Estado, agora: number): number
+	return somaVitrine(estado) * Economia.multiplicadorMoedas(estado, agora)
+end
+
+-- Renda sem boosts temporários (Renascer e VIP contam): é a que vale no Ranking
+function Economia.rendaPermanente(estado: Estado): number
+	local m = Economia.multiplicadorRenascer(estado.renascimentos or 0)
+	if estado.passes.vip then
+		m *= 2
+	end
+	return somaVitrine(estado) * m
 end
 
 return Economia

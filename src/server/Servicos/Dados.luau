@@ -58,6 +58,23 @@ local antesDeSair: { (Player, Estado) -> () } = {}
 function Dados.antesDeSair(fn: (Player, Estado) -> ())
 	table.insert(antesDeSair, fn)
 end
+-- Jogadores que já passaram pelo antesDeSair (a saída e o desligamento do servidor
+-- podem acontecer juntos; as funções rodam uma vez só)
+local preparados: { [Player]: boolean } = {}
+
+local function prepararSaida(player: Player)
+	local estado = estados[player]
+	if not estado or preparados[player] then
+		return
+	end
+	preparados[player] = true
+	for _, fn in antesDeSair do
+		local ok, erro = pcall(fn, player, estado)
+		if not ok then
+			warn("[Dados] erro antes de salvar " .. player.Name .. ": " .. tostring(erro))
+		end
+	end
+end
 
 -- ObterEstado é só leitura, mas limitamos a frequência para não virar spam
 local INTERVALO_OBTER = 0.25
@@ -314,23 +331,21 @@ function Dados.iniciar()
 		task.spawn(Dados.carregar, player)
 	end
 	Players.PlayerRemoving:Connect(function(player)
-		local estado = estados[player]
-		if estado then
-			for _, fn in antesDeSair do
-				local ok, erro = pcall(fn, player, estado)
-				if not ok then
-					warn("[Dados] erro antes de salvar " .. player.Name .. ": " .. tostring(erro))
-				end
-			end
-		end
+		prepararSaida(player)
 		Dados.salvar(player, true)
 		estados[player] = nil
+		preparados[player] = nil
 		semSalvar[player] = nil
 		envioPendente[player] = nil
 		revisao[player] = nil
 		ultimoObter[player] = nil
 	end)
 	game:BindToClose(function()
+		-- Primeiro todos os antesDeSair (ex.: Docinho resgatado volta ao dono), depois os saves,
+		-- para nenhum save sair antes da mudança que ele precisa levar
+		for player in estados do
+			prepararSaida(player)
+		end
 		local pendentes = 0
 		for player in estados do
 			pendentes += 1
