@@ -211,4 +211,74 @@ igual("sorte diminui comuns", prSorte.comum < pr.comum, true)
 igual("sorteio com aleatório 0 dá o primeiro", (Est.sortear(function() return 0 end, false)), "balaDeCoco")
 igual("sorteio com aleatório ~1 não quebra", Catalogo.docinho((Est.sortear(function() return 0.9999999 end, false))) ~= nil, true)
 
+-- Resgate ---------------------------------------------------------------------
+local Resgate = req("Resgate")
+local function contexto(mudar)
+  local c = {
+    agora = 10000, mesmoJogador = false, escudoAte = 0, docinhosNaVitrine = 5,
+    ultimoResgateSofrido = nil, ultimoResgateFeito = nil, carregando = false,
+    espacoNaVitrine = true, temVitrine = true, distancia = 4, slotValido = true,
+  }
+  for k, v in mudar or {} do c[k] = v end
+  return c
+end
+igual("resgate permitido no caso normal", (Resgate.pode(contexto())), true)
+local casos = {
+  { "própria vitrine", { mesmoJogador = true } },
+  { "sem vitrine", { temVitrine = false } },
+  { "já carregando", { carregando = true } },
+  { "pedestal vazio", { slotValido = false } },
+  { "escudo ligado", { escudoAte = 10001 } },
+  { "vitrine de iniciante", { docinhosNaVitrine = Resgate.MinimoNaVitrine - 1 } },
+  { "vítima imune", { ultimoResgateSofrido = 10000 - Resgate.ImunidadeVitima + 1 } },
+  { "recarga de quem resgata", { ultimoResgateFeito = 10000 - Resgate.RecargaQuemResgata + 1 } },
+  { "longe demais", { distancia = Resgate.Distancia + 0.1 } },
+  { "vitrine cheia", { espacoNaVitrine = false } },
+}
+for _, caso in casos do
+  local ok, motivo = Resgate.pode(contexto(caso[2]))
+  igual("resgate bloqueado: " .. caso[1], ok, false)
+  igual("motivo explicado: " .. caso[1], type(motivo) == "string" and #motivo > 0, true)
+end
+igual("escudo acabou: pode", (Resgate.pode(contexto({ escudoAte = 10000 }))), true)
+igual("imunidade acabou: pode", (Resgate.pode(contexto({ ultimoResgateSofrido = 10000 - Resgate.ImunidadeVitima }))), true)
+igual("recarga acabou: pode", (Resgate.pode(contexto({ ultimoResgateFeito = 10000 - Resgate.RecargaQuemResgata }))), true)
+igual("vitrine com o mínimo: pode", (Resgate.pode(contexto({ docinhosNaVitrine = Resgate.MinimoNaVitrine }))), true)
+igual("na distância limite: pode", (Resgate.pode(contexto({ distancia = Resgate.Distancia }))), true)
+local _, msgRecarga = Resgate.pode(contexto({ ultimoResgateFeito = 10000 - 10 }))
+igual("recarga diz quanto falta", msgRecarga, "Espere " .. (Resgate.RecargaQuemResgata - 10) .. " s para resgatar de novo")
+igual("prompt de resgate alcança o pedestal", Resgate.Distancia - 2 > 0, true)
+
+-- Chuva de Doces --------------------------------------------------------------
+local ChuvaD = req("Chuva")
+igual("chuva não cai na fábrica", ChuvaD.pontoLivre(Mapa.Fabrica.centro.X, Mapa.Fabrica.centro.Z), false)
+igual("chuva não cai na esteira", ChuvaD.pontoLivre(0, 0), false)
+for i, lote in Mapa.Lotes do
+  igual("chuva não cai na vitrine " .. i, ChuvaD.pontoLivre(lote.centro.X, lote.centro.Z), false)
+end
+igual("chuva não cai fora da área", ChuvaD.pontoLivre(ChuvaD.Area + 1, 0), false)
+igual("chuva cai no campo aberto", ChuvaD.pontoLivre(-100, -100), true)
+do
+  local semente = 777
+  local function rng()
+    semente = (semente * 1103515245 + 12345) % 2147483648
+    return semente / 2147483648
+  end
+  local achados = 0
+  for _ = 1, 500 do
+    local p = ChuvaD.sortearPonto(rng)
+    if p then
+      achados += 1
+      igual("ponto sorteado é livre", ChuvaD.pontoLivre(p.X, p.Z), true)
+    end
+  end
+  igual("quase sempre acha ponto livre", achados >= 495, true)
+end
+igual("começa lá em cima", ChuvaD.alturaNoAr(50, 50), ChuvaD.AlturaQueda)
+igual("chega no chão", ChuvaD.alturaNoAr(50, 50 + ChuvaD.Queda), 0)
+igual("não fura o chão", ChuvaD.alturaNoAr(50, 50 + ChuvaD.Queda * 5), 0)
+igual("cai cada vez mais rápido", ChuvaD.AlturaQueda - ChuvaD.alturaNoAr(0, ChuvaD.Queda / 2) < ChuvaD.alturaNoAr(0, ChuvaD.Queda / 2), true)
+igual("no ar não dá para pegar", ChuvaD.pousou(0, ChuvaD.Queda - 0.01), false)
+igual("pousou dá para pegar", ChuvaD.pousou(0, ChuvaD.Queda), true)
+
 print(string.format("%d testes, %d falhas", total, falhas))

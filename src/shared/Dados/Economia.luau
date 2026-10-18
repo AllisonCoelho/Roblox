@@ -22,6 +22,13 @@ export type MissaoDoDia = {
 	resgatada: boolean,
 }
 
+export type Carga = {
+	id: string,
+	variante: string,
+	preco: number, -- moedas pagas (0 no resgate)
+	origem: number?,
+}
+
 export type Estado = {
 	versao: number,
 	moedas: number,
@@ -41,7 +48,8 @@ export type Estado = {
 	ultimaVez: number,
 	-- Docinho comprado na esteira e ainda não entregue na vitrine (nil quando não há).
 	-- Fica salvo: se o jogador sair ou cair carregando, recebe as moedas de volta.
-	carregando: { id: string, variante: string, preco: number }?,
+	-- origem = UserId do dono quando o Docinho foi resgatado da vitrine de outro jogador.
+	carregando: Carga?,
 }
 
 Economia.VERSAO = 1

@@ -52,6 +52,13 @@ function Dados.quandoMudar(fn: (Player, Estado) -> ())
 	table.insert(aoMudar, fn)
 end
 
+-- Funções chamadas quando o jogador sai, ANTES do último salvamento
+-- (ex.: devolver um Docinho resgatado ao dono antes de gravar)
+local antesDeSair: { (Player, Estado) -> () } = {}
+function Dados.antesDeSair(fn: (Player, Estado) -> ())
+	table.insert(antesDeSair, fn)
+end
+
 -- ObterEstado é só leitura, mas limitamos a frequência para não virar spam
 local INTERVALO_OBTER = 0.25
 local ultimoObter: { [Player]: number } = {}
@@ -298,6 +305,15 @@ function Dados.iniciar()
 		task.spawn(Dados.carregar, player)
 	end
 	Players.PlayerRemoving:Connect(function(player)
+		local estado = estados[player]
+		if estado then
+			for _, fn in antesDeSair do
+				local ok, erro = pcall(fn, player, estado)
+				if not ok then
+					warn("[Dados] erro antes de salvar " .. player.Name .. ": " .. tostring(erro))
+				end
+			end
+		end
 		Dados.salvar(player, true)
 		estados[player] = nil
 		semSalvar[player] = nil

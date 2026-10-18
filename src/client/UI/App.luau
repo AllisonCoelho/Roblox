@@ -66,7 +66,8 @@ local function teclasDeTeste()
 		elseif tecla == Enum.KeyCode.F2 then
 			Estado.pedir("TesteResgate")
 		elseif tecla == Enum.KeyCode.F3 then
-			Chuva.mostrar()
+			-- Liga a chuva de verdade por 60 s (a faixa aparece sozinha)
+			Avisos.resultado(Estado.pedir("TesteChuva"))
 		elseif tecla == Enum.KeyCode.F4 then
 			Tutorial.mostrar()
 		elseif tecla == Enum.KeyCode.F5 then
@@ -114,6 +115,7 @@ function App.iniciar()
 	local Mundo = script.Parent.Parent:WaitForChild("Mundo")
 	task.spawn(require(Mundo.EsteiraVisual).iniciar)
 	task.spawn(require(Mundo.Prompts).iniciar)
+	task.spawn(require(Mundo.ChuvaVisual).iniciar)
 
 	teclasDeTeste()
 end

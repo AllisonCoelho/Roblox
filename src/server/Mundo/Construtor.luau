@@ -221,9 +221,10 @@ local function construirLote(pasta: Folder, indice: number): Model
 		Parent = modelo,
 	})
 	for _, lado in { -1, 1 } do
+		-- Altas o bastante para não pular por cima (o pulo padrão chega a ~7 studs)
 		peca({
-			Size = Vector3.new(1, 6, D),
-			CFrame = base * CFrame.new(lado * W / 2, 3, 0),
+			Size = Vector3.new(1, 10, D),
+			CFrame = base * CFrame.new(lado * W / 2, 5, 0),
 			Color = Cores.Creme,
 			Parent = modelo,
 		})
@@ -292,11 +293,11 @@ local function construirLote(pasta: Folder, indice: number): Model
 		{ nome = "Rotulo", deslocamento = Vector3.new(0, 4, 0), sub = "desligado", distancia = 60 }
 	)
 
-	-- Portão de laser: aparece quando o escudo está ligado (bloquear passagem vem na fase do resgate)
+	-- Portão de laser: com o escudo ligado aparece e bloqueia todos menos o dono (Servicos/Lotes.luau)
 	peca({
 		Name = "Portao",
-		Size = Vector3.new(W - 2, 8, 0.6),
-		CFrame = base * CFrame.new(0, 4, -D / 2),
+		Size = Vector3.new(W - 2, 10, 0.6),
+		CFrame = base * CFrame.new(0, 5, -D / 2),
 		Color = Cores.Ceu,
 		Material = Enum.Material.ForceField,
 		Transparency = 1,
@@ -421,6 +422,11 @@ function Construtor.construir(): Folder
 	itens.Name = "Esteira"
 	itens:ClearAllChildren()
 	itens.Parent = workspace
+
+	local chuva = workspace:FindFirstChild("Chuva") or Instance.new("Folder")
+	chuva.Name = "Chuva"
+	chuva:ClearAllChildren()
+	chuva.Parent = workspace
 
 	Lighting.ClockTime = 14
 	Lighting.OutdoorAmbient = Color3.fromRGB(170, 160, 190)

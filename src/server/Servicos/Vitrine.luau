@@ -35,7 +35,13 @@ end
 
 -- Coloca um Docinho na vitrine e no álbum. Usado pela esteira, presentes e eventos.
 -- Devolve false se a vitrine estiver cheia.
-function Vitrine.adicionarDocinho(player: Player, id: string, variante: string?): boolean
+-- devolucao = true quando o Docinho só está voltando (resgate recuperado): não conta no álbum.
+function Vitrine.adicionarDocinho(
+	player: Player,
+	id: string,
+	variante: string?,
+	devolucao: boolean?
+): boolean
 	local def = Catalogo.docinho(id)
 	local v = variante or "normal"
 	if not def or not Catalogo.Variantes[v] then
@@ -47,6 +53,9 @@ function Vitrine.adicionarDocinho(player: Player, id: string, variante: string?)
 			return false
 		end
 		table.insert(estado.vitrine, { id = id, variante = v })
+		if devolucao then
+			return true
+		end
 		local entrada = estado.album[id]
 		if not entrada then
 			entrada = { qtd = 0, desde = os.time(), dourado = false, arcoiris = false }

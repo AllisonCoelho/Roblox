@@ -61,4 +61,27 @@ Com `ModoTeste = false` e *Enable Studio Access to API Services* ligado:
 - [ ] Prédios da praça: E abre Loja, Docinhopédia e Códigos
 - [ ] Com 2 jogadores (aba Test → 2 Players): cada um tem a sua vitrine e vê o Docinho na cabeça do outro
 
+## 6. Eventos e resgate (fase 3)
+
+Chuva de Doces (sozinho):
+
+- [ ] **F3** liga a chuva: a faixa aparece e a contagem do HUD mostra "acontecendo"
+- [ ] Docinhos caem do céu girando, pousam fora das construções e ficam quicando
+- [ ] Encostar num Docinho pousado: aviso "Você pegou ..." e ele aparece na vitrine
+- [ ] Encostar enquanto ainda está caindo não pega
+- [ ] Depois de 60 s a chuva para e os Docinhos que sobraram somem
+
+Resgate e escudo (aba Test → 2 Players; jogadores A e B):
+
+- [ ] O "Resgatar" não aparece na própria vitrine, nem com escudo ligado, nem carregando algo
+- [ ] B segura E por 1,5 s num Docinho de A: o Docinho vai para a cabeça de B e A vê o alerta Resgate
+- [ ] A encosta em B no caminho: o Docinho volta para a vitrine de A ("Você recuperou ...")
+- [ ] Se B chegar na vitrine dele: o Docinho fica com B e A recebe o aviso
+- [ ] B tenta resgatar de novo logo em seguida: "Espere N s"; resgatar A de novo em menos de 60 s: bloqueado
+- [ ] Vitrine com menos de 3 Docinhos: "Vitrine de iniciante: protegida"
+- [ ] B resetar o personagem carregando o Docinho de A: o Docinho volta para A
+- [ ] A liga o escudo: o portão azul aparece; B não passa; A passa normalmente
+- [ ] B dentro da vitrine de A quando A liga o escudo: B é levado para fora
+- [ ] Pisar no caixa e logo no escudo: os dois funcionam (esperas separadas)
+
 Anote o que falhar com print e a plataforma (PC/celular).

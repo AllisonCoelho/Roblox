@@ -22,6 +22,8 @@ mods = {
  "Sessao": "src/server/Servicos/Sessao.luau",
  "Mapa": "src/shared/Dados/Mapa.luau",
  "Esteira": "src/shared/Dados/Esteira.luau",
+ "Resgate": "src/shared/Dados/Resgate.luau",
+ "Chuva": "src/shared/Dados/Chuva.luau",
 }
 out = ['''
 -- stubs do Roblox

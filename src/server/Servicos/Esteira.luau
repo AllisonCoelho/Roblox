@@ -210,30 +210,62 @@ local function visualCarregando(player: Player)
 	modelo.Parent = personagem
 end
 
--- Devolve as moedas de um Docinho que não chegou na vitrine
-local function devolver(player: Player, motivo: string)
-	local valor = 0
+local function avisar(player: Player, tipo: string, texto: string)
+	Remotos.evento("Aviso"):FireClient(player, { tipo = tipo, texto = texto })
+end
+
+local function nomeDe(id: string): string
+	local d = Catalogo.docinho(id)
+	return if d then d.nome else "Docinho"
+end
+
+-- Tira a carga de um jogador que não conseguiu entregar (caiu, saiu, vitrine cheia, foi alcançado):
+-- Docinho comprado -> as moedas voltam; Docinho resgatado -> volta para a vitrine do dono.
+function Esteira.devolver(player: Player, motivo: string)
+	local carga: Economia.Carga? = nil
 	local ok = Dados.alterar(player, function(estado)
-		local carga = estado.carregando
+		carga = estado.carregando
 		if not carga then
 			return false
 		end
-		valor = carga.preco
-		estado.moedas += carga.preco
 		estado.carregando = nil
+		if not carga.origem then
+			estado.moedas += carga.preco
+		end
 		return true
 	end)
-	if ok then
-		visualCarregando(player)
-		Remotos.evento("Aviso"):FireClient(player, {
-			tipo = "info",
-			texto = motivo .. " Você recebeu " .. Formato.curto(valor) .. " moedas de volta.",
-		})
+	if not ok or not carga then
+		return
+	end
+	local c = carga :: Economia.Carga
+	visualCarregando(player)
+	if c.origem then
+		local dono = Players:GetPlayerByUserId(c.origem)
+		local voltou = dono ~= nil and Vitrine.adicionarDocinho(dono, c.id, c.variante, true)
+		avisar(
+			player,
+			"info",
+			motivo
+				.. (
+					if voltou
+						then " O Docinho voltou para o dono."
+						else " O Docinho voltou para a fábrica."
+				)
+		)
+		if dono and voltou then
+			avisar(dono, "sucesso", "Você recuperou o " .. nomeDe(c.id) .. "!")
+		end
+	else
+		avisar(
+			player,
+			"info",
+			motivo .. " Você recebeu " .. Formato.curto(c.preco) .. " moedas de volta."
+		)
 	end
 end
 
 local function entregar(player: Player)
-	local carga: { id: string, variante: string, preco: number }? = nil
+	local carga: Economia.Carga? = nil
 	Dados.alterar(player, function(estado)
 		carga = estado.carregando
 		estado.carregando = nil
@@ -242,21 +274,25 @@ local function entregar(player: Player)
 	if not carga then
 		return
 	end
-	local c = carga :: { id: string, variante: string, preco: number }
+	local c = carga :: Economia.Carga
 	if Vitrine.adicionarDocinho(player, c.id, c.variante) then
-		local d = Catalogo.docinho(c.id)
-		Remotos.evento("Aviso"):FireClient(player, {
-			tipo = "sucesso",
-			texto = (if d then d.nome else "Docinho") .. " está na sua vitrine!",
-		})
+		avisar(player, "sucesso", nomeDe(c.id) .. " está na sua vitrine!")
 		visualCarregando(player)
+		local dono = c.origem and Players:GetPlayerByUserId(c.origem)
+		if dono then
+			avisar(
+				dono,
+				"erro",
+				player.DisplayName .. " levou o seu " .. nomeDe(c.id) .. ". Ligue o escudo!"
+			)
+		end
 	else
-		-- Vitrine encheu no caminho: devolve como carga e reembolsa
+		-- Vitrine encheu no caminho: volta a ser carga e segue a regra de devolução
 		Dados.alterar(player, function(estado)
 			estado.carregando = c
 			return true
 		end)
-		devolver(player, "Sua vitrine está cheia!")
+		Esteira.devolver(player, "Sua vitrine está cheia!")
 	end
 end
 
@@ -309,6 +345,11 @@ local function comprar(player: Player, uid: any): (boolean, string?)
 	return true
 end
 
+-- Atualiza o Docinho na cabeça depois de mudar estado.carregando (usado pelo Resgate)
+function Esteira.atualizarCarga(player: Player)
+	visualCarregando(player)
+end
+
 function Esteira.iniciar(pastaItens: Folder)
 	pasta = pastaItens
 	Acoes.registrar("ComprarDaEsteira", comprar)
@@ -316,7 +357,11 @@ function Esteira.iniciar(pastaItens: Folder)
 	-- Quem saiu ou caiu carregando recebe as moedas de volta ao entrar
 	Dados.quandoCarregar(function(player, estado)
 		if estado.carregando then
-			task.defer(devolver, player, "O Docinho que você carregava não chegou na vitrine.")
+			task.defer(
+				Esteira.devolver,
+				player,
+				"O Docinho que você carregava não chegou na vitrine."
+			)
 		end
 	end)
 
@@ -325,7 +370,7 @@ function Esteira.iniciar(pastaItens: Folder)
 			local humanoide = personagem:WaitForChild("Humanoid") :: Humanoid
 			visualCarregando(player)
 			humanoide.Died:Connect(function()
-				devolver(player, "Você caiu e o Docinho voltou para a fábrica.")
+				Esteira.devolver(player, "Você caiu!")
 			end)
 		end)
 	end

@@ -52,7 +52,7 @@ Com `ModoTeste = true` em `src/shared/Config.luau` (vale **só no Studio**):
 |---|---|
 | F1 | Ganhar um Docinho aleatório (popup **Novo Docinho**) |
 | F2 | Alerta de **Resgate** |
-| F3 | Faixa da **Chuva de Doces** |
+| F3 | Liga a **Chuva de Doces** de verdade por 60 s |
 | F4 | **Tutorial** |
 | F5 | Aviso "saiu um raro da fábrica" |
 | F7 | Soltar um **Pudim Lendário** na esteira (comprar, carregar e entregar) |
@@ -86,7 +86,27 @@ O que só dá para ver dentro do jogo está no [checklist de playtest](playtest.
 - **Praça:** Loja, Docinhopédia e Códigos abrem a tela com E.
 - **Servidor com 6 vagas:** em *Game Settings → Places → Max Players*, use **6** (uma vitrine por jogador).
 
+## Eventos e resgate (fase 3)
+
+- **Chuva de Doces de verdade:** no sábado às 15h (ou com F3 no Studio), Docinhos caem em pontos
+  livres do mapa a cada 1,2 s (com sorte dobrada para raros). Depois de pousar, quem encosta
+  primeiro ganha de graça na vitrine (vitrine cheia vira 5 granulados). Ficam 20 s no chão.
+  O servidor marca `workspace.ChuvaAte`; a faixa e a contagem do HUD seguem esse atributo.
+- **Resgate entre jogadores** (regras em `src/shared/Dados/Resgate.luau`): segure E por 1,5 s num
+  Docinho da vitrine de outro jogador para levá-lo. Proteções para o público infantil:
+  - escudo ligado protege a vitrine (e o portão bloqueia a entrada);
+  - vitrines com menos de 3 Docinhos são de iniciante e não podem ser resgatadas;
+  - quem foi resgatado fica 60 s imune; quem resgatou espera 30 s para resgatar de novo;
+  - o dono que **encostar** em quem está levando recupera o Docinho na hora;
+  - se quem resgatou cair ou sair do jogo, o Docinho volta para o dono.
+  O Docinho que volta não conta de novo no álbum. Não há moedas de compensação
+  (evita que dois amigos fabriquem moedas resgatando um do outro).
+- **Portão do escudo:** com o escudo ligado o portão bloqueia todo mundo menos o dono
+  (grupos de colisão). Quem estiver dentro quando o escudo ligar é levado para fora.
+  As paredes laterais subiram para 10 studs para não dar para pular por cima.
+- **Caixa e escudo** têm esperas separadas: pisar num e logo no outro funciona.
+
 ## Próximas fases
 
 1. **Modelos 3D:** ver [modelos-3d.md](modelos-3d.md).
-2. **Eventos e resgate:** Chuva de Doces de verdade, o resgate entre jogadores e o portão do escudo bloqueando a passagem.
+2. **Balanceamento:** preços, rendas e pesos da esteira com dados de playtest.

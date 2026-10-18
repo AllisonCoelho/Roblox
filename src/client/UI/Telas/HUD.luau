@@ -567,6 +567,11 @@ function HUD.montar(raiz: Frame, acoes: Acoes)
 		local estado = Estado.atual
 		local agora = Estado.agora()
 		local ativo, falta = Evento.estado(agora)
+		-- O servidor manda quando a chuva está de fato acontecendo (agenda ou teste)
+		local fimChuva = workspace:GetAttribute("ChuvaAte")
+		if type(fimChuva) == "number" and fimChuva > agora then
+			ativo, falta = true, fimChuva - agora
+		end
 		tempoEvento.Text = if ativo
 			then "acontecendo · " .. Formato.tempo(falta)
 			else "sábado · " .. Formato.tempo(falta)
