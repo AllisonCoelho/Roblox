@@ -281,4 +281,30 @@ igual("cai cada vez mais rápido", ChuvaD.AlturaQueda - ChuvaD.alturaNoAr(0, Chu
 igual("no ar não dá para pegar", ChuvaD.pousou(0, ChuvaD.Queda - 0.01), false)
 igual("pousou dá para pegar", ChuvaD.pousou(0, ChuvaD.Queda), true)
 
+-- Correções da fase 4 -------------------------------------------------------------
+igual("venda normal = metade do preço", Est.valorVenda("pacoca", "normal"), 200)
+igual("venda dourada vale o dobro", Est.valorVenda("pacoca", "dourado"), 400)
+igual("venda arco-íris vale 5x", Est.valorVenda("pacoca", "arcoiris"), 1000)
+do
+  local semente = 4242
+  local function rng()
+    semente = (semente * 1103515245 + 12345) % 2147483648
+    return semente / 2147483648
+  end
+  local secretosEsteira, secretosChuva = 0, 0
+  for _ = 1, 100000 do
+    if Est.sortear(rng, true) == "coxinha" then secretosEsteira += 1 end
+    if Est.sortear(rng, true, ChuvaD.PesoSecreto) == "coxinha" then secretosChuva += 1 end
+  end
+  igual("Secreto nunca sai na esteira", secretosEsteira, 0)
+  igual("Secreto sai na chuva (raro)", secretosChuva > 30 and secretosChuva < 300, true)
+end
+local eAlbum = Economia.padrao()
+igual("álbum vazio não está completo", Economia.albumCompleto(eAlbum), false)
+for _, d in Catalogo.Lista do eAlbum.album[d.id] = { qtd = 1, desde = 0, dourado = false, arcoiris = false } end
+igual("álbum com todos está completo", Economia.albumCompleto(eAlbum), true)
+eAlbum.album.coxinha = nil
+igual("sem o Secreto não está completo", Economia.albumCompleto(eAlbum), false)
+igual("padrão tem prêmios vazios", next(Economia.padrao().premios), nil)
+
 print(string.format("%d testes, %d falhas", total, falhas))

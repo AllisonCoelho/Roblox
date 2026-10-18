@@ -124,10 +124,11 @@ function Avisos.montar(raiz: Frame)
 				Avisos.mostrar(
 					"raro",
 					string.format(
-						'Um <font color="#%s">%s %s</font> saiu da fábrica!',
+						'Um <font color="#%s">%s %s</font> %s',
 						cor,
 						d.nome,
-						string.upper(r.nome)
+						string.upper(r.nome),
+						if dados.onde == "chuva" then "caiu do céu!" else "saiu da fábrica!"
 					),
 					d.id
 				)

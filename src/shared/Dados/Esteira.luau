@@ -51,14 +51,28 @@ function Esteira.preco(id: string, variante: string): number
 	return d.preco * v.multiplicador
 end
 
+-- A vitrine compra de volta por metade do preço da esteira (que já conta a variante)
+Esteira.FracaoVenda = 0.5
+
+function Esteira.valorVenda(id: string, variante: string): number
+	return math.floor(Esteira.preco(id, variante) * Esteira.FracaoVenda)
+end
+
 -- Sorteia um Docinho e a variante. "aleatorio" devolve um número em [0, 1).
-function Esteira.sortear(aleatorio: () -> number, sorte: boolean): (string, string)
+-- pesoSecreto: peso do Secreto (só a Chuva de Doces passa; na esteira ele nunca sai).
+function Esteira.sortear(
+	aleatorio: () -> number,
+	sorte: boolean,
+	pesoSecreto: number?
+): (string, string)
 	local pesos: { { id: string, peso: number } } = {}
 	local total = 0
 	for _, d in Catalogo.Lista do
 		local r = Catalogo.Raridades[d.raridade]
 		local peso = Esteira.Pesos[d.raridade] or 0
-		if sorte and r.ordem >= Esteira.SorteAPartirDe then
+		if d.raridade == "secreto" and pesoSecreto then
+			peso = pesoSecreto
+		elseif sorte and r.ordem >= Esteira.SorteAPartirDe then
 			peso *= Esteira.MultiplicadorSorte
 		end
 		if peso > 0 then

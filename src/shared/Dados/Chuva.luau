@@ -11,6 +11,8 @@ Chuva.AlturaQueda = 60 -- de onde caem (studs acima do chão)
 Chuva.TempoNoChao = 20 -- quanto tempo ficam no chão antes de sumir
 Chuva.DistanciaPegar = 5 -- encostar a esta distância pega o Docinho
 Chuva.GranuladosSeCheia = 5 -- prêmio no lugar do Docinho se a vitrine estiver cheia
+-- O Secreto só existe na chuva: peso 0,15 (perto de 0,13% por Docinho, ~1 a cada sábado)
+Chuva.PesoSecreto = 0.15
 Chuva.Area = 110 -- metade do quadrado onde podem cair
 Chuva.Folga = 3 -- distância mínima das construções
 

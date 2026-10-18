@@ -116,6 +116,7 @@ function App.iniciar()
 	task.spawn(require(Mundo.EsteiraVisual).iniciar)
 	task.spawn(require(Mundo.Prompts).iniciar)
 	task.spawn(require(Mundo.ChuvaVisual).iniciar)
+	task.spawn(require(Mundo.Guia).iniciar)
 
 	teclasDeTeste()
 end

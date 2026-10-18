@@ -45,6 +45,7 @@ export type Estado = {
 	missoes: { dia: number, lista: { MissaoDoDia } },
 	codigos: { [string]: boolean },
 	tutorialFeito: boolean,
+	premios: { [string]: boolean }, -- prêmios únicos já pegos (ex.: álbum completo)
 	ultimaVez: number,
 	-- Docinho comprado na esteira e ainda não entregue na vitrine (nil quando não há).
 	-- Fica salvo: se o jogador sair ou cair carregando, recebe as moedas de volta.
@@ -81,8 +82,21 @@ function Economia.padrao(): Estado
 		missoes = { dia = -1, lista = {} },
 		codigos = {},
 		tutorialFeito = false,
+		premios = {},
 		ultimaVez = 0,
 	}
+end
+
+Economia.PremioAlbumGranulados = 500
+
+-- Todos os Docinhos do catálogo já foram descobertos? (variantes não contam)
+function Economia.albumCompleto(estado: Estado): boolean
+	for _, d in Catalogo.Lista do
+		if not estado.album[d.id] then
+			return false
+		end
+	end
+	return true
 end
 
 function Economia.nivel(estado: Estado, melhoria: string): number

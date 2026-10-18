@@ -6,6 +6,7 @@ local Shared = ReplicatedStorage.Shared
 local Tema = require(Shared.Tema)
 local Catalogo = require(Shared.Dados.Catalogo)
 local Economia = require(Shared.Dados.Economia)
+local EsteiraDados = require(Shared.Dados.Esteira)
 local Formato = require(Shared.Formato)
 local UI = script.Parent.Parent
 local C = require(UI.Componentes)
@@ -16,8 +17,6 @@ local Avisos = require(UI.Popups.Avisos)
 
 local Cores = Tema.Cores
 local MeusDocinhos = {}
-
-local FRACAO_VENDA = 0.5 -- igual ao servidor (Servicos/Vitrine.luau), só para mostrar o valor
 
 function MeusDocinhos.montar()
 	local painel = Navegacao.criarPainel(
@@ -168,7 +167,7 @@ function MeusDocinhos.montar()
 				Position = UDim2.fromOffset(0, 170),
 				Parent = celula,
 			})
-			local valor = math.floor(d.preco * FRACAO_VENDA)
+			local valor = EsteiraDados.valorVenda(item.id, item.variante)
 			local vender
 			vender = C.botao({
 				cor = if confirmando == i then "vermelho" else "cinza",
@@ -181,7 +180,7 @@ function MeusDocinhos.montar()
 				aoClicar = function()
 					if confirmando == i then
 						confirmando = nil
-						Avisos.resultado(Estado.pedir("VenderDocinho", i))
+						Avisos.resultado(Estado.pedir("VenderDocinho", i, item.id, item.variante))
 					else
 						confirmando = i
 						vender.definirCor("vermelho")

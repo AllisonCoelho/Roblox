@@ -7,13 +7,13 @@ local Catalogo = require(Shared.Dados.Catalogo)
 local Economia = require(Shared.Dados.Economia)
 local Remotos = require(Shared.Remotos)
 local Formato = require(Shared.Formato)
+local EsteiraDados = require(Shared.Dados.Esteira)
 local Dados = require(script.Parent.Dados)
 local Acoes = require(script.Parent.Acoes)
 local Missoes = require(script.Parent.Missoes)
 
 local Vitrine = {}
 
-local FRACAO_VENDA = 0.5
 local INTERVALO_TELEPORTE = 3 -- segundos entre dois "ir para a vitrine"
 
 local ultimoTeleporte: { [Player]: number } = {}
@@ -159,8 +159,16 @@ function Vitrine.iniciar()
 
 	Acoes.registrar("Coletar", Vitrine.coletar)
 
-	Acoes.registrar("VenderDocinho", function(player, indice: any)
-		if type(indice) ~= "number" or indice % 1 ~= 0 then
+	-- O cliente manda a posição e qual Docinho ele viu ali: se a vitrine mudou nesse meio-tempo
+	-- (um resgate tirou um Docinho e as posições andaram), a venda é recusada em vez de
+	-- vender o Docinho errado.
+	Acoes.registrar("VenderDocinho", function(player, indice: any, id: any, variante: any)
+		if
+			type(indice) ~= "number"
+			or indice % 1 ~= 0
+			or type(id) ~= "string"
+			or type(variante) ~= "string"
+		then
 			return false, "Docinho inválido"
 		end
 		return Dados.alterar(player, function(estado)
@@ -169,9 +177,11 @@ function Vitrine.iniciar()
 			if not item or not def then
 				return false, "Docinho inválido"
 			end
+			if item.id ~= id or item.variante ~= variante then
+				return false, "Sua vitrine mudou. Confira e tente de novo"
+			end
 			table.remove(estado.vitrine, indice)
-			local valor = math.floor(def.preco * FRACAO_VENDA)
-			estado.moedas += valor
+			estado.moedas += EsteiraDados.valorVenda(item.id, item.variante)
 			return true, string.format("%s vendido!", def.nome)
 		end)
 	end)

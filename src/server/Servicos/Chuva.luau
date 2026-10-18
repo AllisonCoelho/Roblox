@@ -70,7 +70,7 @@ local function soltar()
 	-- Na chuva a sorte é maior: raros pesam o dobro
 	local id, variante = EsteiraDados.sortear(function()
 		return aleatorio:NextNumber()
-	end, true)
+	end, true, ChuvaDados.PesoSecreto)
 	proximoUid += 1
 	local uid = proximoUid
 	local modelo = Modelos.criar(id)
@@ -89,6 +89,10 @@ local function soltar()
 	modelo:PivotTo(CFrame.new(pouso + Vector3.new(0, alturaBase, 0)))
 	modelo.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
 	local alvo = modelo:FindFirstChildWhichIsA("BasePart")
+	if id == "coxinha" then
+		Remotos.evento("Aviso")
+			:FireAllClients({ tipo = "raro", texto = "", docinho = id, onde = "chuva" })
+	end
 	if alvo then
 		local brilho = Instance.new("Sparkles")
 		brilho.SparkleColor = if variante == "normal" then Cores.Ceu else Cores.Ouro
