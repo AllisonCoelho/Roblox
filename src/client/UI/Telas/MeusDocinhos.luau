@@ -72,6 +72,19 @@ function MeusDocinhos.montar()
 			Avisos.resultado(ok, msg or (if ok then "Moedas coletadas!" else nil))
 		end,
 	})
+	C.botao({
+		cor = "roxo",
+		icone = "✨",
+		texto = "RENASCER",
+		tamanho = UDim2.fromOffset(220, 60),
+		tamanhoTexto = 24,
+		posicao = UDim2.new(1, -274, 0.5, -3),
+		ancora = Vector2.new(1, 0.5),
+		pai = faixa,
+		aoClicar = function()
+			Navegacao.abrir("Renascer")
+		end,
+	})
 
 	local grade = C.novo("ScrollingFrame", {
 		BackgroundTransparency = 1,

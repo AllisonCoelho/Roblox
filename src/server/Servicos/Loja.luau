@@ -5,6 +5,7 @@ local MarketplaceService = game:GetService("MarketplaceService")
 local Shared = ReplicatedStorage.Shared
 local LojaDados = require(Shared.Dados.Loja)
 local Formato = require(Shared.Formato)
+local Economia = require(Shared.Dados.Economia)
 local Dados = require(script.Parent.Dados)
 local Acoes = require(script.Parent.Acoes)
 local Missoes = require(script.Parent.Missoes)
@@ -98,6 +99,44 @@ function Loja.iniciar()
 			estado.boosts[boost.id] = math.max(estado.boosts[boost.id] or 0, agora) + boost.duracao
 			return true, boost.nome .. " ativado!"
 		end)
+	end)
+
+	-- Renascer (regras em Shared/Dados/Economia.luau)
+	Acoes.registrar("Renascer", function(player)
+		local feitos = 0
+		local ok, msg = Dados.alterar(player, function(estado)
+			if estado.carregando then
+				return false, "Entregue o Docinho que está carregando antes"
+			end
+			local custo = Economia.custoRenascer(estado.renascimentos)
+			if estado.moedas < custo then
+				return false,
+					"Faltam " .. Formato.curto(custo - estado.moedas) .. " moedas para renascer"
+			end
+			estado.renascimentos += 1
+			feitos = estado.renascimentos
+			estado.moedas = 0
+			estado.caixa = 0
+			for id in estado.melhorias do
+				if id ~= "vitrine" then
+					estado.melhorias[id] = 0
+				end
+			end
+			estado.granulados += Economia.RenascerGranulados * feitos
+			return true
+		end)
+		if not ok then
+			return false, msg
+		end
+		player:SetAttribute("Caixa", 0)
+		player:SetAttribute("NivelTenis", 0)
+		local bonus = math.floor((Economia.multiplicadorRenascer(feitos) - 1) * 100 + 0.5)
+		return true,
+			string.format(
+				"Você renasceu! Agora sua vitrine rende +%d%% para sempre (+%d granulados)",
+				bonus,
+				Economia.RenascerGranulados * feitos
+			)
 	end)
 
 	Acoes.registrar("ComprarPasse", function(player, id: any)

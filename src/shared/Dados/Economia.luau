@@ -46,6 +46,7 @@ export type Estado = {
 	codigos: { [string]: boolean },
 	tutorialFeito: boolean,
 	premios: { [string]: boolean }, -- prêmios únicos já pegos (ex.: álbum completo)
+	renascimentos: number,
 	ultimaVez: number,
 	-- Docinho comprado na esteira e ainda não entregue na vitrine (nil quando não há).
 	-- Fica salvo: se o jogador sair ou cair carregando, recebe as moedas de volta.
@@ -83,6 +84,7 @@ function Economia.padrao(): Estado
 		codigos = {},
 		tutorialFeito = false,
 		premios = {},
+		renascimentos = 0,
 		ultimaVez = 0,
 	}
 end
@@ -120,8 +122,23 @@ function Economia.boostAtivo(estado: Estado, id: string, agora: number): boolean
 	return (estado.boosts[id] or 0) > agora
 end
 
+-- Renascer: zera moedas, caixa e melhorias (menos o tamanho da vitrine) e dá renda extra
+-- para sempre. Os Docinhos e o álbum continuam (perder Docinhos frustraria as crianças).
+Economia.RenascerCustoBase = 1000000
+Economia.RenascerCustoFator = 4
+Economia.RenascerBonus = 0.25 -- +25% de renda por renascimento
+Economia.RenascerGranulados = 50 -- vezes o número do renascimento
+
+function Economia.custoRenascer(feitos: number): number
+	return Economia.RenascerCustoBase * Economia.RenascerCustoFator ^ feitos
+end
+
+function Economia.multiplicadorRenascer(feitos: number): number
+	return 1 + Economia.RenascerBonus * feitos
+end
+
 function Economia.multiplicadorMoedas(estado: Estado, agora: number): number
-	local m = 1
+	local m = Economia.multiplicadorRenascer(estado.renascimentos or 0)
 	if estado.passes.vip then
 		m *= 2
 	end

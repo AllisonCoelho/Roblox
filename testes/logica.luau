@@ -307,4 +307,17 @@ eAlbum.album.coxinha = nil
 igual("sem o Secreto não está completo", Economia.albumCompleto(eAlbum), false)
 igual("padrão tem prêmios vazios", next(Economia.padrao().premios), nil)
 
+-- Renascer --------------------------------------------------------------------
+igual("primeiro renascer custa 1 mi", Economia.custoRenascer(0), 1000000)
+igual("segundo custa 4 mi", Economia.custoRenascer(1), 4000000)
+igual("sem renascer: x1", Economia.multiplicadorRenascer(0), 1)
+igual("2 renascimentos: x1,5", Economia.multiplicadorRenascer(2), 1.5)
+local eR = Economia.padrao()
+table.insert(eR.vitrine, { id = "brigadeiro", variante = "normal" })
+eR.renascimentos = 2
+igual("renda com renascer", Economia.rendaPorSegundo(eR, 0), 450)
+eR.passes.vip = true
+igual("renascer soma com VIP", Economia.rendaPorSegundo(eR, 0), 900)
+igual("padrão começa sem renascer", Economia.padrao().renascimentos, 0)
+
 print(string.format("%d testes, %d falhas", total, falhas))

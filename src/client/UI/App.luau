@@ -103,6 +103,8 @@ function App.iniciar()
 	require(Telas.Presentes).montar()
 	require(Telas.Codigos).montar()
 	require(Telas.Ajustes).montar()
+	require(Telas.Renascer).montar()
+	require(Telas.Ranking).montar()
 	Navegacao.ajustar()
 
 	Tutorial.montar(raiz)
