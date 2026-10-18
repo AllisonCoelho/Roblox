@@ -6,6 +6,7 @@ local Shared = ReplicatedStorage.Shared
 local Catalogo = require(Shared.Dados.Catalogo)
 local Economia = require(Shared.Dados.Economia)
 local Remotos = require(Shared.Remotos)
+local Formato = require(Shared.Formato)
 local Dados = require(script.Parent.Dados)
 local Acoes = require(script.Parent.Acoes)
 local Missoes = require(script.Parent.Missoes)
@@ -68,6 +69,47 @@ function Vitrine.adicionarDocinho(player: Player, id: string, variante: string?)
 	return ok
 end
 
+-- Passa as moedas do caixa para o jogador (botão COLETAR e o caixa da vitrine no mundo)
+function Vitrine.coletar(player: Player): (boolean, string?)
+	local coletado = 0
+	local ok, msg = Dados.alterar(player, function(estado)
+		coletado = math.floor(estado.caixa)
+		if coletado <= 0 then
+			return false, "O caixa está vazio"
+		end
+		estado.moedas += coletado
+		estado.caixa -= coletado
+		return true
+	end)
+	if ok then
+		player:SetAttribute("Caixa", 0)
+		Missoes.progredir(player, "coletar_moedas", coletado)
+		return true, "+" .. Formato.inteiro(coletado) .. " moedas!"
+	end
+	return ok, msg
+end
+
+-- Liga o escudo da vitrine (botão do HUD e o tapete do escudo no mundo)
+function Vitrine.ligarEscudo(player: Player): (boolean, string?)
+	local ok, msg = Dados.alterar(player, function(estado)
+		local agora = os.time()
+		if agora < estado.escudoAte then
+			return false, "O escudo já está ligado"
+		end
+		if agora < estado.escudoProntoEm then
+			return false, "O escudo está recarregando"
+		end
+		estado.escudoAte = agora + Economia.duracaoEscudo(estado)
+		estado.escudoProntoEm = estado.escudoAte + Economia.EscudoRecarga
+		return true
+	end)
+	if ok then
+		Missoes.progredir(player, "ligar_escudo", 1)
+		return true, "Escudo ligado!"
+	end
+	return ok, msg
+end
+
 local function creditarOffline(player: Player, estado: Economia.Estado)
 	if estado.ultimaVez <= 0 then
 		return
@@ -106,23 +148,7 @@ function Vitrine.iniciar()
 		end
 	end)
 
-	Acoes.registrar("Coletar", function(player)
-		local coletado = 0
-		local ok, msg = Dados.alterar(player, function(estado)
-			coletado = math.floor(estado.caixa)
-			if coletado <= 0 then
-				return false, "O caixa está vazio"
-			end
-			estado.moedas += coletado
-			estado.caixa -= coletado
-			return true
-		end)
-		if ok then
-			player:SetAttribute("Caixa", 0)
-			Missoes.progredir(player, "coletar_moedas", coletado)
-		end
-		return ok, msg
-	end)
+	Acoes.registrar("Coletar", Vitrine.coletar)
 
 	Acoes.registrar("VenderDocinho", function(player, indice: any)
 		if type(indice) ~= "number" or indice % 1 ~= 0 then
@@ -141,24 +167,7 @@ function Vitrine.iniciar()
 		end)
 	end)
 
-	Acoes.registrar("LigarEscudo", function(player)
-		local ok, msg = Dados.alterar(player, function(estado)
-			local agora = os.time()
-			if agora < estado.escudoAte then
-				return false, "O escudo já está ligado"
-			end
-			if agora < estado.escudoProntoEm then
-				return false, "O escudo está recarregando"
-			end
-			estado.escudoAte = agora + Economia.duracaoEscudo(estado)
-			estado.escudoProntoEm = estado.escudoAte + Economia.EscudoRecarga
-			return true
-		end)
-		if ok then
-			Missoes.progredir(player, "ligar_escudo", 1)
-		end
-		return ok, msg
-	end)
+	Acoes.registrar("LigarEscudo", Vitrine.ligarEscudo)
 
 	Acoes.registrar("IrParaVitrine", function(player)
 		local agora = os.clock()
@@ -168,7 +177,7 @@ function Vitrine.iniciar()
 		end
 		local vitrine = Vitrine.daJogador(player)
 		if not vitrine then
-			return false, "Sua vitrine aparece quando o mapa estiver pronto!"
+			return false, "Você ainda não tem uma vitrine neste servidor"
 		end
 		local personagem = player.Character
 		local humanoide = personagem and personagem:FindFirstChildOfClass("Humanoid")
@@ -180,7 +189,11 @@ function Vitrine.iniciar()
 			return false, "Leve o Docinho andando até a vitrine!"
 		end
 		ultimoTeleporte[player] = agora
-		personagem:PivotTo(vitrine:GetPivot() * CFrame.new(0, 5, 8))
+		local entrada = vitrine:FindFirstChild("Entrada")
+		local destino = if entrada and entrada:IsA("BasePart")
+			then entrada.CFrame + Vector3.new(0, 3, 0)
+			else vitrine:GetPivot() * CFrame.new(0, 5, 8)
+		personagem:PivotTo(destino)
 		return true
 	end)
 	Players.PlayerRemoving:Connect(function(player)

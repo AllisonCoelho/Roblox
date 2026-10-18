@@ -20,6 +20,8 @@ mods = {
  "Missoes": "src/shared/Dados/Missoes.luau",
  "Loja": "src/shared/Dados/Loja.luau",
  "Sessao": "src/server/Servicos/Sessao.luau",
+ "Mapa": "src/shared/Dados/Mapa.luau",
+ "Esteira": "src/shared/Dados/Esteira.luau",
 }
 out = ['''
 -- stubs do Roblox
@@ -29,6 +31,47 @@ Random = { new = function(seed)
   if s <= 0 then s = s + 2147483646 end
   return { NextInteger = function(self, a, b) s = (s * 16807) % 2147483647; return a + (s % (b - a + 1)) end }
 end }
+-- Vector3 e CFrame simplificados (só o que a lógica compartilhada usa)
+local V3 = {}
+Vector3 = {}
+function Vector3.new(x, y, z) return setmetatable({ X = x or 0, Y = y or 0, Z = z or 0 }, V3) end
+local function dot(a, b) return a.X * b.X + a.Y * b.Y + a.Z * b.Z end
+local function cross(a, b) return Vector3.new(a.Y * b.Z - a.Z * b.Y, a.Z * b.X - a.X * b.Z, a.X * b.Y - a.Y * b.X) end
+V3.__index = function(v, k)
+  if k == "Magnitude" then return math.sqrt(dot(v, v)) end
+  if k == "Unit" then local m = math.sqrt(dot(v, v)); return Vector3.new(v.X / m, v.Y / m, v.Z / m) end
+  if k == "Cross" then return cross end
+  if k == "Dot" then return dot end
+  return nil
+end
+V3.__add = function(a, b) return Vector3.new(a.X + b.X, a.Y + b.Y, a.Z + b.Z) end
+V3.__sub = function(a, b) return Vector3.new(a.X - b.X, a.Y - b.Y, a.Z - b.Z) end
+V3.__mul = function(a, b)
+  if type(a) == "number" then return Vector3.new(b.X * a, b.Y * a, b.Z * a) end
+  if type(b) == "number" then return Vector3.new(a.X * b, a.Y * b, a.Z * b) end
+  return Vector3.new(a.X * b.X, a.Y * b.Y, a.Z * b.Z)
+end
+V3.__div = function(a, b) return Vector3.new(a.X / b, a.Y / b, a.Z / b) end
+V3.__unm = function(a) return Vector3.new(-a.X, -a.Y, -a.Z) end
+V3.__eq = function(a, b) return a.X == b.X and a.Y == b.Y and a.Z == b.Z end
+Vector3.zero = Vector3.new(0, 0, 0)
+Vector3.one = Vector3.new(1, 1, 1)
+local CF = {}
+CF.__index = CF
+CFrame = {}
+function CFrame.lookAt(pos, alvo)
+  local look = (alvo - pos).Unit
+  local right = cross(look, Vector3.new(0, 1, 0)).Unit
+  local up = cross(right, look)
+  return setmetatable({ Position = pos, RightVector = right, UpVector = up, LookVector = look }, CF)
+end
+function CF:PointToObjectSpace(p)
+  local rel = p - self.Position
+  return Vector3.new(dot(rel, self.RightVector), dot(rel, self.UpVector), -dot(rel, self.LookVector))
+end
+function CF:PointToWorldSpace(v)
+  return self.Position + self.RightVector * v.X + self.UpVector * v.Y - self.LookVector * v.Z
+end
 local MODS = {}
 local CACHE = {}
 local function req(nome)

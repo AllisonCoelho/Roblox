@@ -25,7 +25,7 @@ Com `ModoTeste = false` e *Enable Studio Access to API Services* ligado:
 - [ ] Contagem da Chuva de Doces anda a cada segundo
 - [ ] Missão em destaque mostra o progresso; tocar abre Missões
 - [ ] Escudo: tocar liga; mostra "desliga em", depois "recarregando"
-- [ ] **F6** mostra e esconde o Docinho carregado embaixo
+- [ ] Carregando um Docinho, o cartão embaixo mostra o Docinho e a seta aponta para a vitrine
 - [ ] Celular: nada fica embaixo do analógico, do botão de pular ou da barra do Roblox
 
 ## 3. Painéis
@@ -45,9 +45,20 @@ Com `ModoTeste = false` e *Enable Studio Access to API Services* ligado:
       **F4** Tutorial, **F5** aviso de raro
 - [ ] Vários F1 seguidos entram em fila (um por vez)
 
-## 5. Vitrine (quando o mapa existir)
+## 5. Mundo (fase 2)
 
-- [ ] Botão Vitrine leva até a sua vitrine; usar de novo em menos de 3 s mostra aviso
+- [ ] Ao entrar, o jogador aparece na própria vitrine e o letreiro mostra o nome dele
+- [ ] Os Docinhos da vitrine aparecem nos pedestais, de frente para a esteira, com etiqueta
+- [ ] A esteira anda lisa (sem tremer) e os Docinhos olham para a câmera
+- [ ] Aperte E num Docinho: as moedas descem, ele vai para a cabeça e você anda mais devagar
+- [ ] Sem moedas / vitrine cheia / longe demais: aparece o aviso e nada é cobrado
+- [ ] Entrar na própria vitrine entrega o Docinho (aviso verde) e ele aparece num pedestal
+- [ ] Morrer carregando (pule da borda ou resete o personagem) devolve as moedas
+- [ ] **F7** solta um Pudim Lendário: aviso para todos e dá para comprar com as moedas de teste
+- [ ] Pisar no caixa verde coleta; pisar no escudo azul liga e o portão azul aparece
+- [ ] Botão Vitrine leva até a vitrine; usar de novo em menos de 3 s mostra aviso
 - [ ] Carregando um Docinho, o botão Vitrine recusa ("Leve o Docinho andando")
+- [ ] Prédios da praça: E abre Loja, Docinhopédia e Códigos
+- [ ] Com 2 jogadores (aba Test → 2 Players): cada um tem a sua vitrine e vê o Docinho na cabeça do outro
 
 Anote o que falhar com print e a plataforma (PC/celular).

@@ -71,11 +71,8 @@ local function teclasDeTeste()
 			Tutorial.mostrar()
 		elseif tecla == Enum.KeyCode.F5 then
 			Estado.pedir("TesteAvisoRaro")
-		elseif tecla == Enum.KeyCode.F6 then
-			player:SetAttribute(
-				"Carregando",
-				if player:GetAttribute("Carregando") then nil else "pudim"
-			)
+		elseif tecla == Enum.KeyCode.F7 then
+			Avisos.resultado(Estado.pedir("TesteEsteiraRaro"))
 		end
 	end)
 end
@@ -112,6 +109,11 @@ function App.iniciar()
 	Resgate.montar(raiz, irParaVitrine)
 	NovoDocinho.montar(raiz)
 	Avisos.montar(raiz)
+
+	-- Mundo: esteira animada e os "aperte E" (esperam o mapa que o servidor constrói)
+	local Mundo = script.Parent.Parent:WaitForChild("Mundo")
+	task.spawn(require(Mundo.EsteiraVisual).iniciar)
+	task.spawn(require(Mundo.Prompts).iniciar)
 
 	teclasDeTeste()
 end

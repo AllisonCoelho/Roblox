@@ -46,6 +46,16 @@ function Dados.quandoCarregar(fn: (Player, Estado) -> ())
 	table.insert(aoCarregar, fn)
 end
 
+-- Funções chamadas depois de cada envio do estado (ex.: atualizar a vitrine no mundo)
+local aoMudar: { (Player, Estado) -> () } = {}
+function Dados.quandoMudar(fn: (Player, Estado) -> ())
+	table.insert(aoMudar, fn)
+end
+
+-- ObterEstado é só leitura, mas limitamos a frequência para não virar spam
+local INTERVALO_OBTER = 0.25
+local ultimoObter: { [Player]: number } = {}
+
 local function chave(player: Player): string
 	return "jogador_" .. player.UserId
 end
@@ -76,7 +86,7 @@ end
 
 local function estadoDeTeste(): Estado
 	local e = Economia.padrao()
-	e.moedas = 12450
+	e.moedas = 2000000 -- dá para comprar até um Lendário na esteira (tecla F7)
 	e.granulados = 320
 	e.caixa = 1200
 	e.melhorias.vitrine = 2
@@ -250,6 +260,9 @@ function Dados.enviar(player: Player)
 			local rev = (revisao[player] or 0) + 1
 			revisao[player] = rev
 			Remotos.evento("Estado"):FireClient(player, estado, rev)
+			for _, fn in aoMudar do
+				task.spawn(fn, player, estado)
+			end
 		end
 	end)
 end
@@ -270,6 +283,12 @@ end
 function Dados.iniciar()
 	-- O cliente pede o estado ao abrir; se ainda está carregando, recebe nil e tenta de novo
 	Remotos.funcao("ObterEstado").OnServerInvoke = function(player: Player)
+		local agora = os.clock()
+		local ultimo = ultimoObter[player]
+		if ultimo and agora - ultimo < INTERVALO_OBTER then
+			return nil, -1 -- rápido demais: o cliente tenta de novo depois
+		end
+		ultimoObter[player] = agora
 		return Dados.instantaneo(player)
 	end
 	Players.PlayerAdded:Connect(function(player)
@@ -284,6 +303,7 @@ function Dados.iniciar()
 		semSalvar[player] = nil
 		envioPendente[player] = nil
 		revisao[player] = nil
+		ultimoObter[player] = nil
 	end)
 	game:BindToClose(function()
 		local pendentes = 0
