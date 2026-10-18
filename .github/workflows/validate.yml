@@ -37,8 +37,8 @@ jobs:
           ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
         run: |
           if [ -z "$ROBLOX_API_KEY" ]; then
-            echo "::notice::Build concluido. Deploy pendente: cadastre o secret ROBLOX_API_KEY no GitHub."
-            exit 0
+            echo "::error::Secret ROBLOX_API_KEY nao configurado. Publicacao nao realizada."
+            exit 1
           fi
           curl --fail-with-body --silent --show-error --retry 2 \
             --request POST \
