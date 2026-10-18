@@ -340,6 +340,14 @@ local function entregarResgate(player: Player, estado: Economia.Estado, carga: E
 	end)
 	Dados.enviar(dono)
 	Vitrine.registrarChegada(player, movido.id, movido.variante)
+	-- Cada jogador é uma chave diferente no DataStore, então a troca não grava junto.
+	-- Salvamos já, primeiro quem levou e depois o dono: se o servidor cair entre as duas
+	-- gravações, o pior caso é o Docinho ficar com os dois, nunca sumir.
+	local quemLevou = player
+	task.spawn(function()
+		Dados.salvar(quemLevou)
+		Dados.salvar(dono)
+	end)
 	visualCarregando(player)
 	avisar(player, "sucesso", nomeDe(movido.id) .. " está na sua vitrine!")
 	avisar(
