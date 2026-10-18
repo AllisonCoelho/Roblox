@@ -36,6 +36,88 @@ function Resgate.rapidoDemais(distancia: number, segundos: number, velocidade: n
 		> velocidade * math.max(segundos, 0) * Resgate.FolgaVelocidade + Resgate.MargemStuds
 end
 
+-- Reserva ---------------------------------------------------------------------------
+-- O Docinho resgatado NÃO sai da vitrine do dono durante a corrida: ele fica lá, marcado
+-- com quem está levando (levadoPor = UserId), sem render e sem aparecer no pedestal.
+-- Só na entrega ele muda de vitrine, de uma vez. Se o resgate não terminar (o dono alcança,
+-- quem leva cai, sai do jogo, o servidor desliga ou cai), basta tirar a marca: a única cópia
+-- do Docinho nunca deixa de existir, mesmo com o dono offline ou a vitrine dele cheia.
+
+type Item = { id: string, variante: string, levadoPor: number? }
+
+-- Docinhos que estão de fato na vitrine (sem os que estão sendo levados)
+function Resgate.naVitrine(vitrine: { Item }): number
+	local n = 0
+	for _, item in vitrine do
+		if not item.levadoPor then
+			n += 1
+		end
+	end
+	return n
+end
+
+-- Marca o Docinho do slot (conferindo que é o mesmo id/variante e que ninguém já leva)
+function Resgate.reservar(
+	vitrine: { Item },
+	slot: number,
+	id: string,
+	variante: string,
+	quemLeva: number
+): boolean
+	local item = vitrine[slot]
+	if not item or item.levadoPor or item.id ~= id or item.variante ~= variante then
+		return false
+	end
+	item.levadoPor = quemLeva
+	return true
+end
+
+-- Tira a marca de quem leva (o Docinho volta ao pedestal). true se havia reserva dele.
+function Resgate.cancelar(vitrine: { Item }, quemLeva: number): boolean
+	for _, item in vitrine do
+		if item.levadoPor == quemLeva then
+			item.levadoPor = nil
+			return true
+		end
+	end
+	return false
+end
+
+-- Tira todas as marcas (o dono vai sair, ou os dados voltaram depois de uma queda)
+function Resgate.limparReservas(vitrine: { Item }): number
+	local n = 0
+	for _, item in vitrine do
+		if item.levadoPor then
+			item.levadoPor = nil
+			n += 1
+		end
+	end
+	return n
+end
+
+-- Entrega: tira o Docinho reservado da vitrine do dono e põe na de quem levou, sem pausa
+-- entre os dois passos. Devolve o Docinho movido, ou nil e o motivo ("cheia": quem levou
+-- não tem espaço; "sem_reserva": não há Docinho reservado para ele). Sem sucesso, nada muda.
+function Resgate.concluir(
+	vitrineDono: { Item },
+	vitrineQuemLeva: { Item },
+	capacidadeQuemLeva: number,
+	quemLeva: number
+): (Item?, string?)
+	if #vitrineQuemLeva >= capacidadeQuemLeva then
+		return nil, "cheia"
+	end
+	for i, item in vitrineDono do
+		if item.levadoPor == quemLeva then
+			table.remove(vitrineDono, i)
+			local movido = { id = item.id, variante = item.variante }
+			table.insert(vitrineQuemLeva, movido)
+			return movido, nil
+		end
+	end
+	return nil, "sem_reserva"
+end
+
 -- Devolve (true) ou (false, motivo para mostrar ao jogador)
 function Resgate.pode(c: Contexto): (boolean, string?)
 	if c.mesmoJogador then

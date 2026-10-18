@@ -53,7 +53,7 @@ local function resgatar(player: Player, indiceLote: any, slot: any): (boolean, s
 		agora = agora,
 		mesmoJogador = dono == player,
 		escudoAte = estadoDono.escudoAte,
-		docinhosNaVitrine = #estadoDono.vitrine,
+		docinhosNaVitrine = ResgateDados.naVitrine(estadoDono.vitrine),
 		ultimoResgateSofrido = ultimoResgateSofrido[dono],
 		ultimoResgateFeito = ultimoResgateFeito[player],
 		carregando = estadoLadrao.carregando ~= nil,
@@ -62,25 +62,19 @@ local function resgatar(player: Player, indiceLote: any, slot: any): (boolean, s
 		distancia = if pedestal and pedestal:IsA("BasePart")
 			then (raiz.Position - pedestal.Position).Magnitude
 			else math.huge,
-		slotValido = item ~= nil,
+		slotValido = item ~= nil and not item.levadoPor,
 	})
 	if not ok then
 		return false, motivo
 	end
-	-- Tira da vitrine do dono (confere de novo o mesmo Docinho no mesmo lugar)
-	local levado: Economia.DocinhoNaVitrine? = nil
-	Dados.alterar(dono, function(estado)
-		local atual = estado.vitrine[slot]
-		if not atual or atual.id ~= item.id or atual.variante ~= item.variante then
-			return false
-		end
-		levado = table.remove(estado.vitrine, slot)
-		return true
+	-- Reserva na vitrine do dono (o Docinho só muda de vitrine na entrega)
+	local reservado = Dados.alterar(dono, function(estado)
+		return ResgateDados.reservar(estado.vitrine, slot, item.id, item.variante, player.UserId)
 	end)
-	if not levado then
+	if not reservado then
 		return false, "Esse Docinho não está mais aqui"
 	end
-	local d = levado :: Economia.DocinhoNaVitrine
+	local d = item :: Economia.DocinhoNaVitrine
 	Dados.alterar(player, function(estado)
 		estado.carregando = { id = d.id, variante = d.variante, preco = 0, origem = dono.UserId }
 		return true
@@ -120,10 +114,26 @@ end
 function Resgate.iniciar()
 	Acoes.registrar("Resgatar", resgatar)
 
-	-- Quem sai do jogo carregando um Docinho resgatado: ele volta para o dono antes de salvar
+	-- Antes do último save de quem sai (ou de todos, quando o servidor desliga):
+	--   * quem saiu levando um Docinho: a reserva na vitrine do dono é desfeita;
+	--   * o dono que saiu: as marcas saem da vitrine dele (o save leva o Docinho normal) e
+	--     quem estava levando perde a carga, porque o Docinho ficou com o dono.
 	Dados.antesDeSair(function(player, estado)
 		if estado.carregando and estado.carregando.origem then
 			Esteira.devolver(player, "")
+		end
+		if ResgateDados.limparReservas(estado.vitrine) > 0 then
+			for _, outro in Players:GetPlayers() do
+				local e = Dados.de(outro)
+				if
+					outro ~= player
+					and e
+					and e.carregando
+					and e.carregando.origem == player.UserId
+				then
+					Esteira.esquecerCarga(outro, "O dono saiu do jogo e o Docinho ficou com ele.")
+				end
+			end
 		end
 	end)
 	Players.PlayerRemoving:Connect(function(player)

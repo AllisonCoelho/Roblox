@@ -8,6 +8,7 @@ local Economia = require(Shared.Dados.Economia)
 local Remotos = require(Shared.Remotos)
 local Formato = require(Shared.Formato)
 local EsteiraDados = require(Shared.Dados.Esteira)
+local ResgateDados = require(Shared.Dados.Resgate)
 local Dados = require(script.Parent.Dados)
 local Acoes = require(script.Parent.Acoes)
 local Missoes = require(script.Parent.Missoes)
@@ -33,15 +34,42 @@ function Vitrine.daJogador(player: Player): PVInstance?
 	return nil
 end
 
+-- Conta o Docinho no álbum. Devolve true se é novidade (Docinho ou variante nunca vistos).
+local function contarNoAlbum(estado: Economia.Estado, id: string, v: string): boolean
+	local novidade = false
+	local entrada = estado.album[id]
+	if not entrada then
+		entrada = { qtd = 0, desde = os.time(), dourado = false, arcoiris = false }
+		estado.album[id] = entrada
+		novidade = true
+	end
+	entrada.qtd += 1
+	if v == "dourado" and not entrada.dourado then
+		entrada.dourado = true
+		novidade = true
+	elseif v == "arcoiris" and not entrada.arcoiris then
+		entrada.arcoiris = true
+		novidade = true
+	end
+	return novidade
+end
+
+-- Para um Docinho que já entrou na vitrine por outro caminho (entrega de resgate):
+-- conta no álbum, mostra o popup se for novidade e manda o estado
+function Vitrine.registrarChegada(player: Player, id: string, variante: string)
+	local novidade = false
+	Dados.alterar(player, function(estado)
+		novidade = contarNoAlbum(estado, id, variante)
+		return true
+	end)
+	if novidade then
+		Remotos.evento("NovoDocinho"):FireClient(player, { id = id, variante = variante })
+	end
+end
+
 -- Coloca um Docinho na vitrine e no álbum. Usado pela esteira, presentes e eventos.
 -- Devolve false se a vitrine estiver cheia.
--- devolucao = true quando o Docinho só está voltando (resgate recuperado): não conta no álbum.
-function Vitrine.adicionarDocinho(
-	player: Player,
-	id: string,
-	variante: string?,
-	devolucao: boolean?
-): boolean
+function Vitrine.adicionarDocinho(player: Player, id: string, variante: string?): boolean
 	local def = Catalogo.docinho(id)
 	local v = variante or "normal"
 	if not def or not Catalogo.Variantes[v] then
@@ -53,23 +81,7 @@ function Vitrine.adicionarDocinho(
 			return false
 		end
 		table.insert(estado.vitrine, { id = id, variante = v })
-		if devolucao then
-			return true
-		end
-		local entrada = estado.album[id]
-		if not entrada then
-			entrada = { qtd = 0, desde = os.time(), dourado = false, arcoiris = false }
-			estado.album[id] = entrada
-			novidade = true
-		end
-		entrada.qtd += 1
-		if v == "dourado" and not entrada.dourado then
-			entrada.dourado = true
-			novidade = true
-		elseif v == "arcoiris" and not entrada.arcoiris then
-			entrada.arcoiris = true
-			novidade = true
-		end
+		novidade = contarNoAlbum(estado, id, v)
 		return true
 	end)
 	if ok and novidade then
@@ -137,6 +149,8 @@ end
 
 function Vitrine.iniciar()
 	Dados.quandoCarregar(function(player: Player, estado: Economia.Estado)
+		-- Marcas de resgate que ficaram de uma sessão que caiu: o Docinho volta ao pedestal
+		ResgateDados.limparReservas(estado.vitrine)
 		creditarOffline(player, estado)
 		Dados.enviar(player)
 	end)
@@ -179,6 +193,9 @@ function Vitrine.iniciar()
 			end
 			if item.id ~= id or item.variante ~= variante then
 				return false, "Sua vitrine mudou. Confira e tente de novo"
+			end
+			if item.levadoPor then
+				return false, "Esse Docinho está sendo levado! Alcance quem está com ele"
 			end
 			table.remove(estado.vitrine, indice)
 			estado.moedas += EsteiraDados.valorVenda(item.id, item.variante)

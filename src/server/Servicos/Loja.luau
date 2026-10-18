@@ -11,6 +11,7 @@ local Remotos = require(Shared.Remotos)
 local Tema = require(Shared.Tema)
 local Construtor = require(script.Parent.Parent.Mundo.Construtor)
 local Dados = require(script.Parent.Dados)
+local Compras = require(script.Parent.Compras)
 local Acoes = require(script.Parent.Acoes)
 local Missoes = require(script.Parent.Missoes)
 
@@ -46,34 +47,39 @@ local function marcarPasse(player: Player, passeId: string)
 	end
 end
 
--- Compras de Developer Products (pacotes de granulados). O Roblox chama esta função até
--- receber PurchaseGranted, inclusive em outra sessão: por isso só confirmamos depois de
--- salvar, e a lista estado.recibos impede entregar a mesma compra duas vezes.
+-- Compras de Developer Products (pacotes de granulados). As regras e o porquê de cada passo
+-- estão em Servicos/Compras.luau.
+local ESPERA_CARREGAR = 20 -- o jogador pode ter acabado de entrar (ou trocado de servidor)
+
 local function processarRecibo(info: { [string]: any }): Enum.ProductPurchaseDecision
 	local player = Players:GetPlayerByUserId(info.PlayerId)
-	if not player or not Dados.podeSalvar(player) then
+	if not player then
 		return Enum.ProductPurchaseDecision.NotProcessedYet
 	end
-	local estado = Dados.de(player) :: Economia.Estado
-	local pacote = LojaDados.pacoteDoProduto(info.ProductId)
-	local resultado = LojaDados.aplicarRecibo(estado, info.PurchaseId, pacote)
-	if resultado == "invalida" then
+	Dados.esperarCarregar(player, ESPERA_CARREGAR)
+	local decisao = Compras.processar(info :: any, {
+		estado = function()
+			return if Dados.podeSalvar(player) then Dados.de(player) else nil
+		end,
+		pacote = LojaDados.pacoteDoProduto,
+		salvar = function()
+			return Dados.salvar(player)
+		end,
+		entregue = function(pacote)
+			Dados.enviar(player)
+			Remotos.evento("Aviso"):FireClient(player, {
+				tipo = "sucesso",
+				texto = "+" .. Formato.inteiro(pacote.granulados) .. " granulados! Obrigado 💖",
+			})
+		end,
+	}, os.time())
+	if decisao == "PurchaseGranted" then
+		return Enum.ProductPurchaseDecision.PurchaseGranted
+	end
+	if not LojaDados.pacoteDoProduto(info.ProductId) then
 		warn("[Loja] produto desconhecido: " .. tostring(info.ProductId))
-		return Enum.ProductPurchaseDecision.NotProcessedYet
 	end
-	if resultado == "entregue" then
-		Dados.enviar(player)
-	end
-	if not Dados.salvar(player) then
-		return Enum.ProductPurchaseDecision.NotProcessedYet
-	end
-	if resultado == "entregue" and pacote then
-		Remotos.evento("Aviso"):FireClient(player, {
-			tipo = "sucesso",
-			texto = "+" .. Formato.inteiro(pacote.granulados) .. " granulados! Obrigado 💖",
-		})
-	end
-	return Enum.ProductPurchaseDecision.PurchaseGranted
+	return Enum.ProductPurchaseDecision.NotProcessedYet
 end
 
 -- Confere no Roblox os passes que o jogador já tem (compras feitas fora do jogo também contam)

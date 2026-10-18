@@ -7,6 +7,9 @@ local Economia = {}
 export type DocinhoNaVitrine = {
 	id: string,
 	variante: string,
+	-- UserId de quem está levando no resgate (o Docinho continua aqui até a entrega,
+	-- sem render e sem aparecer no pedestal; ver Shared/Dados/Resgate.luau)
+	levadoPor: number?,
 }
 
 export type EntradaAlbum = {
@@ -48,12 +51,13 @@ export type Estado = {
 	premios: { [string]: boolean }, -- prêmios únicos já pegos (ex.: álbum completo)
 	renascimentos: number,
 	config: { [string]: boolean }, -- preferências (sons, música)
-	recibos: { string }, -- últimas compras de Robux já entregues (PurchaseId)
+	recibos: { [string]: number }, -- compras de Robux já entregues: PurchaseId -> horário
 	conquistas: { [string]: boolean }, -- ids de Shared/Dados/Conquistas já ganhos
 	ultimaVez: number,
 	-- Docinho comprado na esteira e ainda não entregue na vitrine (nil quando não há).
 	-- Fica salvo: se o jogador sair ou cair carregando, recebe as moedas de volta.
-	-- origem = UserId do dono quando o Docinho foi resgatado da vitrine de outro jogador.
+	-- origem = UserId do dono quando o Docinho foi resgatado da vitrine de outro jogador
+	-- (o Docinho continua reservado na vitrine do dono; a carga é só "quem está levando").
 	carregando: Carga?,
 }
 
@@ -154,10 +158,13 @@ function Economia.multiplicadorMoedas(estado: Estado, agora: number): number
 	return m
 end
 
+-- Docinhos sendo levados num resgate não rendem até voltarem (ou até a entrega)
 local function somaVitrine(estado: Estado): number
 	local total = 0
 	for _, d in estado.vitrine do
-		total += Catalogo.rendaDe(d.id, d.variante)
+		if not d.levadoPor then
+			total += Catalogo.rendaDe(d.id, d.variante)
+		end
 	end
 	return total
 end

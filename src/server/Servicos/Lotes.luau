@@ -185,7 +185,10 @@ function Lotes.sincronizar(player: Player, estado: Economia.Estado)
 
 	local partes = { tostring(capacidade) }
 	for _, item in estado.vitrine do
-		table.insert(partes, item.id .. ":" .. item.variante)
+		table.insert(
+			partes,
+			item.id .. ":" .. item.variante .. (if item.levadoPor then "*" else "")
+		)
 	end
 	local assinatura = table.concat(partes, ",")
 	if mostrado[player] == assinatura then
@@ -204,7 +207,8 @@ function Lotes.sincronizar(player: Player, estado: Economia.Estado)
 		p.Transparency = if ativo then 0 else 1
 		p.CanCollide = ativo
 		local item = estado.vitrine[i]
-		if item and ativo then
+		-- Docinho sendo levado num resgate: o pedestal fica vazio até ele voltar
+		if item and ativo and not item.levadoPor then
 			local modelo = Modelos.criar(item.id)
 			modelo:ScaleTo(ESCALA_DOCINHO)
 			prepararModelo(modelo)

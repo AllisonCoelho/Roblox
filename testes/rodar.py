@@ -21,6 +21,8 @@ mods = {
  "Missoes": "src/shared/Dados/Missoes.luau",
  "Loja": "src/shared/Dados/Loja.luau",
  "Sessao": "src/server/Servicos/Sessao.luau",
+ "Gravacao": "src/server/Servicos/Gravacao.luau",
+ "Compras": "src/server/Servicos/Compras.luau",
  "Mapa": "src/shared/Dados/Mapa.luau",
  "Esteira": "src/shared/Dados/Esteira.luau",
  "Resgate": "src/shared/Dados/Resgate.luau",

@@ -180,6 +180,19 @@ function MeusDocinhos.montar()
 				Position = UDim2.fromOffset(0, 170),
 				Parent = celula,
 			})
+			-- Sendo levado num resgate: não dá para vender; volta se o dono alcançar quem leva
+			if item.levadoPor then
+				C.textoEscuro({
+					Text = "🚨 Sendo levado!",
+					Font = Tema.Fonte,
+					TextSize = 18,
+					TextColor3 = Cores.Vermelho,
+					Size = UDim2.new(1, -20, 0, 44),
+					Position = UDim2.new(0, 10, 1, -56),
+					Parent = celula,
+				})
+				continue
+			end
 			local valor = EsteiraDados.valorVenda(item.id, item.variante)
 			local vender
 			vender = C.botao({

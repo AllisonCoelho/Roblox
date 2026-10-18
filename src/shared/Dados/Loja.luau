@@ -158,9 +158,6 @@ Loja.Pacotes = {
 -- Granulados a mais no presente diário para quem tem o VIP
 Loja.BonusPresenteVip = 10
 
--- Quantas compras recentes guardamos para não entregar a mesma duas vezes
-Loja.MaxRecibos = 50
-
 local melhoriaPorId: { [string]: Melhoria } = {}
 for _, m in Loja.Melhorias do
 	melhoriaPorId[m.id] = m
@@ -200,30 +197,6 @@ end
 
 function Loja.pacoteDoProduto(productId: number): Pacote?
 	return pacotePorProduto[productId]
-end
-
--- Entrega uma compra de Robux (ProcessReceipt) no estado do jogador
--- (pacote = Loja.pacoteDoProduto(ProductId)).
--- Devolve "entregue" (granulados somados agora), "repetida" (esta compra já foi entregue)
--- ou "invalida" (produto desconhecido). A lista de recibos evita entregar duas vezes
--- quando o Roblox chama de novo (ex.: o salvamento anterior falhou).
-function Loja.aplicarRecibo(
-	estado: { granulados: number, recibos: { string } },
-	compraId: string,
-	pacote: Pacote?
-): string
-	if table.find(estado.recibos, compraId) then
-		return "repetida"
-	end
-	if not pacote then
-		return "invalida"
-	end
-	estado.granulados += pacote.granulados
-	table.insert(estado.recibos, compraId)
-	while #estado.recibos > Loja.MaxRecibos do
-		table.remove(estado.recibos, 1)
-	end
-	return "entregue"
 end
 
 -- Custo para subir do nível atual para o próximo; nil se já está no máximo

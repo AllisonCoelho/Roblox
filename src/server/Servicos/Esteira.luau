@@ -221,7 +221,8 @@ local function nomeDe(id: string): string
 end
 
 -- Tira a carga de um jogador que não conseguiu entregar (caiu, saiu, vitrine cheia, foi alcançado):
--- Docinho comprado -> as moedas voltam; Docinho resgatado -> volta para a vitrine do dono.
+-- Docinho comprado -> as moedas voltam; Docinho resgatado -> a reserva na vitrine do dono é
+-- desfeita (o Docinho nunca saiu de lá; se o dono já saiu do jogo, ele está nos dados dele).
 -- De onde e quando saiu cada Docinho resgatado (só na memória): na entrega conferimos se a
 -- viagem foi possível andando, para quem se teletransporta não levar sem o dono ter chance
 local saidaResgate: { [Player]: { t: number, pos: Vector3 } } = {}
@@ -271,17 +272,16 @@ function Esteira.devolver(player: Player, motivo: string)
 	visualCarregando(player)
 	if c.origem then
 		local dono = Players:GetPlayerByUserId(c.origem)
-		local voltou = dono ~= nil and Vitrine.adicionarDocinho(dono, c.id, c.variante, true)
-		avisar(
-			player,
-			"info",
-			motivo
-				.. (
-					if voltou
-						then " O Docinho voltou para o dono."
-						else " O Docinho voltou para a fábrica."
-				)
-		)
+		local voltou = false
+		if dono then
+			Dados.alterar(dono, function(estadoDono)
+				voltou = ResgateDados.cancelar(estadoDono.vitrine, player.UserId)
+				return voltou
+			end)
+		end
+		if motivo ~= "" then
+			avisar(player, "info", motivo .. " O Docinho voltou para o dono.")
+		end
 		if dono and voltou then
 			avisar(dono, "sucesso", "Você recuperou o " .. nomeDe(c.id) .. "!")
 		end
@@ -294,6 +294,61 @@ function Esteira.devolver(player: Player, motivo: string)
 	end
 end
 
+-- Tira a carga de resgate sem mexer na vitrine de ninguém (o Docinho ficou com o dono)
+function Esteira.esquecerCarga(player: Player, aviso: string)
+	saidaResgate[player] = nil
+	local tinha = Dados.alterar(player, function(e)
+		if not e.carregando then
+			return false
+		end
+		e.carregando = nil
+		return true
+	end)
+	if tinha then
+		visualCarregando(player)
+		avisar(player, "info", aviso)
+	end
+end
+
+-- Entrega de um Docinho resgatado: muda da vitrine do dono para a de quem levou, de uma vez
+local function entregarResgate(player: Player, estado: Economia.Estado, carga: Economia.Carga)
+	local dono = Players:GetPlayerByUserId(carga.origem :: number)
+	local estadoDono = dono and Dados.de(dono)
+	if not dono or not estadoDono then
+		-- O dono saiu: o Docinho ficou nos dados dele (a reserva foi desfeita na saída)
+		Esteira.esquecerCarga(player, "O dono saiu do jogo e o Docinho ficou com ele.")
+		return
+	end
+	local movido, motivo = ResgateDados.concluir(
+		estadoDono.vitrine,
+		estado.vitrine,
+		Economia.capacidadeVitrine(estado),
+		player.UserId
+	)
+	if not movido then
+		Esteira.devolver(
+			player,
+			if motivo == "cheia"
+				then "Sua vitrine está cheia!"
+				else "O Docinho não está mais com você."
+		)
+		return
+	end
+	Dados.alterar(player, function(e)
+		e.carregando = nil
+		return true
+	end)
+	Dados.enviar(dono)
+	Vitrine.registrarChegada(player, movido.id, movido.variante)
+	visualCarregando(player)
+	avisar(player, "sucesso", nomeDe(movido.id) .. " está na sua vitrine!")
+	avisar(
+		dono,
+		"erro",
+		player.DisplayName .. " levou o seu " .. nomeDe(movido.id) .. ". Ligue o escudo!"
+	)
+end
+
 local function entregar(player: Player)
 	local estado = Dados.de(player)
 	if estado and viagemImpossivel(player, estado) then
@@ -301,6 +356,10 @@ local function entregar(player: Player)
 		return
 	end
 	saidaResgate[player] = nil
+	if estado and estado.carregando and estado.carregando.origem then
+		entregarResgate(player, estado, estado.carregando)
+		return
+	end
 	local carga: Economia.Carga? = nil
 	Dados.alterar(player, function(estado)
 		carga = estado.carregando
@@ -314,14 +373,6 @@ local function entregar(player: Player)
 	if Vitrine.adicionarDocinho(player, c.id, c.variante) then
 		avisar(player, "sucesso", nomeDe(c.id) .. " está na sua vitrine!")
 		visualCarregando(player)
-		local dono = c.origem and Players:GetPlayerByUserId(c.origem)
-		if dono then
-			avisar(
-				dono,
-				"erro",
-				player.DisplayName .. " levou o seu " .. nomeDe(c.id) .. ". Ligue o escudo!"
-			)
-		end
 	else
 		-- Vitrine encheu no caminho: volta a ser carga e segue a regra de devolução
 		Dados.alterar(player, function(estado)
@@ -390,9 +441,13 @@ function Esteira.iniciar(pastaItens: Folder)
 	pasta = pastaItens
 	Acoes.registrar("ComprarDaEsteira", comprar)
 
-	-- Quem saiu ou caiu carregando recebe as moedas de volta ao entrar
+	-- Quem saiu ou caiu carregando recebe as moedas de volta ao entrar. Um Docinho resgatado
+	-- nunca saiu da vitrine do dono: aqui a carga só é esquecida (nada a devolver).
 	Dados.quandoCarregar(function(player, estado)
-		if estado.carregando then
+		local carga = estado.carregando
+		if carga and carga.origem then
+			estado.carregando = nil
+		elseif carga then
 			task.defer(
 				Esteira.devolver,
 				player,
