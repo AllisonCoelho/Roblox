@@ -2,6 +2,9 @@
 *.rbxlx
 *.rbxm
 *.rbxmx
+# Modelos 3D do jogo (exportados do Studio) entram no Git
+!assets/**/*.rbxm
+!assets/**/*.rbxmx
 /dist/
 .env
 .env.*

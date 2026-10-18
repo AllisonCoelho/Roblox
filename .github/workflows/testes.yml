@@ -1,0 +1,56 @@
+name: Roblox - Testes e qualidade
+
+# Só valida o código: não publica nada e não usa segredos.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  testes:
+    name: Testes, formatacao e analise Luau
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar codigo
+        uses: actions/checkout@v4
+
+      - name: Instalar ferramentas (versoes fixas)
+        shell: bash
+        run: |
+          set -euo pipefail
+          BIN="$RUNNER_TEMP/bin"
+          mkdir -p "$BIN"
+          baixar() {
+            curl --fail --location --silent --show-error --retry 3 "$1" --output "$RUNNER_TEMP/$2"
+          }
+          baixar "https://github.com/rojo-rbx/rojo/releases/download/v7.7.1/rojo-7.7.1-linux-x86_64.zip" rojo.zip
+          baixar "https://github.com/JohnnyMorganz/StyLua/releases/download/v2.1.0/stylua-linux-x86_64.zip" stylua.zip
+          baixar "https://github.com/luau-lang/luau/releases/download/0.700/luau-ubuntu.zip" luau.zip
+          baixar "https://github.com/JohnnyMorganz/luau-lsp/releases/download/1.70.1/luau-lsp-linux-x86_64.zip" luau-lsp.zip
+          baixar "https://raw.githubusercontent.com/JohnnyMorganz/luau-lsp/1.70.1/scripts/globalTypes.d.luau" globalTypes.d.luau
+          for z in rojo stylua luau luau-lsp; do
+            unzip -oq "$RUNNER_TEMP/$z.zip" -d "$BIN"
+          done
+          chmod +x "$BIN"/*
+          echo "$BIN" >> "$GITHUB_PATH"
+
+      - name: Formatacao (StyLua)
+        run: stylua --check src
+
+      - name: Testes da logica compartilhada
+        run: python3 testes/rodar.py
+
+      - name: Analise de tipos (luau-lsp com tipos do Roblox)
+        run: |
+          rojo sourcemap default.project.json --output "$RUNNER_TEMP/sourcemap.json"
+          luau-lsp analyze --sourcemap="$RUNNER_TEMP/sourcemap.json" --definitions="$RUNNER_TEMP/globalTypes.d.luau" src
+
+      - name: Build do jogo (Rojo)
+        run: |
+          mkdir -p dist
+          rojo build default.project.json --output dist/jogo.rbxlx
