@@ -13,6 +13,7 @@ local Config = require(Shared:WaitForChild("Config"))
 local Economia = require(Shared.Dados.Economia)
 local Remotos = require(Shared.Remotos)
 local Sessao = require(script.Parent.Sessao)
+local Gravacao = require(script.Parent.Gravacao)
 
 type Estado = Economia.Estado
 
@@ -38,6 +39,8 @@ local semSalvar: { [Player]: boolean } = {}
 local envioPendente: { [Player]: boolean } = {}
 -- Número da versão enviada ao cliente: ele ignora cópias mais velhas que a que já tem
 local revisao: { [Player]: number } = {}
+-- Uma gravação por vez para cada jogador (ver Servicos/Gravacao.luau)
+local filas: { [Player]: Gravacao.Fila } = {}
 -- Lista simples de funções (BindableEvent copiaria a tabela do estado e as mudanças se perderiam)
 local aoCarregar: { (Player, Estado) -> () } = {}
 
@@ -50,6 +53,30 @@ end
 local aoMudar: { (Player, Estado) -> () } = {}
 function Dados.quandoMudar(fn: (Player, Estado) -> ())
 	table.insert(aoMudar, fn)
+end
+
+-- Funções chamadas quando o jogador sai, ANTES do último salvamento
+-- (ex.: devolver um Docinho resgatado ao dono antes de gravar)
+local antesDeSair: { (Player, Estado) -> () } = {}
+function Dados.antesDeSair(fn: (Player, Estado) -> ())
+	table.insert(antesDeSair, fn)
+end
+-- Jogadores que já passaram pelo antesDeSair (a saída e o desligamento do servidor
+-- podem acontecer juntos; as funções rodam uma vez só)
+local preparados: { [Player]: boolean } = {}
+
+local function prepararSaida(player: Player)
+	local estado = estados[player]
+	if not estado or preparados[player] then
+		return
+	end
+	preparados[player] = true
+	for _, fn in antesDeSair do
+		local ok, erro = pcall(fn, player, estado)
+		if not ok then
+			warn("[Dados] erro antes de salvar " .. player.Name .. ": " .. tostring(erro))
+		end
+	end
 end
 
 -- ObterEstado é só leitura, mas limitamos a frequência para não virar spam
@@ -155,18 +182,21 @@ local function travarELer(player: Player): (string, Sessao.Registro?)
 end
 
 -- Grava no DataStore só se a trava ainda for deste servidor. liberar = true solta a trava.
-local function gravar(player: Player, dados: any, liberar: boolean): boolean
+-- "dados" é chamada dentro do UpdateAsync: o que vai ao DataStore é o estado daquele instante.
+local function gravar(player: Player, dados: () -> any, liberar: boolean): boolean
 	local motivo: string? = nil
 	local ok = comTentativas(function()
 		return (store :: DataStore):UpdateAsync(chave(player), function(atual)
 			local novo
-			novo, motivo = Sessao.salvar(atual, JOB_ID, os.time(), dados, liberar)
+			novo, motivo = Sessao.salvar(atual, JOB_ID, os.time(), dados(), liberar)
 			return novo
 		end)
 	end)
 	if ok and motivo == "sem_trava" then
 		-- Outro servidor assumiu este jogador: paramos de salvar aqui para não sobrescrever
-		semSalvar[player] = true
+		if estados[player] then
+			semSalvar[player] = true
+		end
 		if not liberar then
 			warn(
 				"[Dados] trava de " .. player.Name .. " é de outro servidor; salvamento cancelado"
@@ -201,7 +231,10 @@ function Dados.carregar(player: Player)
 		if not player.Parent then
 			-- Saiu enquanto carregava: solta a trava sem mudar nada
 			if not semSalvar[player] and registro then
-				gravar(player, registro.dados, true)
+				local dados = registro.dados
+				gravar(player, function()
+					return dados
+				end, true)
 			end
 			semSalvar[player] = nil
 			return
@@ -229,13 +262,41 @@ function Dados.carregar(player: Player)
 end
 
 -- Salva o jogador. liberar = true (saída do jogo) também solta a trava da sessão.
-function Dados.salvar(player: Player, liberar: boolean?)
+-- Devolve true só se uma gravação que começou depois desta chamada deu certo: tudo o que
+-- mudou no estado até aqui está no DataStore (sem DataStore, no Studio de teste, é sempre true).
+function Dados.salvar(player: Player, liberar: boolean?): boolean
 	local estado = estados[player]
-	if not estado or not store or semSalvar[player] then
-		return
+	if not estado or semSalvar[player] then
+		return false
 	end
-	estado.ultimaVez = os.time()
-	gravar(player, table.clone(estado), liberar == true)
+	if not store then
+		return true
+	end
+	local fila = filas[player]
+	if not fila then
+		fila = Gravacao.nova()
+		filas[player] = fila
+	end
+	return Gravacao.executar(fila, task.wait, function()
+		-- Enquanto esperava a vez, o jogador pode ter saído (a gravação de saída já levou
+		-- tudo e soltou a trava) ou outro servidor pode ter assumido
+		if estados[player] ~= estado or semSalvar[player] then
+			return false
+		end
+		estado.ultimaVez = os.time()
+		return gravar(player, function()
+			return Gravacao.copiar(estado)
+		end, liberar == true)
+	end)
+end
+
+-- Espera os dados do jogador carregarem (até "limite" segundos). nil se não carregou.
+function Dados.esperarCarregar(player: Player, limite: number): Estado?
+	local inicio = os.clock()
+	while not estados[player] and player.Parent and os.clock() - inicio < limite do
+		task.wait(0.5)
+	end
+	return estados[player]
 end
 
 -- Cópia atual para o cliente que pediu (handshake de entrada). nil enquanto carrega.
@@ -245,6 +306,11 @@ end
 
 function Dados.de(player: Player): Estado?
 	return estados[player]
+end
+
+-- true quando os dados do jogador carregaram e podem ser salvos (não houve falha ao ler)
+function Dados.podeSalvar(player: Player): boolean
+	return estados[player] ~= nil and not semSalvar[player]
 end
 
 -- Envia o estado ao cliente no fim do quadro (várias mudanças seguidas viram 1 envio)
@@ -298,14 +364,22 @@ function Dados.iniciar()
 		task.spawn(Dados.carregar, player)
 	end
 	Players.PlayerRemoving:Connect(function(player)
+		prepararSaida(player)
 		Dados.salvar(player, true)
 		estados[player] = nil
+		preparados[player] = nil
+		filas[player] = nil
 		semSalvar[player] = nil
 		envioPendente[player] = nil
 		revisao[player] = nil
 		ultimoObter[player] = nil
 	end)
 	game:BindToClose(function()
+		-- Primeiro todos os antesDeSair (ex.: Docinho resgatado volta ao dono), depois os saves,
+		-- para nenhum save sair antes da mudança que ele precisa levar
+		for player in estados do
+			prepararSaida(player)
+		end
 		local pendentes = 0
 		for player in estados do
 			pendentes += 1

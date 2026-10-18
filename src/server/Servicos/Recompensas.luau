@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local Presentes = require(Shared.Dados.Presentes)
 local LojaDados = require(Shared.Dados.Loja)
+local Economia = require(Shared.Dados.Economia)
 local Dados = require(script.Parent.Dados)
 local Acoes = require(script.Parent.Acoes)
 local Missoes = require(script.Parent.Missoes)
@@ -37,6 +38,11 @@ function Recompensas.iniciar()
 			p.ultimoDia = hoje
 			local premio = Presentes.Dias[(p.sequencia - 1) % #Presentes.Dias + 1]
 			aplicarMoedasGranulados(estado, premio)
+			local extra = ""
+			if estado.passes.vip then
+				estado.granulados += LojaDados.BonusPresenteVip
+				extra = " (+" .. LojaDados.BonusPresenteVip .. " ✨ VIP)"
+			end
 			if premio.boost then
 				local boost = LojaDados.boost(premio.boost)
 				if boost then
@@ -46,7 +52,7 @@ function Recompensas.iniciar()
 				end
 			end
 			docinhoDoDia = premio.docinho
-			return true, premio.texto .. "!"
+			return true, premio.texto .. "!" .. extra
 		end)
 		if ok then
 			if docinhoDoDia and not Vitrine.adicionarDocinho(player, docinhoDoDia) then
@@ -60,6 +66,23 @@ function Recompensas.iniciar()
 			Missoes.progredir(player, "presente_diario", 1)
 		end
 		return ok, msg
+	end)
+
+	Acoes.registrar("ResgatarAlbum", function(player)
+		return Dados.alterar(player, function(estado)
+			if estado.premios.album then
+				return false, "Você já pegou esse prêmio"
+			end
+			if not Economia.albumCompleto(estado) then
+				return false, "Complete o álbum primeiro"
+			end
+			estado.premios.album = true
+			estado.granulados += Economia.PremioAlbumGranulados
+			return true,
+				"+"
+					.. Economia.PremioAlbumGranulados
+					.. " granulados! Você é um verdadeiro confeiteiro."
+		end)
 	end)
 
 	Acoes.registrar("ResgatarCodigo", function(player, texto: any)

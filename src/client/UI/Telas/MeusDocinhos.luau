@@ -6,6 +6,7 @@ local Shared = ReplicatedStorage.Shared
 local Tema = require(Shared.Tema)
 local Catalogo = require(Shared.Dados.Catalogo)
 local Economia = require(Shared.Dados.Economia)
+local EsteiraDados = require(Shared.Dados.Esteira)
 local Formato = require(Shared.Formato)
 local UI = script.Parent.Parent
 local C = require(UI.Componentes)
@@ -16,8 +17,6 @@ local Avisos = require(UI.Popups.Avisos)
 
 local Cores = Tema.Cores
 local MeusDocinhos = {}
-
-local FRACAO_VENDA = 0.5 -- igual ao servidor (Servicos/Vitrine.luau), só para mostrar o valor
 
 function MeusDocinhos.montar()
 	local painel = Navegacao.criarPainel(
@@ -71,6 +70,19 @@ function MeusDocinhos.montar()
 		aoClicar = function()
 			local ok, msg = Estado.pedir("Coletar")
 			Avisos.resultado(ok, msg or (if ok then "Moedas coletadas!" else nil))
+		end,
+	})
+	C.botao({
+		cor = "roxo",
+		icone = "✨",
+		texto = "RENASCER",
+		tamanho = UDim2.fromOffset(220, 60),
+		tamanhoTexto = 24,
+		posicao = UDim2.new(1, -274, 0.5, -3),
+		ancora = Vector2.new(1, 0.5),
+		pai = faixa,
+		aoClicar = function()
+			Navegacao.abrir("Renascer")
 		end,
 	})
 
@@ -168,7 +180,20 @@ function MeusDocinhos.montar()
 				Position = UDim2.fromOffset(0, 170),
 				Parent = celula,
 			})
-			local valor = math.floor(d.preco * FRACAO_VENDA)
+			-- Sendo levado num resgate: não dá para vender; volta se o dono alcançar quem leva
+			if item.levadoPor then
+				C.textoEscuro({
+					Text = "🚨 Sendo levado!",
+					Font = Tema.Fonte,
+					TextSize = 18,
+					TextColor3 = Cores.Vermelho,
+					Size = UDim2.new(1, -20, 0, 44),
+					Position = UDim2.new(0, 10, 1, -56),
+					Parent = celula,
+				})
+				continue
+			end
+			local valor = EsteiraDados.valorVenda(item.id, item.variante)
 			local vender
 			vender = C.botao({
 				cor = if confirmando == i then "vermelho" else "cinza",
@@ -181,7 +206,7 @@ function MeusDocinhos.montar()
 				aoClicar = function()
 					if confirmando == i then
 						confirmando = nil
-						Avisos.resultado(Estado.pedir("VenderDocinho", i))
+						Avisos.resultado(Estado.pedir("VenderDocinho", i, item.id, item.variante))
 					else
 						confirmando = i
 						vender.definirCor("vermelho")

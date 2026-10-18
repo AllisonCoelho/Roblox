@@ -9,6 +9,7 @@ local Remotos = require(Shared.Remotos)
 local UI = script.Parent.Parent
 local C = require(UI.Componentes)
 local Visual = require(UI.Visual)
+local Sons = require(UI.Sons)
 
 local Cores = Tema.Cores
 local Avisos = {}
@@ -30,6 +31,9 @@ export type Tipo = "sucesso" | "erro" | "info" | "raro"
 
 function Avisos.mostrar(tipo: string, texto: string, docinhoId: string?)
 	ordem += 1
+	if tipo == "sucesso" or tipo == "erro" or tipo == "raro" then
+		Sons.tocar(tipo)
+	end
 	local cartao = C.novo("Frame", {
 		Name = "Aviso",
 		BackgroundColor3 = Cores.Fundo,
@@ -124,10 +128,11 @@ function Avisos.montar(raiz: Frame)
 				Avisos.mostrar(
 					"raro",
 					string.format(
-						'Um <font color="#%s">%s %s</font> saiu da fábrica!',
+						'Um <font color="#%s">%s %s</font> %s',
 						cor,
 						d.nome,
-						string.upper(r.nome)
+						string.upper(r.nome),
+						if dados.onde == "chuva" then "caiu do céu!" else "saiu da fábrica!"
 					),
 					d.id
 				)

@@ -7,6 +7,9 @@ local Economia = {}
 export type DocinhoNaVitrine = {
 	id: string,
 	variante: string,
+	-- UserId de quem está levando no resgate (o Docinho continua aqui até a entrega,
+	-- sem render e sem aparecer no pedestal; ver Shared/Dados/Resgate.luau)
+	levadoPor: number?,
 }
 
 export type EntradaAlbum = {
@@ -20,6 +23,13 @@ export type MissaoDoDia = {
 	id: string,
 	progresso: number,
 	resgatada: boolean,
+}
+
+export type Carga = {
+	id: string,
+	variante: string,
+	preco: number, -- moedas pagas (0 no resgate)
+	origem: number?,
 }
 
 export type Estado = {
@@ -38,10 +48,17 @@ export type Estado = {
 	missoes: { dia: number, lista: { MissaoDoDia } },
 	codigos: { [string]: boolean },
 	tutorialFeito: boolean,
+	premios: { [string]: boolean }, -- prêmios únicos já pegos (ex.: álbum completo)
+	renascimentos: number,
+	config: { [string]: boolean }, -- preferências (sons, música)
+	recibos: { [string]: number }, -- compras de Robux já entregues: PurchaseId -> horário
+	conquistas: { [string]: boolean }, -- ids de Shared/Dados/Conquistas já ganhos
 	ultimaVez: number,
 	-- Docinho comprado na esteira e ainda não entregue na vitrine (nil quando não há).
 	-- Fica salvo: se o jogador sair ou cair carregando, recebe as moedas de volta.
-	carregando: { id: string, variante: string, preco: number }?,
+	-- origem = UserId do dono quando o Docinho foi resgatado da vitrine de outro jogador
+	-- (o Docinho continua reservado na vitrine do dono; a carga é só "quem está levando").
+	carregando: Carga?,
 }
 
 Economia.VERSAO = 1
@@ -73,8 +90,25 @@ function Economia.padrao(): Estado
 		missoes = { dia = -1, lista = {} },
 		codigos = {},
 		tutorialFeito = false,
+		premios = {},
+		renascimentos = 0,
+		config = { sons = true, musica = true },
+		recibos = {},
+		conquistas = {},
 		ultimaVez = 0,
 	}
+end
+
+Economia.PremioAlbumGranulados = 500
+
+-- Todos os Docinhos do catálogo já foram descobertos? (variantes não contam)
+function Economia.albumCompleto(estado: Estado): boolean
+	for _, d in Catalogo.Lista do
+		if not estado.album[d.id] then
+			return false
+		end
+	end
+	return true
 end
 
 function Economia.nivel(estado: Estado, melhoria: string): number
@@ -98,8 +132,23 @@ function Economia.boostAtivo(estado: Estado, id: string, agora: number): boolean
 	return (estado.boosts[id] or 0) > agora
 end
 
+-- Renascer: zera moedas, caixa e melhorias (menos o tamanho da vitrine) e dá renda extra
+-- para sempre. Os Docinhos e o álbum continuam (perder Docinhos frustraria as crianças).
+Economia.RenascerCustoBase = 2500000 -- 1º renascer perto de 50 min (testes/simulacao.luau)
+Economia.RenascerCustoFator = 4
+Economia.RenascerBonus = 0.25 -- +25% de renda por renascimento
+Economia.RenascerGranulados = 50 -- vezes o número do renascimento
+
+function Economia.custoRenascer(feitos: number): number
+	return Economia.RenascerCustoBase * Economia.RenascerCustoFator ^ feitos
+end
+
+function Economia.multiplicadorRenascer(feitos: number): number
+	return 1 + Economia.RenascerBonus * feitos
+end
+
 function Economia.multiplicadorMoedas(estado: Estado, agora: number): number
-	local m = 1
+	local m = Economia.multiplicadorRenascer(estado.renascimentos or 0)
 	if estado.passes.vip then
 		m *= 2
 	end
@@ -109,13 +158,29 @@ function Economia.multiplicadorMoedas(estado: Estado, agora: number): number
 	return m
 end
 
--- Moedas por segundo de toda a vitrine, já com VIP e boosts
-function Economia.rendaPorSegundo(estado: Estado, agora: number): number
+-- Docinhos sendo levados num resgate não rendem até voltarem (ou até a entrega)
+local function somaVitrine(estado: Estado): number
 	local total = 0
 	for _, d in estado.vitrine do
-		total += Catalogo.rendaDe(d.id, d.variante)
+		if not d.levadoPor then
+			total += Catalogo.rendaDe(d.id, d.variante)
+		end
 	end
-	return total * Economia.multiplicadorMoedas(estado, agora)
+	return total
+end
+
+-- Moedas por segundo de toda a vitrine, já com VIP e boosts
+function Economia.rendaPorSegundo(estado: Estado, agora: number): number
+	return somaVitrine(estado) * Economia.multiplicadorMoedas(estado, agora)
+end
+
+-- Renda sem boosts temporários (Renascer e VIP contam): é a que vale no Ranking
+function Economia.rendaPermanente(estado: Estado): number
+	local m = Economia.multiplicadorRenascer(estado.renascimentos or 0)
+	if estado.passes.vip then
+		m *= 2
+	end
+	return somaVitrine(estado) * m
 end
 
 return Economia

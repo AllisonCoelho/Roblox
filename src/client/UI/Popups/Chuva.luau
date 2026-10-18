@@ -1,4 +1,4 @@
--- Faixa grande quando a Chuva de Doces começa (sábado)
+-- Faixa grande quando a Chuva de Doces começa (sábado); o Chuvisco só mostra um aviso
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
@@ -10,6 +10,8 @@ local UI = script.Parent.Parent
 local C = require(UI.Componentes)
 local Visual = require(UI.Visual)
 local Estado = require(UI.Estado)
+local Sons = require(UI.Sons)
+local Avisos = require(script.Parent.Avisos)
 
 local Cores = Tema.Cores
 local Chuva = {}
@@ -22,7 +24,17 @@ local escala: UIScale
 local relogio: TextLabel
 local versao = 0
 
+-- Segundos até a chuva acabar, ou nil se não está chovendo (a fonte é o servidor)
+function Chuva.restante(): number?
+	local fim = workspace:GetAttribute("ChuvaAte")
+	if type(fim) == "number" and fim > Estado.agora() then
+		return fim - Estado.agora()
+	end
+	return nil
+end
+
 function Chuva.mostrar()
+	Sons.tocar("chuva")
 	versao += 1
 	local minha = versao
 	quadro.Visible = true
@@ -30,8 +42,7 @@ function Chuva.mostrar()
 	TweenService:Create(escala, TweenInfo.new(0.4, Enum.EasingStyle.Back), { Scale = 1 }):Play()
 	task.spawn(function()
 		while versao == minha and quadro.Visible do
-			local ativo, falta = Evento.estado(Estado.agora())
-			relogio.Text = Formato.tempo(if ativo then falta else Evento.Duracao)
+			relogio.Text = Formato.tempo(Chuva.restante() or Evento.Duracao)
 			task.wait(0.5)
 		end
 	end)
@@ -105,16 +116,19 @@ function Chuva.montar(raiz: Frame)
 		Parent = quadro,
 	})
 
-	-- Mostra a faixa sozinha quando o evento começa
-	task.spawn(function()
-		local antes = Evento.estado(Estado.agora())
-		while true do
-			task.wait(1)
-			local agora = Evento.estado(Estado.agora())
-			if agora and not antes then
-				Chuva.mostrar()
-			end
-			antes = agora
+	-- O servidor marca workspace.ChuvaAte quando a chuva começa (pela agenda ou pelo teste)
+	workspace:GetAttributeChangedSignal("ChuvaAte"):Connect(function()
+		if not Chuva.restante() then
+			return
+		end
+		if workspace:GetAttribute("ChuvaGrande") == true then
+			Chuva.mostrar()
+		else
+			Sons.tocar("chuva")
+			Avisos.mostrar(
+				"info",
+				"🌧️ Chuvisco de Doces! Corra e pegue os Docinhos que caem do céu."
+			)
 		end
 	end)
 end

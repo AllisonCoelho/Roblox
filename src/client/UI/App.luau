@@ -9,6 +9,7 @@ local Estado = require(script.Parent.Estado)
 local Escala = require(script.Parent.Escala)
 local Visual = require(script.Parent.Visual)
 local Navegacao = require(script.Parent.Navegacao)
+local Sons = require(script.Parent.Sons)
 local Telas = script.Parent.Telas
 local Popups = script.Parent.Popups
 local HUD = require(Telas.HUD)
@@ -66,7 +67,8 @@ local function teclasDeTeste()
 		elseif tecla == Enum.KeyCode.F2 then
 			Estado.pedir("TesteResgate")
 		elseif tecla == Enum.KeyCode.F3 then
-			Chuva.mostrar()
+			-- Liga a chuva de verdade por 60 s (a faixa aparece sozinha)
+			Avisos.resultado(Estado.pedir("TesteChuva"))
 		elseif tecla == Enum.KeyCode.F4 then
 			Tutorial.mostrar()
 		elseif tecla == Enum.KeyCode.F5 then
@@ -80,6 +82,9 @@ end
 function App.iniciar()
 	Estado.iniciar()
 	Visual.iniciar()
+	Estado.aoMudar(function(estado)
+		Sons.aplicar(estado.config.sons ~= false, estado.config.musica ~= false)
+	end)
 
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "Docinhos"
@@ -89,19 +94,23 @@ function App.iniciar()
 	gui.Parent = player:WaitForChild("PlayerGui")
 
 	local raiz = Escala.montar(gui)
+	local LojaTela = require(Telas.Loja)
 	HUD.montar(raiz, {
 		abrir = Navegacao.abrir,
+		abrirLojaNa = LojaTela.irPara,
 		irParaVitrine = irParaVitrine,
 		posicaoVitrine = posicaoVitrine,
 	})
 	Navegacao.montar(raiz)
-	require(Telas.Loja).montar()
+	LojaTela.montar()
 	require(Telas.MeusDocinhos).montar()
 	require(Telas.Album).montar(HUD.marcarAlbumVisto)
 	require(Telas.Missoes).montar()
 	require(Telas.Presentes).montar()
 	require(Telas.Codigos).montar()
 	require(Telas.Ajustes).montar()
+	require(Telas.Renascer).montar()
+	require(Telas.Ranking).montar()
 	Navegacao.ajustar()
 
 	Tutorial.montar(raiz)
@@ -114,6 +123,8 @@ function App.iniciar()
 	local Mundo = script.Parent.Parent:WaitForChild("Mundo")
 	task.spawn(require(Mundo.EsteiraVisual).iniciar)
 	task.spawn(require(Mundo.Prompts).iniciar)
+	task.spawn(require(Mundo.ChuvaVisual).iniciar)
+	task.spawn(require(Mundo.Guia).iniciar)
 
 	teclasDeTeste()
 end

@@ -26,6 +26,7 @@ local BOTAO = 104
 
 export type Acoes = {
 	abrir: (nome: string) -> (),
+	abrirLojaNa: (aba: string) -> (),
 	irParaVitrine: () -> (),
 	posicaoVitrine: () -> Vector3?,
 }
@@ -67,7 +68,7 @@ function HUD.montar(raiz: Frame, acoes: Acoes)
 	})
 	if granulados.mais then
 		granulados.mais.Activated:Connect(function()
-			acoes.abrir("Loja")
+			acoes.abrirLojaNa("granulados")
 		end)
 	end
 
@@ -75,7 +76,7 @@ function HUD.montar(raiz: Frame, acoes: Acoes)
 	local menu = C.novo("Frame", {
 		Name = "Menu",
 		BackgroundTransparency = 1,
-		Size = UDim2.fromOffset(BOTAO * 2 + 18, BOTAO * 3 + 36),
+		Size = UDim2.fromOffset(BOTAO * 2 + 18, BOTAO * 4 + 54),
 		Position = UDim2.fromOffset(MARGEM, 200),
 		Parent = hud,
 	})
@@ -127,6 +128,9 @@ function HUD.montar(raiz: Frame, acoes: Acoes)
 		acoes.abrir("Presentes")
 	end)
 	botaoMenu("Vitrine", "🏠", "Vitrine", "verde", 6, acoes.irParaVitrine)
+	botaoMenu("Renascer", "✨", "Renascer", "roxo", 7, function()
+		acoes.abrir("Renascer")
+	end)
 
 	local function marcar(nome: string, quantidade: number | string | nil)
 		local n = notificacoes[nome]
@@ -173,7 +177,7 @@ function HUD.montar(raiz: Frame, acoes: Acoes)
 	C.cantosRedondos(iconeEvento)
 	C.contorno(iconeEvento, 3)
 	C.emoji("🌧️", 26, { Size = UDim2.fromScale(1, 1), Parent = iconeEvento })
-	C.textoEscuro({
+	local nomeEvento = C.textoEscuro({
 		Text = Evento.Nome,
 		Font = Tema.Fonte,
 		TextSize = 22,
@@ -221,8 +225,8 @@ function HUD.montar(raiz: Frame, acoes: Acoes)
 		})
 		return b.quadro
 	end
-	local rankingTopo = botaoTopo("🏆", "ouro", 1, function()
-		Avisos.mostrar("info", "O ranking chega em breve!")
+	botaoTopo("🏆", "ouro", 1, function()
+		acoes.abrir("Ranking")
 	end)
 	local missoesTopo = botaoTopo("📜", "laranja", 2, function()
 		acoes.abrir("Missoes")
@@ -529,6 +533,10 @@ function HUD.montar(raiz: Frame, acoes: Acoes)
 			end
 		end
 		marcar("Missoes", prontas)
+		marcar(
+			"Renascer",
+			if estado.moedas >= Economia.custoRenascer(estado.renascimentos or 0) then "!" else nil
+		)
 		bolinhaMissoesTopo.Visible = prontas > 0
 		textoMissoesTopo.Text = tostring(prontas)
 		local presenteDisponivel = estado.presente.ultimoDia ~= Presentes.diaAtual(agora)
@@ -566,10 +574,18 @@ function HUD.montar(raiz: Frame, acoes: Acoes)
 	local function relogios()
 		local estado = Estado.atual
 		local agora = Estado.agora()
-		local ativo, falta = Evento.estado(agora)
+		local ativo, falta, grande = Evento.chuva(agora)
+		-- O servidor manda quando a chuva está de fato acontecendo (agenda ou teste)
+		local fimChuva = workspace:GetAttribute("ChuvaAte")
+		if type(fimChuva) == "number" and fimChuva > agora then
+			ativo, falta = true, fimChuva - agora
+			grande = workspace:GetAttribute("ChuvaGrande") == true
+		end
+		nomeEvento.Text = if grande then Evento.Nome else Evento.NomeChuvisco
 		tempoEvento.Text = if ativo
 			then "acontecendo · " .. Formato.tempo(falta)
-			else "sábado · " .. Formato.tempo(falta)
+			elseif grande then "sábado · " .. Formato.tempo(falta)
+			else "em " .. Formato.tempo(falta)
 		iconeEvento.BackgroundColor3 = if ativo then Cores.Menta else Cores.Rosa
 		if not estado then
 			return
@@ -611,13 +627,14 @@ function HUD.montar(raiz: Frame, acoes: Acoes)
 			else UDim2.fromOffset(MARGEM, 200)
 		menu.Size = if compacto
 			then UDim2.fromOffset(BOTAO * 2 + 18, BOTAO * 2 + 18)
-			else UDim2.fromOffset(BOTAO * 2 + 18, BOTAO * 3 + 36)
+			else UDim2.fromOffset(BOTAO * 2 + 18, BOTAO * 4 + 54)
 		-- No celular, Missões e Presentes sobem para o canto e o menu fica 2x2
 		botoesMenu.Missoes.Visible = not compacto
 		botoesMenu.Presentes.Visible = not compacto
+		-- No celular o Renascer fica dentro de "Meus Docinhos"
+		botoesMenu.Renascer.Visible = not compacto
 		missoesTopo.Visible = compacto
 		presentesTopo.Visible = compacto
-		rankingTopo.Visible = not compacto
 		evento.Position = if compacto then UDim2.new(0.5, 0, 0, 100) else UDim2.new(0.5, 0, 0, 24)
 		missao.Visible = not compacto
 		missaoChip.Visible = compacto

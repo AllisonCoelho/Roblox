@@ -35,6 +35,25 @@ a, f = Evento.estado(SAB + 600)
 igual("evento acabou", a, false); igual("evento proxima semana", f, 7 * 86400 - 600)
 a, f = Evento.estado(SAB - 86400 * 3)
 igual("evento quarta", a, false); igual("evento falta 3 dias", f, 86400 * 3)
+-- Chuvisco a cada 20 minutos; a grande de sábado tem prioridade
+local g
+a, f, g = Evento.chuva(SAB + 60)
+igual("chuva grande ativa", a, true); igual("chuva grande resta", f, 540); igual("é a grande", g, true)
+local Q = SAB - 86400 * 3 -- quarta, 18:00 UTC (múltiplo de 20 min)
+a, f, g = Evento.chuva(Q + 10)
+igual("chuvisco ativo", a, true); igual("chuvisco resta", f, Evento.ChuviscoDuracao - 10); igual("chuvisco não é grande", g, false)
+a, f, g = Evento.chuva(Q + Evento.ChuviscoDuracao)
+igual("chuvisco acabou", a, false); igual("próximo chuvisco", f, Evento.ChuviscoIntervalo - Evento.ChuviscoDuracao); igual("próximo é chuvisco", g, false)
+a, f, g = Evento.chuva(SAB - 300)
+igual("antes da grande", a, false); igual("grande em 5 min", f, 300); igual("próxima é a grande", g, true)
+a, f, g = Evento.chuva(SAB + 600)
+igual("depois da grande", a, false); igual("depois da grande vem chuvisco", g, false)
+local chuviscosNoDia = 0
+for s = 0, 86400 - 1, 30 do
+  local at, _, gr = Evento.chuva(Q - 18 * 3600 + s)
+  if at and not gr and s % 1200 == 0 then chuviscosNoDia += 1 end
+end
+igual("72 chuviscos por dia", chuviscosNoDia, 72)
 
 local Presentes = req("Presentes")
 local MEIA_NOITE_BRT = 1792292400 -- 2026-10-18 03:00:00 UTC = 00:00 em Brasília
@@ -84,10 +103,274 @@ local Loja = req("Loja")
 igual("custo nível 0", Loja.proximoCusto("vitrine", 0), 5000)
 igual("custo máximo", Loja.proximoCusto("vitrine", 5), nil)
 igual("custo item inválido", Loja.proximoCusto("xyz", 0), nil)
+-- Pacotes de granulados e entrega de compras (ProcessReceipt)
+local idsPacotes, precoAnterior, taxaAnterior = {}, 0, 0
+for _, p in Loja.Pacotes do
+  igual("pacote id único " .. p.id, idsPacotes[p.id], nil)
+  idsPacotes[p.id] = true
+  igual("pacote busca " .. p.id, Loja.pacote(p.id), p)
+  igual("pacote preço sobe " .. p.id, p.precoRobux > precoAnterior, true)
+  local taxa = p.granulados / p.precoRobux
+  igual("pacote maior rende mais por Robux " .. p.id, taxa > taxaAnterior, true)
+  precoAnterior, taxaAnterior = p.precoRobux, taxa
+end
+igual("produto 0 não é pacote", Loja.pacoteDoProduto(0), nil)
+igual("padrao tem recibos vazios", next(Economia.padrao().recibos), nil)
+
 for _, dia in Presentes.Dias do
   if dia.boost then igual("boost do presente existe " .. dia.boost, Loja.boost(dia.boost) ~= nil, true) end
   if dia.docinho then igual("docinho do presente existe", Catalogo.docinho(dia.docinho) ~= nil, true) end
 end
+
+-- Conquistas -----------------------------------------------------------------
+local Conquistas = req("Conquistas")
+local idsConq = {}
+for _, c in Conquistas.Lista do
+  igual("conquista id único " .. c.id, idsConq[c.id], nil)
+  idsConq[c.id] = true
+  igual("conquista busca " .. c.id, Conquistas.conquista(c.id), c)
+end
+igual("no máximo 10 emblemas (1 consulta CheckUserBadgesAsync)", #Conquistas.Lista <= 10, true)
+local function tem(lista, id) return table.find(lista, id) ~= nil end
+local novo = Economia.padrao()
+local c0 = Conquistas.doEstado(novo)
+igual("jogador novo: só boas-vindas", #c0, 1)
+igual("jogador novo: boas-vindas", tem(c0, "bemVindo"), true)
+novo.album.brigadeiro = { qtd = 1, desde = 0, dourado = false, arcoiris = false }
+igual("primeiro Docinho", tem(Conquistas.doEstado(novo), "primeiroDocinho"), true)
+igual("comum não é lendário", tem(Conquistas.doEstado(novo), "lendario"), false)
+novo.album.brigadeiro.dourado = true
+igual("dourado", tem(Conquistas.doEstado(novo), "dourado"), true)
+local idLend
+for _, d in Catalogo.Lista do
+  local r = Catalogo.raridadeDe(d.id)
+  if r and r.ordem >= 5 then idLend = d.id break end
+end
+novo.album[idLend] = { qtd = 1, desde = 0, dourado = false, arcoiris = false }
+igual("lendário", tem(Conquistas.doEstado(novo), "lendario"), true)
+igual("álbum incompleto", tem(Conquistas.doEstado(novo), "albumCompleto"), false)
+for _, d in Catalogo.Lista do
+  novo.album[d.id] = novo.album[d.id] or { qtd = 1, desde = 0, dourado = false, arcoiris = false }
+end
+igual("álbum completo", tem(Conquistas.doEstado(novo), "albumCompleto"), true)
+novo.moedas = 999999
+igual("quase milionário", tem(Conquistas.doEstado(novo), "milionario"), false)
+novo.moedas = 1000000
+igual("milionário", tem(Conquistas.doEstado(novo), "milionario"), true)
+novo.renascimentos = 1
+igual("renascido", tem(Conquistas.doEstado(novo), "renascer"), true)
+for _, id in Conquistas.doEstado(novo) do
+  igual("conquista do estado existe " .. id, Conquistas.conquista(id) ~= nil, true)
+end
+igual("padrao tem conquistas vazias", next(Economia.padrao().conquistas), nil)
+
+-- Fila de gravação: interleavings ---------------------------------------------
+-- O "DataStore" falso cede a vez (coroutine.yield) como se esperasse a rede antes de gravar.
+local Gravacao = req("Gravacao")
+local function cenarioGravacao()
+  local c = { fila = Gravacao.nova(), banco = nil, gravacoes = 0 }
+  c.estado = { granulados = 0, recibos = {}, vitrine = { { id = "a", variante = "normal" } } }
+  function c.salvar()
+    return coroutine.create(function()
+      return Gravacao.executar(c.fila, function() coroutine.yield("espera") end, function()
+        coroutine.yield("rede") -- UpdateAsync esperando o servidor do Roblox
+        c.banco = Gravacao.copiar(c.estado) -- o estado é lido na hora de gravar
+        c.gravacoes += 1
+        return true
+      end)
+    end)
+  end
+  return c
+end
+do
+  -- Autosave começa, a compra credita no meio, o save da compra espera a vez
+  local c = cenarioGravacao()
+  local auto = c.salvar()
+  coroutine.resume(auto) -- autosave na rede
+  c.estado.granulados += 400; c.estado.recibos.p1 = 1
+  local comp = c.salvar()
+  local _, onde = coroutine.resume(comp)
+  igual("save da compra espera o autosave", onde, "espera")
+  igual("nada gravado ainda", c.banco, nil)
+  coroutine.resume(comp)
+  igual("continua esperando enquanto o autosave não termina", coroutine.status(comp), "suspended")
+  igual("ainda sem gravar", c.gravacoes, 0)
+  local _, okAuto = coroutine.resume(auto)
+  igual("autosave termina", okAuto, true)
+  igual("autosave já leva o crédito (lido na hora de gravar)", c.banco.granulados, 400)
+  coroutine.resume(comp) -- pega a vez e vai para a rede
+  local _, okComp = coroutine.resume(comp)
+  igual("save da compra confirma", okComp, true)
+  igual("gravações em ordem, uma por vez", c.gravacoes, 2)
+  igual("banco termina com o crédito", c.banco.granulados, 400)
+  igual("banco termina com a marca da compra", c.banco.recibos.p1, 1)
+end
+do
+  -- Snapshot antigo não sobrescreve: 3 saves com mudanças no meio, o banco fica com a última
+  local c = cenarioGravacao()
+  local s1 = c.salvar(); coroutine.resume(s1)
+  c.estado.granulados = 10
+  local s2 = c.salvar(); coroutine.resume(s2)
+  c.estado.granulados = 20
+  local s3 = c.salvar(); coroutine.resume(s3)
+  c.estado.granulados = 30
+  -- termina na ordem inversa de pedido sempre que possível: a fila não deixa
+  for _ = 1, 10 do
+    for _, co in { s3, s2, s1 } do
+      if coroutine.status(co) == "suspended" then coroutine.resume(co) end
+    end
+  end
+  igual("três gravações", c.gravacoes, 3)
+  igual("banco fica com o estado mais novo", c.banco.granulados, 30)
+end
+do
+  -- Cópia profunda: mexer no estado depois de gravar não muda o que foi gravado
+  local c = cenarioGravacao()
+  local s1 = c.salvar(); coroutine.resume(s1); coroutine.resume(s1)
+  c.estado.vitrine[1].id = "b"
+  c.estado.recibos.p9 = 2
+  igual("cópia profunda: vitrine gravada não muda", c.banco.vitrine[1].id, "a")
+  igual("cópia profunda: recibos gravados não mudam", c.banco.recibos.p9, nil)
+end
+do
+  local f = Gravacao.nova()
+  igual("erro na gravação devolve falso", Gravacao.executar(f, function() end, function() error("rede caiu") end), false)
+  igual("erro libera a fila", f.ocupada, false)
+  igual("gravação que devolve falso", Gravacao.executar(f, function() end, function() return false end), false)
+end
+
+-- Compras (ProcessReceipt): falhas, repetições e troca de servidor -----------------
+local Compras = req("Compras")
+local PAC = { granulados = 400 }
+local function pacoteDe(pid) return if pid == 7 then PAC else nil end
+local function mundoCompras()
+  local m = { banco = { granulados = 0, recibos = {} }, avisos = 0 }
+  function m.entrar() return Gravacao.copiar(m.banco) end -- nova sessão lê o banco
+  function m.deps(estado, salvarDa)
+    return {
+      estado = function() return estado end,
+      pacote = pacoteDe,
+      salvar = function()
+        if salvarDa() then m.banco = Gravacao.copiar(estado); return true end
+        return false
+      end,
+      entregue = function() m.avisos += 1 end,
+    }
+  end
+  return m
+end
+local function sim() return true end
+local function nao() return false end
+local G, N = "PurchaseGranted", "NotProcessedYet"
+do
+  local m = mundoCompras(); local s = m.entrar()
+  igual("compra normal: confirma", Compras.processar({ PurchaseId = "A", ProductId = 7 }, m.deps(s, sim), 1), G)
+  igual("compra normal: banco com os granulados", m.banco.granulados, 400)
+  igual("compra normal: banco com a marca", m.banco.recibos.A, 1)
+  igual("compra normal: um aviso", m.avisos, 1)
+end
+do
+  -- Save falha; o Roblox repete na mesma sessão e agora salva
+  local m = mundoCompras(); local s = m.entrar()
+  igual("save falhou: não confirma", Compras.processar({ PurchaseId = "B", ProductId = 7 }, m.deps(s, nao), 1), N)
+  igual("save falhou: banco sem crédito", m.banco.granulados, 0)
+  igual("save falhou: sem aviso ainda", m.avisos, 0)
+  igual("repetição: confirma", Compras.processar({ PurchaseId = "B", ProductId = 7 }, m.deps(s, sim), 2), G)
+  igual("repetição: crédito uma vez só", m.banco.granulados, 400)
+  igual("repetição: aviso aparece quando confirma", m.avisos, 1)
+end
+do
+  -- Save falha, jogador sai e o save de saída também falha: nada gravado, crédito na próxima sessão
+  local m = mundoCompras(); local s = m.entrar()
+  Compras.processar({ PurchaseId = "C", ProductId = 7 }, m.deps(s, nao), 1)
+  local s2 = m.entrar()
+  igual("nova sessão sem a compra: confirma", Compras.processar({ PurchaseId = "C", ProductId = 7 }, m.deps(s2, sim), 2), G)
+  igual("nova sessão: crédito uma vez", m.banco.granulados, 400)
+end
+do
+  -- Save falha, mas o save de saída leva crédito + marca: a próxima sessão não credita de novo
+  local m = mundoCompras(); local s = m.entrar()
+  Compras.processar({ PurchaseId = "D", ProductId = 7 }, m.deps(s, nao), 1)
+  m.banco = Gravacao.copiar(s) -- save de saída deu certo
+  local s2 = m.entrar()
+  igual("depois do save de saída: confirma", Compras.processar({ PurchaseId = "D", ProductId = 7 }, m.deps(s2, sim), 2), G)
+  igual("depois do save de saída: sem crédito duplo", m.banco.granulados, 400)
+end
+do
+  -- Servidor caiu depois de salvar e antes do Roblox receber a resposta
+  local m = mundoCompras(); local s = m.entrar()
+  Compras.processar({ PurchaseId = "E", ProductId = 7 }, m.deps(s, sim), 1)
+  local s2 = m.entrar()
+  igual("caiu depois de salvar: confirma de novo", Compras.processar({ PurchaseId = "E", ProductId = 7 }, m.deps(s2, sim), 2), G)
+  igual("caiu depois de salvar: sem crédito duplo", m.banco.granulados, 400)
+end
+do
+  -- Compra antiga repetida depois de 1000 outras: continua reconhecida
+  local m = mundoCompras(); local s = m.entrar()
+  Compras.processar({ PurchaseId = "velha", ProductId = 7 }, m.deps(s, sim), 1)
+  for i = 1, 1000 do
+    Compras.processar({ PurchaseId = "n" .. i, ProductId = 7 }, m.deps(s, sim), 1 + i)
+  end
+  local antes = m.banco.granulados
+  igual("replay antigo: confirma", Compras.processar({ PurchaseId = "velha", ProductId = 7 }, m.deps(m.entrar(), sim), 5000), G)
+  igual("replay antigo: não credita de novo", m.banco.granulados, antes)
+  igual("1001 compras creditadas", antes, 400 * 1001)
+end
+do
+  local m = mundoCompras()
+  igual("dados não carregados: não confirma", Compras.processar({ PurchaseId = "F", ProductId = 7 }, m.deps(nil, sim), 1), N)
+  local s = m.entrar()
+  igual("produto desconhecido: não confirma", Compras.processar({ PurchaseId = "G", ProductId = 99 }, m.deps(s, sim), 1), N)
+  igual("produto desconhecido: sem marca", s.recibos.G, nil)
+  igual("produto desconhecido: sem crédito", s.granulados, 0)
+end
+do
+  -- Gastou no meio: falha, gasta 100, repete; o banco fica com 300 (nem devolve nem duplica)
+  local m = mundoCompras(); local s = m.entrar()
+  Compras.processar({ PurchaseId = "H", ProductId = 7 }, m.deps(s, nao), 1)
+  s.granulados -= 100
+  Compras.processar({ PurchaseId = "H", ProductId = 7 }, m.deps(s, sim), 2)
+  igual("gastou entre as tentativas", m.banco.granulados, 300)
+end
+do
+  -- Mesma compra duas vezes ao mesmo tempo (o salvar cede a vez no meio)
+  local m = mundoCompras(); local s = m.entrar()
+  local function lento() coroutine.yield(); return true end
+  local d = m.deps(s, lento)
+  local r = {}
+  local c1 = coroutine.create(function() r[1] = Compras.processar({ PurchaseId = "I", ProductId = 7 }, d, 1) end)
+  local c2 = coroutine.create(function() r[2] = Compras.processar({ PurchaseId = "I", ProductId = 7 }, d, 1) end)
+  coroutine.resume(c1); coroutine.resume(c2); coroutine.resume(c1); coroutine.resume(c2)
+  igual("concorrente: as duas confirmam", r[1] == G and r[2] == G, true)
+  igual("concorrente: crédito uma vez", m.banco.granulados, 400)
+  igual("concorrente: um aviso", m.avisos, 1)
+end
+
+-- Ritmo do jogo (balanceamento): a mesma simulação do relatório, mais curta -----------
+-- Se um número da economia mudar e o ritmo sair destas faixas, o teste avisa.
+local Simulador = req("Simulador")
+local function media(perfilBase, horas, marco)
+  local perfil = table.clone(perfilBase)
+  perfil.horas = horas
+  local soma, n = 0, 0
+  for _, semente in { 11, 23, 37 } do
+    local r = Simulador.simular(perfil, semente)
+    local t = if marco == "Renascer 1" then r.renasceuEm[1] else r.marcos[marco]
+    if t then soma += t; n += 1 end
+  end
+  return if n == 3 then soma / n / 60 else nil -- minutos (nil se não aconteceu em todos)
+end
+local function entre(nome, valor, minimo, maximo)
+  igual(nome .. " (" .. tostring(valor and math.floor(valor + 0.5)) .. " min)", valor ~= nil and valor >= minimo and valor <= maximo, true)
+end
+local casual, dedicado = Simulador.PERFIS.casual, Simulador.PERFIS.dedicado
+entre("ritmo: criança enche a vitrine nos primeiros minutos", media(casual, 1.5, "vitrine cheia (8)"), 0, 6)
+entre("ritmo: criança vê o 1º Raro na primeira sessão", media(casual, 1.5, "1º Raro"), 0, 15)
+entre("ritmo: criança vê o 1º Épico em até meia hora", media(casual, 1.5, "1º Épico"), 5, 30)
+entre("ritmo: criança renasce na 1ª hora e pouco", media(casual, 1.5, "Renascer 1"), 35, 85)
+entre("ritmo: dedicado chega à vitrine máxima perto de 1 h", media(dedicado, 1.5, "vitrine nível 5"), 40, 90)
+entre("ritmo: dedicado renasce depois de 30 min", media(dedicado, 1.5, "Renascer 1"), 30, 75)
+entre("ritmo: 1º Lendário do dedicado não é instantâneo", media(dedicado, 1.5, "1º Lendário"), 15, 70)
 
 -- Trava de sessão do DataStore -------------------------------------------------
 local Sessao = req("Sessao")
@@ -210,5 +493,248 @@ igual("sorte aumenta épicos", prSorte.epico > pr.epico, true)
 igual("sorte diminui comuns", prSorte.comum < pr.comum, true)
 igual("sorteio com aleatório 0 dá o primeiro", (Est.sortear(function() return 0 end, false)), "balaDeCoco")
 igual("sorteio com aleatório ~1 não quebra", Catalogo.docinho((Est.sortear(function() return 0.9999999 end, false))) ~= nil, true)
+
+-- Resgate ---------------------------------------------------------------------
+local Resgate = req("Resgate")
+local function contexto(mudar)
+  local c = {
+    agora = 10000, mesmoJogador = false, escudoAte = 0, docinhosNaVitrine = 5,
+    ultimoResgateSofrido = nil, ultimoResgateFeito = nil, carregando = false,
+    espacoNaVitrine = true, temVitrine = true, distancia = 4, slotValido = true,
+  }
+  for k, v in mudar or {} do c[k] = v end
+  return c
+end
+igual("resgate permitido no caso normal", (Resgate.pode(contexto())), true)
+-- Reserva do resgate: o Docinho nunca some nem duplica ------------------------------
+local DONO, LADRAO = 111, 222
+local function vitrineDono()
+  return {
+    { id = "balaDeCoco", variante = "normal" },
+    { id = "brigadeiro", variante = "dourado" },
+    { id = "pacoca", variante = "normal" },
+  }
+end
+-- Quantas cópias de um Docinho existem nas duas vitrines (tem que ser sempre 1)
+local function copias(a, b, id, variante)
+  local n = 0
+  for _, v in { a, b } do
+    for _, item in v do
+      if item.id == id and item.variante == variante then n += 1 end
+    end
+  end
+  return n
+end
+do
+  local d, l = vitrineDono(), {}
+  igual("reserva marca", Resgate.reservar(d, 2, "brigadeiro", "dourado", LADRAO), true)
+  igual("reserva: Docinho continua na vitrine do dono", #d, 3)
+  igual("reserva: fora da contagem da vitrine", Resgate.naVitrine(d), 2)
+  igual("não reserva de novo o mesmo", Resgate.reservar(d, 2, "brigadeiro", "dourado", 333), false)
+  igual("não reserva com id trocado", Resgate.reservar(d, 1, "quindim", "normal", 333), false)
+  igual("não reserva slot vazio", Resgate.reservar(d, 9, "quindim", "normal", 333), false)
+  local eRenda = Economia.padrao()
+  eRenda.vitrine = d
+  igual("reservado não rende", Economia.rendaPorSegundo(eRenda, 0), 1 + 8)
+  -- entrega normal
+  local movido, motivo = Resgate.concluir(d, l, 8, LADRAO)
+  igual("entrega move", movido and movido.id, "brigadeiro")
+  igual("entrega sem motivo", motivo, nil)
+  igual("entrega: sai do dono", #d, 2)
+  igual("entrega: entra em quem levou", #l, 1)
+  igual("entrega: sem marca na vitrine nova", l[1].levadoPor, nil)
+  igual("entrega: uma cópia só", copias(d, l, "brigadeiro", "dourado"), 1)
+end
+do
+  -- Quem levava caiu / foi alcançado / se teletransportou: a marca sai e o Docinho volta
+  local d, l = vitrineDono(), {}
+  Resgate.reservar(d, 2, "brigadeiro", "dourado", LADRAO)
+  igual("cancelar devolve", Resgate.cancelar(d, LADRAO), true)
+  igual("cancelar: volta a contar", Resgate.naVitrine(d), 3)
+  igual("cancelar: uma cópia", copias(d, l, "brigadeiro", "dourado"), 1)
+  igual("cancelar de novo não faz nada", Resgate.cancelar(d, LADRAO), false)
+  igual("depois de cancelar não há o que entregar", (Resgate.concluir(d, l, 8, LADRAO)), nil)
+end
+do
+  -- O dono sai enquanto o Docinho está sendo levado: o save do dono leva o Docinho normal,
+  -- e a carga de quem levava é esquecida (não há nada a devolver depois)
+  local d, l = vitrineDono(), {}
+  Resgate.reservar(d, 2, "brigadeiro", "dourado", LADRAO)
+  igual("dono saiu: marcas limpas", Resgate.limparReservas(d), 1)
+  local salvoDoDono = Gravacao.copiar(d)
+  igual("dono saiu: o save tem o Docinho", copias(salvoDoDono, {}, "brigadeiro", "dourado"), 1)
+  igual("dono saiu: sem marca no save", salvoDoDono[2].levadoPor, nil)
+  igual("dono saiu: quem levava não recebe nada", (Resgate.concluir(d, l, 8, LADRAO)), nil)
+  igual("dono saiu: uma cópia", copias(d, l, "brigadeiro", "dourado"), 1)
+end
+do
+  -- O dono vende outros Docinhos no meio da corrida: as posições andam e a entrega acha o certo
+  local d, l = vitrineDono(), {}
+  Resgate.reservar(d, 2, "brigadeiro", "dourado", LADRAO)
+  table.remove(d, 1)
+  local movido = Resgate.concluir(d, l, 8, LADRAO)
+  igual("posições andaram: entrega o reservado", movido and movido.variante, "dourado")
+  igual("posições andaram: a paçoca fica", d[1] and d[1].id, "pacoca")
+end
+do
+  -- A vaga continua ocupada durante a corrida: o dono não consegue encher por cima
+  local d = vitrineDono()
+  local cap = 3
+  Resgate.reservar(d, 2, "brigadeiro", "dourado", LADRAO)
+  igual("vaga reservada conta como ocupada", #d >= cap, true)
+  Resgate.cancelar(d, LADRAO)
+  igual("ao voltar, não passa da capacidade", #d, cap)
+end
+do
+  -- Quem levou chega com a vitrine cheia: nada muda, e depois a reserva é desfeita
+  local d, l = vitrineDono(), { { id = "balaDeCoco", variante = "normal" } }
+  Resgate.reservar(d, 2, "brigadeiro", "dourado", LADRAO)
+  local movido, motivo = Resgate.concluir(d, l, 1, LADRAO)
+  igual("vitrine cheia: não move", movido, nil)
+  igual("vitrine cheia: motivo", motivo, "cheia")
+  igual("vitrine cheia: reserva continua até cancelar", Resgate.naVitrine(d), 2)
+  Resgate.cancelar(d, LADRAO)
+  igual("vitrine cheia: Docinho de volta ao dono", copias(d, l, "brigadeiro", "dourado"), 1)
+end
+do
+  -- Servidor caiu no meio: o save do dono ficou com a marca e o de quem levava com a carga.
+  -- Ao carregar, a marca é limpa e a carga de resgate é esquecida: uma cópia, com o dono.
+  local d = vitrineDono()
+  Resgate.reservar(d, 2, "brigadeiro", "dourado", LADRAO)
+  local salvoDono = Gravacao.copiar(d)
+  local salvoLadrao = { vitrine = {}, carregando = { id = "brigadeiro", variante = "dourado", preco = 0, origem = DONO } }
+  Resgate.limparReservas(salvoDono) -- Vitrine: quandoCarregar
+  if salvoLadrao.carregando.origem then salvoLadrao.carregando = nil end -- Esteira: quandoCarregar
+  igual("queda: Docinho com o dono", copias(salvoDono, salvoLadrao.vitrine, "brigadeiro", "dourado"), 1)
+  igual("queda: sem marca", Resgate.naVitrine(salvoDono), 3)
+  igual("queda: carga esquecida", salvoLadrao.carregando, nil)
+end
+do
+  -- Os dois saem (ou o servidor desliga): cada antesDeSair roda uma vez, em qualquer ordem
+  for _, ordem in { { "dono", "ladrao" }, { "ladrao", "dono" } } do
+    local d = vitrineDono()
+    local cargaLadrao = { origem = DONO }
+    Resgate.reservar(d, 2, "brigadeiro", "dourado", LADRAO)
+    for _, quem in ordem do
+      if quem == "dono" then
+        if Resgate.limparReservas(d) > 0 then cargaLadrao = nil end
+      elseif cargaLadrao then
+        Resgate.cancelar(d, LADRAO); cargaLadrao = nil
+      end
+    end
+    igual("os dois saem (" .. ordem[1] .. " primeiro): uma cópia com o dono", copias(d, {}, "brigadeiro", "dourado"), 1)
+    igual("os dois saem (" .. ordem[1] .. " primeiro): sem marca", Resgate.naVitrine(d), 3)
+  end
+end
+-- Entrega de Docinho resgatado: teleporte é recusado, andar de verdade passa
+igual("andar na velocidade passa", Resgate.rapidoDemais(110, 10, 11), false)
+igual("andar com folga de rede passa", Resgate.rapidoDemais(11 * 10 * Resgate.FolgaVelocidade + Resgate.MargemStuds, 10, 11), false)
+igual("teleporte é recusado", Resgate.rapidoDemais(150, 1, 11), true)
+igual("pertinho logo depois passa (margem)", Resgate.rapidoDemais(Resgate.MargemStuds, 0, 11), false)
+igual("tempo negativo não ajuda", Resgate.rapidoDemais(50, -5, 11), true)
+local casos = {
+  { "própria vitrine", { mesmoJogador = true } },
+  { "sem vitrine", { temVitrine = false } },
+  { "já carregando", { carregando = true } },
+  { "pedestal vazio", { slotValido = false } },
+  { "escudo ligado", { escudoAte = 10001 } },
+  { "vitrine de iniciante", { docinhosNaVitrine = Resgate.MinimoNaVitrine - 1 } },
+  { "vítima imune", { ultimoResgateSofrido = 10000 - Resgate.ImunidadeVitima + 1 } },
+  { "recarga de quem resgata", { ultimoResgateFeito = 10000 - Resgate.RecargaQuemResgata + 1 } },
+  { "longe demais", { distancia = Resgate.Distancia + 0.1 } },
+  { "vitrine cheia", { espacoNaVitrine = false } },
+}
+for _, caso in casos do
+  local ok, motivo = Resgate.pode(contexto(caso[2]))
+  igual("resgate bloqueado: " .. caso[1], ok, false)
+  igual("motivo explicado: " .. caso[1], type(motivo) == "string" and #motivo > 0, true)
+end
+igual("escudo acabou: pode", (Resgate.pode(contexto({ escudoAte = 10000 }))), true)
+igual("imunidade acabou: pode", (Resgate.pode(contexto({ ultimoResgateSofrido = 10000 - Resgate.ImunidadeVitima }))), true)
+igual("recarga acabou: pode", (Resgate.pode(contexto({ ultimoResgateFeito = 10000 - Resgate.RecargaQuemResgata }))), true)
+igual("vitrine com o mínimo: pode", (Resgate.pode(contexto({ docinhosNaVitrine = Resgate.MinimoNaVitrine }))), true)
+igual("na distância limite: pode", (Resgate.pode(contexto({ distancia = Resgate.Distancia }))), true)
+local _, msgRecarga = Resgate.pode(contexto({ ultimoResgateFeito = 10000 - 10 }))
+igual("recarga diz quanto falta", msgRecarga, "Espere " .. (Resgate.RecargaQuemResgata - 10) .. " s para resgatar de novo")
+igual("prompt de resgate alcança o pedestal", Resgate.Distancia - 2 > 0, true)
+
+-- Chuva de Doces --------------------------------------------------------------
+local ChuvaD = req("Chuva")
+igual("chuva não cai na fábrica", ChuvaD.pontoLivre(Mapa.Fabrica.centro.X, Mapa.Fabrica.centro.Z), false)
+igual("chuva não cai na esteira", ChuvaD.pontoLivre(0, 0), false)
+for i, lote in Mapa.Lotes do
+  igual("chuva não cai na vitrine " .. i, ChuvaD.pontoLivre(lote.centro.X, lote.centro.Z), false)
+end
+igual("chuva não cai fora da área", ChuvaD.pontoLivre(ChuvaD.Area + 1, 0), false)
+igual("chuva cai no campo aberto", ChuvaD.pontoLivre(-100, -100), true)
+do
+  local semente = 777
+  local function rng()
+    semente = (semente * 1103515245 + 12345) % 2147483648
+    return semente / 2147483648
+  end
+  local achados = 0
+  for _ = 1, 500 do
+    local p = ChuvaD.sortearPonto(rng)
+    if p then
+      achados += 1
+      igual("ponto sorteado é livre", ChuvaD.pontoLivre(p.X, p.Z), true)
+    end
+  end
+  igual("quase sempre acha ponto livre", achados >= 495, true)
+end
+igual("começa lá em cima", ChuvaD.alturaNoAr(50, 50), ChuvaD.AlturaQueda)
+igual("chega no chão", ChuvaD.alturaNoAr(50, 50 + ChuvaD.Queda), 0)
+igual("não fura o chão", ChuvaD.alturaNoAr(50, 50 + ChuvaD.Queda * 5), 0)
+igual("cai cada vez mais rápido", ChuvaD.AlturaQueda - ChuvaD.alturaNoAr(0, ChuvaD.Queda / 2) < ChuvaD.alturaNoAr(0, ChuvaD.Queda / 2), true)
+igual("no ar não dá para pegar", ChuvaD.pousou(0, ChuvaD.Queda - 0.01), false)
+igual("pousou dá para pegar", ChuvaD.pousou(0, ChuvaD.Queda), true)
+
+-- Correções da fase 4 -------------------------------------------------------------
+igual("venda normal = metade do preço", Est.valorVenda("pacoca", "normal"), 200)
+igual("venda dourada vale o dobro", Est.valorVenda("pacoca", "dourado"), 400)
+igual("venda arco-íris vale 5x", Est.valorVenda("pacoca", "arcoiris"), 1000)
+do
+  local semente = 4242
+  local function rng()
+    semente = (semente * 1103515245 + 12345) % 2147483648
+    return semente / 2147483648
+  end
+  local secretosEsteira, secretosChuva = 0, 0
+  for _ = 1, 100000 do
+    if Est.sortear(rng, true) == "coxinha" then secretosEsteira += 1 end
+    if Est.sortear(rng, true, ChuvaD.PesoSecreto) == "coxinha" then secretosChuva += 1 end
+  end
+  igual("Secreto nunca sai na esteira", secretosEsteira, 0)
+  igual("Secreto sai na chuva (raro)", secretosChuva > 30 and secretosChuva < 300, true)
+end
+local eAlbum = Economia.padrao()
+igual("álbum vazio não está completo", Economia.albumCompleto(eAlbum), false)
+for _, d in Catalogo.Lista do eAlbum.album[d.id] = { qtd = 1, desde = 0, dourado = false, arcoiris = false } end
+igual("álbum com todos está completo", Economia.albumCompleto(eAlbum), true)
+eAlbum.album.coxinha = nil
+igual("sem o Secreto não está completo", Economia.albumCompleto(eAlbum), false)
+igual("padrão tem prêmios vazios", next(Economia.padrao().premios), nil)
+
+-- Renascer --------------------------------------------------------------------
+igual("primeiro renascer custa 2,5 mi", Economia.custoRenascer(0), 2500000)
+igual("segundo custa 10 mi", Economia.custoRenascer(1), 10000000)
+igual("sem renascer: x1", Economia.multiplicadorRenascer(0), 1)
+igual("2 renascimentos: x1,5", Economia.multiplicadorRenascer(2), 1.5)
+local eR = Economia.padrao()
+table.insert(eR.vitrine, { id = "brigadeiro", variante = "normal" })
+eR.renascimentos = 2
+igual("renda com renascer", Economia.rendaPorSegundo(eR, 0), 450)
+eR.passes.vip = true
+igual("renascer soma com VIP", Economia.rendaPorSegundo(eR, 0), 900)
+igual("padrão começa sem renascer", Economia.padrao().renascimentos, 0)
+local eB = Economia.padrao()
+eB.vitrine = { { id = "brigadeiro", variante = "normal" } }
+eB.boosts.moedas2x = 2000
+igual("boost conta na renda de agora", Economia.rendaPorSegundo(eB, 1000), 600)
+igual("boost não conta na renda do ranking", Economia.rendaPermanente(eB), 300)
+eB.passes.vip = true
+eB.renascimentos = 2
+igual("ranking conta VIP e renascer", Economia.rendaPermanente(eB), 300 * 1.5 * 2)
 
 print(string.format("%d testes, %d falhas", total, falhas))

@@ -1,0 +1,155 @@
+-- Resgate: levar um Docinho da vitrine de outro jogador (regras em Shared/Dados/Resgate.luau).
+-- Quem resgata carrega o Docinho até a própria vitrine; se o dono encostar nele no caminho,
+-- o Docinho volta. Se quem resgata cair ou sair do jogo, o Docinho também volta para o dono.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage.Shared
+local Catalogo = require(Shared.Dados.Catalogo)
+local Economia = require(Shared.Dados.Economia)
+local ResgateDados = require(Shared.Dados.Resgate)
+local Remotos = require(Shared.Remotos)
+local Dados = require(script.Parent.Dados)
+local Acoes = require(script.Parent.Acoes)
+local Lotes = require(script.Parent.Lotes)
+local Esteira = require(script.Parent.Esteira)
+local Conquistas = require(script.Parent.Conquistas)
+
+local Resgate = {}
+
+local ultimoResgateFeito: { [Player]: number } = {}
+local ultimoResgateSofrido: { [Player]: number } = {}
+
+local function raizDe(player: Player): BasePart?
+	local personagem = player.Character
+	local humanoide = personagem and personagem:FindFirstChildOfClass("Humanoid")
+	if not personagem or not humanoide or humanoide.Health <= 0 then
+		return nil
+	end
+	return personagem:FindFirstChild("HumanoidRootPart") :: BasePart?
+end
+
+local function resgatar(player: Player, indiceLote: any, slot: any): (boolean, string?)
+	if type(indiceLote) ~= "number" or type(slot) ~= "number" or slot % 1 ~= 0 then
+		return false, "Pedido inválido"
+	end
+	local pasta = workspace:FindFirstChild("Vitrines")
+	local lote = pasta and pasta:FindFirstChild("Vitrine" .. indiceLote)
+	if not lote or not lote:IsA("Model") then
+		return false, "Pedido inválido"
+	end
+	local dono = Players:GetPlayerByUserId(lote:GetAttribute("Dono") :: number)
+	local estadoLadrao = Dados.de(player)
+	local estadoDono = dono and Dados.de(dono)
+	local raiz = raizDe(player)
+	if not dono or not estadoLadrao or not estadoDono or not raiz then
+		return false, "Agora não dá para resgatar"
+	end
+	local item = estadoDono.vitrine[slot]
+	local pedestal = lote:FindFirstChild("Pedestais")
+	pedestal = pedestal and pedestal:FindFirstChild("Pedestal" .. slot)
+	local agora = os.time()
+	local ok, motivo = ResgateDados.pode({
+		agora = agora,
+		mesmoJogador = dono == player,
+		escudoAte = estadoDono.escudoAte,
+		docinhosNaVitrine = ResgateDados.naVitrine(estadoDono.vitrine),
+		ultimoResgateSofrido = ultimoResgateSofrido[dono],
+		ultimoResgateFeito = ultimoResgateFeito[player],
+		carregando = estadoLadrao.carregando ~= nil,
+		espacoNaVitrine = #estadoLadrao.vitrine < Economia.capacidadeVitrine(estadoLadrao),
+		temVitrine = Lotes.de(player) ~= nil,
+		distancia = if pedestal and pedestal:IsA("BasePart")
+			then (raiz.Position - pedestal.Position).Magnitude
+			else math.huge,
+		slotValido = item ~= nil and not item.levadoPor,
+	})
+	if not ok then
+		return false, motivo
+	end
+	-- Reserva na vitrine do dono (o Docinho só muda de vitrine na entrega)
+	local reservado = Dados.alterar(dono, function(estado)
+		return ResgateDados.reservar(estado.vitrine, slot, item.id, item.variante, player.UserId)
+	end)
+	if not reservado then
+		return false, "Esse Docinho não está mais aqui"
+	end
+	local d = item :: Economia.DocinhoNaVitrine
+	Dados.alterar(player, function(estado)
+		estado.carregando = { id = d.id, variante = d.variante, preco = 0, origem = dono.UserId }
+		return true
+	end)
+	ultimoResgateFeito[player] = agora
+	ultimoResgateSofrido[dono] = agora
+	Esteira.marcarSaida(player, raiz.Position)
+	Esteira.atualizarCarga(player)
+	Remotos.evento("Resgate"):FireClient(dono, { id = d.id })
+	local nome = (Catalogo.docinho(d.id) or { nome = "Docinho" }).nome
+	return true, "Corra! Leve o " .. nome .. " para a sua vitrine antes que o dono te alcance."
+end
+
+-- O dono encostou em quem está levando o Docinho dele: o Docinho volta
+local function verificarRecuperacoes()
+	for _, ladrao in Players:GetPlayers() do
+		local estado = Dados.de(ladrao)
+		local carga = estado and estado.carregando
+		if not carga or not carga.origem then
+			continue
+		end
+		local dono = Players:GetPlayerByUserId(carga.origem)
+		local raizLadrao = raizDe(ladrao)
+		local raizDono = dono and raizDe(dono)
+		if
+			raizLadrao
+			and raizDono
+			and (raizLadrao.Position - raizDono.Position).Magnitude
+				<= ResgateDados.DistanciaRecuperar
+		then
+			Esteira.devolver(ladrao, "O dono te alcançou!")
+			Conquistas.dar(dono :: Player, "guardiao")
+		end
+	end
+end
+
+function Resgate.iniciar()
+	Acoes.registrar("Resgatar", resgatar)
+
+	-- Antes do último save de quem sai (ou de todos, quando o servidor desliga):
+	--   * quem saiu levando um Docinho: a reserva na vitrine do dono é desfeita;
+	--   * o dono que saiu: as marcas saem da vitrine dele (o save leva o Docinho normal) e
+	--     quem estava levando perde a carga, porque o Docinho ficou com o dono.
+	Dados.antesDeSair(function(player, estado)
+		if estado.carregando and estado.carregando.origem then
+			Esteira.devolver(player, "")
+		end
+		if ResgateDados.limparReservas(estado.vitrine) > 0 then
+			for _, outro in Players:GetPlayers() do
+				local e = Dados.de(outro)
+				if
+					outro ~= player
+					and e
+					and e.carregando
+					and e.carregando.origem == player.UserId
+				then
+					Esteira.esquecerCarga(outro, "O dono saiu do jogo e o Docinho ficou com ele.")
+				end
+			end
+		end
+	end)
+	Players.PlayerRemoving:Connect(function(player)
+		ultimoResgateFeito[player] = nil
+		ultimoResgateSofrido[player] = nil
+	end)
+
+	task.spawn(function()
+		while true do
+			task.wait(0.2)
+			local ok, erro = pcall(verificarRecuperacoes)
+			if not ok then
+				warn("[Resgate] " .. tostring(erro))
+			end
+		end
+	end)
+end
+
+return Resgate

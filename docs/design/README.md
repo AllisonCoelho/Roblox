@@ -2,7 +2,10 @@
 
 Jogo de coleção de **personagens de doces brasileiros**. Loop simples para crianças
 (pegar, levar, ver as moedas subindo) com profundidade para os mais velhos
-(raridades, variantes, álbum, eventos semanais).
+(raridades, variantes, álbum, eventos, Renascer e Ranking).
+
+**Para lançar:** veja o [checklist do dono](../lancamento/README.md) (IDs de passe, produtos e
+emblemas, ícone, miniaturas, descrição e questionário).
 
 ## Loop principal
 
@@ -10,8 +13,9 @@ Jogo de coleção de **personagens de doces brasileiros**. Loop simples para cri
 2. **Carregue até a sua vitrine** (você anda mais devagar carregando).
 3. **A vitrine gera moedas por segundo**, até offline (2 h, ou mais com a melhoria Caixa Maior).
 4. **Melhore a vitrine** e compre Docinhos mais raros.
-5. *(Fase 3)* **Resgate:** com o escudo desligado, outro jogador pode levar um Docinho;
+5. **Resgate:** com o escudo desligado, outro jogador pode levar um Docinho;
    tocando nele no caminho, o Docinho volta.
+6. **Renascer:** com moedas suficientes, recomeça as moedas e ganha renda extra para sempre.
 
 ## Telas
 
@@ -25,21 +29,25 @@ Jogo de coleção de **personagens de doces brasileiros**. Loop simples para cri
 | HUD no PC | [05](05-hud-pc.png) | `src/client/UI/Telas/HUD.luau` |
 | HUD no celular | [06](06-hud-celular.png) | `src/client/UI/Telas/HUD.luau` (layout compacto) |
 | Álbum (Docinhopédia) | [07](07-album.png) | `src/client/UI/Telas/Album.luau` |
-| Loja | [08](08-loja.png) | `src/client/UI/Telas/Loja.luau` |
+| Loja | [08](08-loja.png) · [granulados](11-loja-granulados.png) | `src/client/UI/Telas/Loja.luau` |
 | Popups | [09](09-popups.png) | `src/client/UI/Popups/*` |
 
 Também existem os painéis **Meus Docinhos** (vitrine, caixa e venda), **Missões**,
-**Presentes**, **Códigos** e **Ajustes**.
+**Presentes**, **Códigos**, **Ajustes** (tamanho da tela, efeitos e música), **Renascer** e **Ranking**.
 
-## Economia (valores iniciais, para balancear)
+## Economia (ajustada pela [simulação](balanceamento.md))
 
-- **Moedas:** vêm da vitrine. **Granulados:** moeda rara (missões, presentes, códigos).
-- **Vitrine:** 8 espaços + 4 por nível (5 níveis).
+- **Moedas:** vêm da vitrine. **Granulados:** moeda rara (missões, presentes, códigos, álbum,
+  Renascer e pacotes com Robux).
+- **Vitrine:** 8 espaços + 4 por nível (5 níveis: 5 mil, 25 mil, 150 mil, 750 mil, 4 mi).
 - **Escudo:** 60 s + 15 s por nível; depois recarrega 30 s.
 - **Variantes:** Dourado (x2 de renda, 1 em 20) e Arco-íris (x5, 1 em 200).
-- **Passe Confeiteiro VIP:** 2x moedas. O `gamePassId` está `0` em
-  `src/shared/Dados/Loja.luau` até o passe ser criado no Roblox.
-- **Chuva de Doces:** todo sábado às 15h (Brasília), por 10 minutos.
+- **Passe Confeiteiro VIP:** 2x moedas, coroa VIP no personagem e +10 granulados no presente diário.
+- **Pacotes de granulados:** 120, 400, 1.100 e 3.000 (Developer Products).
+  IDs de passe, produtos e emblemas ficam `0` até serem criados no Roblox (ver o checklist).
+- **Renascer:** 2,5 mi de moedas (x4 a cada vez); +25% de renda para sempre e granulados.
+  Mantém Docinhos, álbum e o tamanho da vitrine.
+- **Chuva de Doces:** todo sábado às 15h (Brasília), por 10 minutos. **Chuvisco:** 1 minuto a cada 20.
 
 ## Como testar no Studio
 
@@ -52,7 +60,7 @@ Com `ModoTeste = true` em `src/shared/Config.luau` (vale **só no Studio**):
 |---|---|
 | F1 | Ganhar um Docinho aleatório (popup **Novo Docinho**) |
 | F2 | Alerta de **Resgate** |
-| F3 | Faixa da **Chuva de Doces** |
+| F3 | Liga a **Chuva de Doces** de verdade por 60 s |
 | F4 | **Tutorial** |
 | F5 | Aviso "saiu um raro da fábrica" |
 | F7 | Soltar um **Pudim Lendário** na esteira (comprar, carregar e entregar) |
@@ -65,7 +73,9 @@ Com `ModoTeste = true` em `src/shared/Config.luau` (vale **só no Studio**):
 ## Testes automáticos
 
 `python3 testes/rodar.py` testa a lógica compartilhada (formatação, agenda do evento,
-missões, economia, loja) e a trava de sessão do DataStore, fora do Roblox. Precisa do
+missões, economia, loja, compras, conquistas, mapa, esteira, resgate, chuva) e a trava de sessão
+do DataStore, fora do Roblox. `python3 testes/rodar.py simulacao` roda a
+[simulação de balanceamento](balanceamento.md). Precisa do
 executável `luau` no PATH. O workflow `.github/workflows/testes.yml` roda esses testes,
 o StyLua, a análise de tipos (luau-lsp) e o build em cada PR.
 
@@ -86,7 +96,57 @@ O que só dá para ver dentro do jogo está no [checklist de playtest](playtest.
 - **Praça:** Loja, Docinhopédia e Códigos abrem a tela com E.
 - **Servidor com 6 vagas:** em *Game Settings → Places → Max Players*, use **6** (uma vitrine por jogador).
 
-## Próximas fases
+## Eventos e resgate (fase 3)
+
+- **Chuva de Doces de verdade:** no sábado às 15h (ou com F3 no Studio), Docinhos caem em pontos
+  livres do mapa a cada 1,2 s (com sorte dobrada para raros). Depois de pousar, quem encosta
+  primeiro ganha de graça na vitrine (com a vitrine cheia, é vendido na hora por moedas).
+  Ficam 20 s no chão. O Docinho **Secreto** só cai na chuva de sábado.
+  O servidor marca `workspace.ChuvaAte`; a faixa e a contagem do HUD seguem esse atributo.
+- **Resgate entre jogadores** (regras em `src/shared/Dados/Resgate.luau`): segure E por 1,5 s num
+  Docinho da vitrine de outro jogador para levá-lo. Proteções para o público infantil:
+  - escudo ligado protege a vitrine (e o portão bloqueia a entrada);
+  - vitrines com menos de 3 Docinhos são de iniciante e não podem ser resgatadas;
+  - quem foi resgatado fica 60 s imune; quem resgatou espera 30 s para resgatar de novo;
+  - o dono que **encostar** em quem está levando recupera o Docinho na hora;
+  - se quem resgatou cair ou sair do jogo, o Docinho volta para o dono.
+  - na entrega o servidor confere se a viagem desde o resgate foi possível andando; quem se
+    teletransporta perde o Docinho, que volta para o dono.
+  **O Docinho nunca some:** durante a corrida ele continua na vitrine do dono, só reservado
+  (`levadoPor`; não rende e o pedestal fica vazio), e só muda de vitrine na entrega, de uma vez.
+  Se o resgate não terminar (dono alcança, quem leva cai ou sai, o dono sai do jogo, o servidor
+  desliga ou cai), a reserva é desfeita. Não há moedas de compensação
+  (evita que dois amigos fabriquem moedas resgatando um do outro).
+- **Portão do escudo:** com o escudo ligado o portão bloqueia todo mundo menos o dono
+  (grupos de colisão). Quem estiver dentro quando o escudo ligar é levado para fora.
+  As paredes laterais subiram para 10 studs para não dar para pular por cima.
+- **Caixa e escudo** têm esperas separadas: pisar num e logo no outro funciona.
+
+## Preparação para o lançamento (fase 4)
+
+O código está pronto para o **playtest**; o lançamento público vem depois dele
+(seções 6 e 7 do [checklist de playtest](playtest.md)).
+
+
+- **Renascer** (painel com confirmação em dois toques) e **Ranking** (placar do servidor e recorde
+  mundial de renda/s num OrderedDataStore; `leaderstats` com Renda/s, Álbum e Renascimentos).
+- **Sons** em todos os botões, avisos, Docinho novo, chuva e resgate; efeitos e música podem ser
+  desligados em Ajustes (fica salvo).
+- **Trilha-guia** no chão: leva à esteira quando a vitrine está vazia, à vitrine quando está
+  carregando e ao Docinho mais perto durante a chuva.
+- **Prêmio do álbum completo** (500 granulados), **venda segura** (o servidor confere qual Docinho
+  está sendo vendido) e o **Secreto** obtenível na chuva de sábado.
+- **Granulados com Robux** e **coroa VIP**. O ProcessReceipt só confirma depois de uma gravação
+  que leva o crédito; as gravações de cada jogador vão em fila e copiam o estado na hora de
+  gravar (`Servicos/Gravacao.luau`), e cada compra fica marcada para sempre
+  (`Servicos/Compras.luau`).
+- **Conquistas** com emblemas do Roblox (`src/shared/Dados/Conquistas.luau`).
+- **Chuvisco de Doces** a cada 20 minutos e **balanceamento** pela simulação. O ritmo (vitrine
+  cheia, 1º Raro/Épico/Lendário, vitrine máxima, 1º Renascer) é conferido em faixas pelos
+  testes que o CI já roda (`testes/simulador.luau` + `testes/logica.luau`).
+
+## Próximos passos
 
 1. **Modelos 3D:** ver [modelos-3d.md](modelos-3d.md).
-2. **Eventos e resgate:** Chuva de Doces de verdade, o resgate entre jogadores e o portão do escudo bloqueando a passagem.
+2. **Lançamento:** [checklist do dono](../lancamento/README.md).
+3. **Depois de lançar:** ajustar números com os dados reais do painel de Análise.

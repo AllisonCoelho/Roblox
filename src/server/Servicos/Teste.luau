@@ -10,6 +10,7 @@ local Remotos = require(Shared.Remotos)
 local Acoes = require(script.Parent.Acoes)
 local Vitrine = require(script.Parent.Vitrine)
 local Esteira = require(script.Parent.Esteira)
+local Chuva = require(script.Parent.Chuva)
 
 local Teste = {}
 
@@ -18,7 +19,7 @@ function Teste.iniciar()
 		return
 	end
 	warn(
-		"[Teste] ModoTeste ligado: dados não são salvos e as teclas F1-F7 mostram os popups e testam a esteira"
+		"[Teste] ModoTeste ligado: dados não são salvos e as teclas F1-F7 mostram os popups e testam a esteira e a chuva"
 	)
 
 	-- Dá um Docinho sorteado (testa o popup Novo Docinho com o fluxo real do servidor)
@@ -40,6 +41,12 @@ function Teste.iniciar()
 	Acoes.registrar("TesteEsteiraRaro", function()
 		Esteira.soltar("pudim", "normal")
 		return true, "Um Pudim Astronauta saiu da fábrica!"
+	end)
+
+	-- Liga a Chuva de Doces por 60 segundos (fora da agenda de sábado)
+	Acoes.registrar("TesteChuva", function()
+		Chuva.forcar(60)
+		return true
 	end)
 
 	Acoes.registrar("TesteAvisoRaro", function()

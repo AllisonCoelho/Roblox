@@ -17,9 +17,18 @@ local Loja = {}
 
 local ABAS = {
 	{ id = "melhorias", texto = "Melhorias", icone = "⬆️", cor = "laranja" },
-	{ id = "boosts", texto = "Boosts", icone = "✨", cor = "roxo" },
+	{ id = "boosts", texto = "Boosts", icone = "⚡", cor = "roxo" },
+	{ id = "granulados", texto = "Granulados", icone = "✨", cor = "rosa" },
 	{ id = "passes", texto = "Passes", icone = "⭐", cor = "ouro" },
 }
+
+-- Aba pedida por outro lugar (ex.: o "+" dos granulados no HUD) antes de abrir a Loja
+local abaPedida: string? = nil
+
+function Loja.irPara(aba: string)
+	abaPedida = aba
+	Navegacao.abrir("Loja")
+end
 
 function Loja.montar()
 	local painel = Navegacao.criarPainel("Loja", { titulo = "Loja", icone = "🛒", cor = "rosa" })
@@ -259,6 +268,22 @@ function Loja.montar()
 					pedir("ComprarBoost", b.id)
 				end)
 			end
+		elseif abaAtual == "granulados" then
+			for i, p in LojaDados.Pacotes do
+				local f = cartao(i, p.icone, "rosa", p.nome, p.descricao)
+				if p.etiqueta then
+					local corTag = if p.etiqueta == "POPULAR" then Cores.Vermelho else Cores.Ouro
+					local tag = C.etiqueta(p.etiqueta, corTag, 15, {
+						Position = UDim2.new(1, -14, 0, -12),
+						AnchorPoint = Vector2.new(1, 0),
+						ZIndex = 3,
+					})
+					tag.Parent = f
+				end
+				botaoCompra(f, "ouro", nil, p.precoRobux .. " Robux", function()
+					pedir("ComprarPacote", p.id)
+				end)
+			end
 		else
 			for i, p in LojaDados.Passes do
 				local f = cartao(i, p.icone, "roxo", p.nome, p.descricao)
@@ -280,6 +305,10 @@ function Loja.montar()
 	end)
 	Navegacao.aoTrocar(function(nome)
 		if nome == "Loja" then
+			if abaPedida then
+				abaAtual = abaPedida
+				abaPedida = nil
+			end
 			desenhar()
 		end
 	end)

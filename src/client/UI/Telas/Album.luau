@@ -4,12 +4,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local Tema = require(Shared.Tema)
 local Catalogo = require(Shared.Dados.Catalogo)
+local Economia = require(Shared.Dados.Economia)
 local Formato = require(Shared.Formato)
 local UI = script.Parent.Parent
 local C = require(UI.Componentes)
 local Estado = require(UI.Estado)
 local Navegacao = require(UI.Navegacao)
 local Visual = require(UI.Visual)
+local Avisos = require(UI.Popups.Avisos)
 
 local Cores = Tema.Cores
 local Album = {}
@@ -165,6 +167,22 @@ function Album.montar(aoAbrir: () -> ())
 		Position = UDim2.fromOffset(12, 0),
 		Parent = premio,
 	})
+	-- Botão de pegar o prêmio (só aparece com o álbum completo e o prêmio ainda não pego)
+	local premioBotao = C.botao({
+		cor = "verde",
+		icone = "✨",
+		texto = tostring(Economia.PremioAlbumGranulados),
+		tamanho = UDim2.fromOffset(130, 48),
+		tamanhoTexto = 22,
+		posicao = UDim2.new(1, -10, 0.5, -2),
+		ancora = Vector2.new(1, 0.5),
+		sombra = 4,
+		pai = premio,
+		aoClicar = function()
+			Avisos.resultado(Estado.pedir("ResgatarAlbum"))
+		end,
+	})
+	premioBotao.quadro.Visible = false
 
 	local abaAtual = "normal"
 	local selecionado = "brigadeiro"
@@ -340,13 +358,27 @@ function Album.montar(aoAbrir: () -> ())
 		local total = #Catalogo.Lista
 		progresso.definir(descobertos / total, descobertos .. " / " .. total)
 		local faltam = total - descobertos
-		premioTexto.Text = if faltam == 0
-			then "<b>Álbum completo!</b> Você é um verdadeiro confeiteiro."
-			else string.format(
-				"<b>Complete esta página</b>\nFaltam %d Docinho%s",
+		local completo = Economia.albumCompleto(estado)
+		local pego = estado.premios.album == true
+		premioBotao.quadro.Visible = completo and not pego
+		premioTexto.Size = if completo and not pego
+			then UDim2.new(1, -160, 1, 0)
+			else UDim2.new(1, -24, 1, 0)
+		if abaAtual ~= "normal" then
+			premioTexto.Text = if faltam == 0
+				then "<b>Coleção completa!</b> Que confeiteiro caprichoso."
+				else string.format("<b>Variantes</b>\nFaltam %d desta cor", faltam)
+		elseif completo then
+			premioTexto.Text = if pego
+				then "<b>Álbum completo!</b> Prêmio pego ✓"
+				else "<b>Álbum completo!</b>\nPegue seu prêmio:"
+		else
+			premioTexto.Text = string.format(
+				"<b>Complete o álbum</b>\nFaltam %d · prêmio: ✨ %d",
 				faltam,
-				if faltam == 1 then "" else "s"
+				Economia.PremioAlbumGranulados
 			)
+		end
 		desenharDetalhe()
 	end
 

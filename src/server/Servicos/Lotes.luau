@@ -1,6 +1,7 @@
 -- Vitrines no mundo (ver docs/design/04-vitrine.png): cada jogador recebe um lote livre,
 -- os Docinhos da vitrine aparecem nos pedestais e o caixa e o escudo funcionam pisando neles.
 local Players = game:GetService("Players")
+local PhysicsService = game:GetService("PhysicsService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage.Shared
@@ -9,6 +10,8 @@ local Catalogo = require(Shared.Dados.Catalogo)
 local Economia = require(Shared.Dados.Economia)
 local Modelos = require(Shared.Dados.Modelos)
 local Formato = require(Shared.Formato)
+local Mapa = require(Shared.Dados.Mapa)
+local ResgateDados = require(Shared.Dados.Resgate)
 local Remotos = require(Shared.Remotos)
 local Construtor = require(script.Parent.Parent.Mundo.Construtor)
 local Dados = require(script.Parent.Dados)
@@ -23,7 +26,56 @@ local ESPERA_TOQUE = 1.5 -- segundos entre dois toques no caixa/escudo
 local pasta: Folder
 local donos: { [Player]: Model } = {}
 local mostrado: { [Player]: string } = {} -- assinatura do que já está nos pedestais
-local ultimoToque: { [Player]: number } = {}
+-- Espera separada por tapete: pisar no caixa e logo no escudo funciona nos dois
+local ultimoToque: { [Player]: { [string]: number } } = {}
+local conexoesPersonagem: { [Player]: RBXScriptConnection } = {}
+
+-- Grupos de colisão: o portão de cada vitrine não colide com o dono dela
+local function grupoPortao(indice: number): string
+	return "PortaoVitrine" .. indice
+end
+local function grupoDono(indice: number): string
+	return "DonoVitrine" .. indice
+end
+
+local function registrarGrupos()
+	for i = 1, #Mapa.Lotes do
+		for _, nome in { grupoPortao(i), grupoDono(i) } do
+			if not PhysicsService:IsCollisionGroupRegistered(nome) then
+				PhysicsService:RegisterCollisionGroup(nome)
+			end
+		end
+		PhysicsService:CollisionGroupSetCollidable(grupoPortao(i), grupoDono(i), false)
+	end
+end
+
+local function grupoDoJogador(player: Player): string
+	local lote = donos[player]
+	local indice = lote and lote:GetAttribute("Indice")
+	return if type(indice) == "number" then grupoDono(indice) else "Default"
+end
+
+-- Coloca todas as peças do personagem no grupo do dono (inclui acessórios que chegam depois)
+local function aplicarGrupo(player: Player)
+	local personagem = player.Character
+	if not personagem then
+		return
+	end
+	local grupo = grupoDoJogador(player)
+	for _, p in personagem:GetDescendants() do
+		if p:IsA("BasePart") then
+			p.CollisionGroup = grupo
+		end
+	end
+	if conexoesPersonagem[player] then
+		conexoesPersonagem[player]:Disconnect()
+	end
+	conexoesPersonagem[player] = personagem.DescendantAdded:Connect(function(d)
+		if d:IsA("BasePart") then
+			d.CollisionGroup = grupoDoJogador(player)
+		end
+	end)
+end
 
 function Lotes.de(player: Player): Model?
 	return donos[player]
@@ -133,7 +185,10 @@ function Lotes.sincronizar(player: Player, estado: Economia.Estado)
 
 	local partes = { tostring(capacidade) }
 	for _, item in estado.vitrine do
-		table.insert(partes, item.id .. ":" .. item.variante)
+		table.insert(
+			partes,
+			item.id .. ":" .. item.variante .. (if item.levadoPor then "*" else "")
+		)
 	end
 	local assinatura = table.concat(partes, ",")
 	if mostrado[player] == assinatura then
@@ -152,7 +207,8 @@ function Lotes.sincronizar(player: Player, estado: Economia.Estado)
 		p.Transparency = if ativo then 0 else 1
 		p.CanCollide = ativo
 		local item = estado.vitrine[i]
-		if item and ativo then
+		-- Docinho sendo levado num resgate: o pedestal fica vazio até ele voltar
+		if item and ativo and not item.levadoPor then
 			local modelo = Modelos.criar(item.id)
 			modelo:ScaleTo(ESCALA_DOCINHO)
 			prepararModelo(modelo)
@@ -161,6 +217,19 @@ function Lotes.sincronizar(player: Player, estado: Economia.Estado)
 			posicionar(modelo, p, frente)
 			efeitoVariante(modelo, item.variante)
 			etiquetaDocinho(modelo, item.id, item.variante)
+			-- "Segure E" para resgatar (o cliente esconde na própria vitrine e com escudo ligado;
+			-- o servidor confere todas as regras em Servicos/Resgate.luau)
+			local alvo = modelo.PrimaryPart or modelo:FindFirstChildWhichIsA("BasePart")
+			if alvo then
+				local prompt = Instance.new("ProximityPrompt")
+				prompt.ActionText = "Resgatar"
+				prompt.ObjectText = (Catalogo.docinho(item.id) or { nome = "Docinho" }).nome
+				prompt.HoldDuration = ResgateDados.SegurarBotao
+				prompt.MaxActivationDistance = ResgateDados.Distancia - 2
+				prompt.RequiresLineOfSight = false
+				prompt:SetAttribute("Slot", i)
+				prompt.Parent = alvo
+			end
 		end
 	end
 end
@@ -174,8 +243,9 @@ local function limparLote(lote: Model)
 	local pedestais = lote:FindFirstChild("Pedestais")
 	if pedestais then
 		for _, p in pedestais:GetChildren() do
-			(p :: BasePart).Transparency = 1
-			(p :: BasePart).CanCollide = false
+			local pedestal = p :: BasePart
+			pedestal.Transparency = 1
+			pedestal.CanCollide = false
 		end
 	end
 	local titulo, sub = letreiro(lote)
@@ -186,7 +256,9 @@ local function limparLote(lote: Model)
 	local portao = lote:FindFirstChild("Portao") :: BasePart?
 	if portao then
 		portao.Transparency = 1
+		portao.CanCollide = false
 	end
+	lote:SetAttribute("EscudoAte", 0)
 end
 
 local function levarParaLote(player: Player, lote: Model)
@@ -209,6 +281,7 @@ local function atribuir(player: Player, estado: Economia.Estado)
 		if lote:IsA("Model") and lote:GetAttribute("Dono") == 0 then
 			lote:SetAttribute("Dono", player.UserId)
 			donos[player] = lote
+			aplicarGrupo(player)
 			Lotes.sincronizar(player, estado)
 			levarParaLote(player, lote)
 			return
@@ -235,16 +308,38 @@ local function aoPisar(lote: Model, nomeParte: string, acao: (Player) -> (boolea
 			return
 		end
 		local agora = os.clock()
-		if ultimoToque[player] and agora - ultimoToque[player] < ESPERA_TOQUE then
+		local toques = ultimoToque[player] or {}
+		ultimoToque[player] = toques
+		if toques[nomeParte] and agora - toques[nomeParte] < ESPERA_TOQUE then
 			return
 		end
-		ultimoToque[player] = agora
+		toques[nomeParte] = agora
 		local ok, msg = acao(player)
 		if msg then
 			Remotos.evento("Aviso")
 				:FireClient(player, { tipo = if ok then "sucesso" else "info", texto = msg })
 		end
 	end)
+end
+
+-- Com o escudo ligado, quem não é dono e está dentro da vitrine é levado para fora do portão
+-- (senão ficaria preso, e o escudo não protegeria nada)
+local function expulsarVisitantes(dono: Player, lote: Model)
+	local indice = lote:GetAttribute("Indice")
+	if type(indice) ~= "number" then
+		return
+	end
+	for _, outro in Players:GetPlayers() do
+		local personagem = outro.Character
+		local raiz = personagem and personagem:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if outro ~= dono and personagem and raiz and Mapa.dentroDoLote(indice, raiz.Position) then
+			personagem:PivotTo(lote:GetPivot() * CFrame.new(0, 3, -Mapa.LoteProfundidade / 2 - 6))
+			Remotos.evento("Aviso"):FireClient(outro, {
+				tipo = "info",
+				texto = "O escudo dessa vitrine ligou e você foi para fora.",
+			})
+		end
+	end
 end
 
 -- Caixa, escudo e portão: atualiza os textos e o brilho duas vezes por segundo
@@ -273,16 +368,29 @@ local function atualizarRotulos()
 		end
 		if portao then
 			portao.Transparency = if ligado then 0.2 else 1
+			-- Ligado, o portão bloqueia todo mundo menos o dono (grupos de colisão)
+			portao.CanCollide = ligado
+		end
+		-- O cliente usa para esconder o "Resgatar" das vitrines protegidas
+		lote:SetAttribute("EscudoAte", estado.escudoAte)
+		if ligado then
+			expulsarVisitantes(player, lote)
 		end
 	end
 end
 
 function Lotes.iniciar(vitrines: Folder)
 	pasta = vitrines
+	registrarGrupos()
 	for _, lote in pasta:GetChildren() do
 		if lote:IsA("Model") then
 			aoPisar(lote, "Caixa", Vitrine.coletar)
 			aoPisar(lote, "Escudo", Vitrine.ligarEscudo)
+			local indice = lote:GetAttribute("Indice")
+			local portao = lote:FindFirstChild("Portao") :: BasePart?
+			if portao and type(indice) == "number" then
+				portao.CollisionGroup = grupoPortao(indice)
+			end
 		end
 	end
 
@@ -302,6 +410,7 @@ function Lotes.iniciar(vitrines: Folder)
 	end)
 	local function aoEntrar(player: Player)
 		player.CharacterAdded:Connect(function()
+			aplicarGrupo(player)
 			local lote = donos[player]
 			if lote then
 				-- Renascer na própria vitrine (depois que o personagem termina de aparecer)
@@ -321,11 +430,18 @@ function Lotes.iniciar(vitrines: Folder)
 		donos[player] = nil
 		mostrado[player] = nil
 		ultimoToque[player] = nil
+		if conexoesPersonagem[player] then
+			conexoesPersonagem[player]:Disconnect()
+			conexoesPersonagem[player] = nil
+		end
 	end)
 
 	task.spawn(function()
 		while true do
-			atualizarRotulos()
+			local ok, erro = pcall(atualizarRotulos)
+			if not ok then
+				warn("[Lotes] " .. tostring(erro))
+			end
 			task.wait(0.5)
 		end
 	end)

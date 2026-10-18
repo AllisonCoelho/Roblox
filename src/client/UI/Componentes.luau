@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local Tema = require(ReplicatedStorage.Shared.Tema)
+local Sons = require(script.Parent.Sons)
 
 local Cores = Tema.Cores
 local C = {}
@@ -248,6 +249,9 @@ function C.botao(op: OpcoesBotao): Botao
 	end)
 	botao.MouseLeave:Connect(function()
 		cima:Play()
+	end)
+	botao.Activated:Connect(function()
+		Sons.tocar("clique")
 	end)
 	if op.aoClicar then
 		botao.Activated:Connect(op.aoClicar)

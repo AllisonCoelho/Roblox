@@ -7,13 +7,14 @@ local Catalogo = require(Shared.Dados.Catalogo)
 local Economia = require(Shared.Dados.Economia)
 local Remotos = require(Shared.Remotos)
 local Formato = require(Shared.Formato)
+local EsteiraDados = require(Shared.Dados.Esteira)
+local ResgateDados = require(Shared.Dados.Resgate)
 local Dados = require(script.Parent.Dados)
 local Acoes = require(script.Parent.Acoes)
 local Missoes = require(script.Parent.Missoes)
 
 local Vitrine = {}
 
-local FRACAO_VENDA = 0.5
 local INTERVALO_TELEPORTE = 3 -- segundos entre dois "ir para a vitrine"
 
 local ultimoTeleporte: { [Player]: number } = {}
@@ -33,6 +34,39 @@ function Vitrine.daJogador(player: Player): PVInstance?
 	return nil
 end
 
+-- Conta o Docinho no álbum. Devolve true se é novidade (Docinho ou variante nunca vistos).
+local function contarNoAlbum(estado: Economia.Estado, id: string, v: string): boolean
+	local novidade = false
+	local entrada = estado.album[id]
+	if not entrada then
+		entrada = { qtd = 0, desde = os.time(), dourado = false, arcoiris = false }
+		estado.album[id] = entrada
+		novidade = true
+	end
+	entrada.qtd += 1
+	if v == "dourado" and not entrada.dourado then
+		entrada.dourado = true
+		novidade = true
+	elseif v == "arcoiris" and not entrada.arcoiris then
+		entrada.arcoiris = true
+		novidade = true
+	end
+	return novidade
+end
+
+-- Para um Docinho que já entrou na vitrine por outro caminho (entrega de resgate):
+-- conta no álbum, mostra o popup se for novidade e manda o estado
+function Vitrine.registrarChegada(player: Player, id: string, variante: string)
+	local novidade = false
+	Dados.alterar(player, function(estado)
+		novidade = contarNoAlbum(estado, id, variante)
+		return true
+	end)
+	if novidade then
+		Remotos.evento("NovoDocinho"):FireClient(player, { id = id, variante = variante })
+	end
+end
+
 -- Coloca um Docinho na vitrine e no álbum. Usado pela esteira, presentes e eventos.
 -- Devolve false se a vitrine estiver cheia.
 function Vitrine.adicionarDocinho(player: Player, id: string, variante: string?): boolean
@@ -47,20 +81,7 @@ function Vitrine.adicionarDocinho(player: Player, id: string, variante: string?)
 			return false
 		end
 		table.insert(estado.vitrine, { id = id, variante = v })
-		local entrada = estado.album[id]
-		if not entrada then
-			entrada = { qtd = 0, desde = os.time(), dourado = false, arcoiris = false }
-			estado.album[id] = entrada
-			novidade = true
-		end
-		entrada.qtd += 1
-		if v == "dourado" and not entrada.dourado then
-			entrada.dourado = true
-			novidade = true
-		elseif v == "arcoiris" and not entrada.arcoiris then
-			entrada.arcoiris = true
-			novidade = true
-		end
+		novidade = contarNoAlbum(estado, id, v)
 		return true
 	end)
 	if ok and novidade then
@@ -128,6 +149,8 @@ end
 
 function Vitrine.iniciar()
 	Dados.quandoCarregar(function(player: Player, estado: Economia.Estado)
+		-- Marcas de resgate que ficaram de uma sessão que caiu: o Docinho volta ao pedestal
+		ResgateDados.limparReservas(estado.vitrine)
 		creditarOffline(player, estado)
 		Dados.enviar(player)
 	end)
@@ -150,8 +173,16 @@ function Vitrine.iniciar()
 
 	Acoes.registrar("Coletar", Vitrine.coletar)
 
-	Acoes.registrar("VenderDocinho", function(player, indice: any)
-		if type(indice) ~= "number" or indice % 1 ~= 0 then
+	-- O cliente manda a posição e qual Docinho ele viu ali: se a vitrine mudou nesse meio-tempo
+	-- (um resgate tirou um Docinho e as posições andaram), a venda é recusada em vez de
+	-- vender o Docinho errado.
+	Acoes.registrar("VenderDocinho", function(player, indice: any, id: any, variante: any)
+		if
+			type(indice) ~= "number"
+			or indice % 1 ~= 0
+			or type(id) ~= "string"
+			or type(variante) ~= "string"
+		then
 			return false, "Docinho inválido"
 		end
 		return Dados.alterar(player, function(estado)
@@ -160,9 +191,14 @@ function Vitrine.iniciar()
 			if not item or not def then
 				return false, "Docinho inválido"
 			end
+			if item.id ~= id or item.variante ~= variante then
+				return false, "Sua vitrine mudou. Confira e tente de novo"
+			end
+			if item.levadoPor then
+				return false, "Esse Docinho está sendo levado! Alcance quem está com ele"
+			end
 			table.remove(estado.vitrine, indice)
-			local valor = math.floor(def.preco * FRACAO_VENDA)
-			estado.moedas += valor
+			estado.moedas += EsteiraDados.valorVenda(item.id, item.variante)
 			return true, string.format("%s vendido!", def.nome)
 		end)
 	end)
@@ -198,6 +234,17 @@ function Vitrine.iniciar()
 	end)
 	Players.PlayerRemoving:Connect(function(player)
 		ultimoTeleporte[player] = nil
+	end)
+
+	-- Preferências do jogador (só chaves conhecidas e valores verdadeiro/falso)
+	Acoes.registrar("Configurar", function(player, chave: any, valor: any)
+		if (chave ~= "sons" and chave ~= "musica") or type(valor) ~= "boolean" then
+			return false, "Ajuste inválido"
+		end
+		return Dados.alterar(player, function(estado)
+			estado.config[chave] = valor
+			return true
+		end)
 	end)
 
 	Acoes.registrar("ConcluirTutorial", function(player)
