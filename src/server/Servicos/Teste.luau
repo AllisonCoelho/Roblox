@@ -9,6 +9,7 @@ local Catalogo = require(Shared.Dados.Catalogo)
 local Remotos = require(Shared.Remotos)
 local Acoes = require(script.Parent.Acoes)
 local Vitrine = require(script.Parent.Vitrine)
+local Esteira = require(script.Parent.Esteira)
 
 local Teste = {}
 
@@ -16,7 +17,9 @@ function Teste.iniciar()
 	if not (RunService:IsStudio() and Config.ModoTeste) then
 		return
 	end
-	warn("[Teste] ModoTeste ligado: dados não são salvos e as teclas F1-F5 mostram os popups")
+	warn(
+		"[Teste] ModoTeste ligado: dados não são salvos e as teclas F1-F7 mostram os popups e testam a esteira"
+	)
 
 	-- Dá um Docinho sorteado (testa o popup Novo Docinho com o fluxo real do servidor)
 	Acoes.registrar("TesteDocinho", function(player)
@@ -31,6 +34,12 @@ function Teste.iniciar()
 	Acoes.registrar("TesteResgate", function(player)
 		Remotos.evento("Resgate"):FireClient(player, { id = "brigadeiro" })
 		return true
+	end)
+
+	-- Solta um Docinho Lendário na esteira (testa a compra, carregar e entregar)
+	Acoes.registrar("TesteEsteiraRaro", function()
+		Esteira.soltar("pudim", "normal")
+		return true, "Um Pudim Astronauta saiu da fábrica!"
 	end)
 
 	Acoes.registrar("TesteAvisoRaro", function()

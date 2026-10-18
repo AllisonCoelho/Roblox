@@ -19,8 +19,9 @@ Jogo de coleção de **personagens de doces brasileiros**. Loop simples para cri
 |---|---|---|
 | Identidade (cores, fonte, componentes) | [01](01-identidade.png) | `src/shared/Tema.luau`, `src/client/UI/Componentes.luau` |
 | Docinhos e raridades | [02](02-docinhos.png) | `src/shared/Dados/Catalogo.luau` |
-| Mapa | [03](03-mapa.png) | *próxima fase (jogabilidade)* |
-| Vitrine no mundo | [04](04-vitrine.png) | *próxima fase (jogabilidade)* |
+| Mapa | [03](03-mapa.png) · [planta do código](10-planta.png) | `src/shared/Dados/Mapa.luau`, `src/server/Mundo/Construtor.luau` |
+| Vitrine no mundo | [04](04-vitrine.png) | `src/server/Servicos/Lotes.luau` |
+| Esteira e carregar | — | `src/shared/Dados/Esteira.luau`, `src/server/Servicos/Esteira.luau`, `src/client/Mundo/*` |
 | HUD no PC | [05](05-hud-pc.png) | `src/client/UI/Telas/HUD.luau` |
 | HUD no celular | [06](06-hud-celular.png) | `src/client/UI/Telas/HUD.luau` (layout compacto) |
 | Álbum (Docinhopédia) | [07](07-album.png) | `src/client/UI/Telas/Album.luau` |
@@ -44,7 +45,7 @@ Também existem os painéis **Meus Docinhos** (vitrine, caixa e venda), **Missõ
 
 Com `ModoTeste = true` em `src/shared/Config.luau` (vale **só no Studio**):
 
-- Os dados **não são salvos** e o jogador começa com moedas, granulados e alguns Docinhos.
+- Os dados **não são salvos** e o jogador começa com 2 milhões de moedas, granulados e alguns Docinhos.
 - Teclas de teste:
 
 | Tecla | O que mostra |
@@ -54,7 +55,7 @@ Com `ModoTeste = true` em `src/shared/Config.luau` (vale **só no Studio**):
 | F3 | Faixa da **Chuva de Doces** |
 | F4 | **Tutorial** |
 | F5 | Aviso "saiu um raro da fábrica" |
-| F6 | Mostrar/esconder o Docinho **carregado** no HUD |
+| F7 | Soltar um **Pudim Lendário** na esteira (comprar, carregar e entregar) |
 
 - Para ver o layout de celular no PC: **Ajustes → Tamanho da tela → Celular**,
   ou use o emulador de dispositivos do Studio.
@@ -70,8 +71,22 @@ o StyLua, a análise de tipos (luau-lsp) e o build em cada PR.
 
 O que só dá para ver dentro do jogo está no [checklist de playtest](playtest.md).
 
+## Jogabilidade (fase 2)
+
+- **Mundo construído por código** (`Mundo/Construtor.luau`) a partir da planta: fábrica, esteira,
+  6 vitrines, praça e decoração. Nada precisa ser montado à mão no Studio.
+- **Esteira:** um Docinho a cada 2,5 s (sorteio por raridade; Esteira da Sorte de qualquer jogador
+  dobra a chance de Raro+ para o servidor todo). Lendário ou melhor avisa todo mundo.
+  Cada cliente anima a posição pelo tempo; o servidor faz a mesma conta para validar a compra.
+- **Comprar e carregar:** chegue perto e aperte E. O servidor confere distância, moedas e espaço
+  na vitrine. O Docinho vai em cima da cabeça e você anda mais devagar (o Tênis Rápido ajuda).
+  Entrar na própria vitrine entrega. Se cair ou sair do jogo carregando, recebe as moedas de volta.
+- **Vitrines:** cada jogador recebe uma livre ao entrar e renasce nela. Docinhos nos pedestais com
+  nome, raridade e renda; pisar no caixa coleta; pisar no escudo liga (o portão azul aparece).
+- **Praça:** Loja, Docinhopédia e Códigos abrem a tela com E.
+- **Servidor com 6 vagas:** em *Game Settings → Places → Max Players*, use **6** (uma vitrine por jogador).
+
 ## Próximas fases
 
-1. **Jogabilidade:** mapa, esteira, carregar Docinhos, vitrines no mundo com caixa e escudo.
-2. **Modelos 3D:** ver [modelos-3d.md](modelos-3d.md).
-3. **Eventos e resgate:** Chuva de Doces de verdade e o resgate entre jogadores.
+1. **Modelos 3D:** ver [modelos-3d.md](modelos-3d.md).
+2. **Eventos e resgate:** Chuva de Doces de verdade, o resgate entre jogadores e o portão do escudo bloqueando a passagem.

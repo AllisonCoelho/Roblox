@@ -126,4 +126,89 @@ igual("B recebe o progresso salvo por A", banco and banco.dados.moedas, 100)
 igual("autosave atrasado de A é recusado", (Sessao.salvar(banco, "A", T + 4, { moedas = 1 }, false)), nil)
 igual("B continua com o progresso certo", banco and banco.dados.moedas, 100)
 
+-- Planta do mapa --------------------------------------------------------------
+local Mapa = req("Mapa")
+local rets = Mapa.retangulos()
+for _, r in rets do
+  igual("dentro do chão " .. r.nome, r.minX >= -Mapa.LimiteChao and r.maxX <= Mapa.LimiteChao and r.minZ >= -Mapa.LimiteChao and r.maxZ <= Mapa.LimiteChao, true)
+end
+-- Nada se sobrepõe (com 2 studs de folga para dar para andar entre as coisas)
+for i = 1, #rets do
+  for j = i + 1, #rets do
+    local a, b = rets[i], rets[j]
+    -- A esteira sai da porta da fábrica: as duas encostam de propósito (folga 0)
+    local folga = if (a.nome == "Fabrica" and b.nome == "Esteira") then 0 else 2
+    local separados = a.maxX + folga <= b.minX or b.maxX + folga <= a.minX or a.maxZ + folga <= b.minZ or b.maxZ + folga <= a.minZ
+    igual("sem sobreposição " .. a.nome .. " x " .. b.nome, separados, true)
+  end
+end
+-- Pedestais cabem no lote e não ficam em cima do caixa nem do escudo
+local maxPedestais = Mapa.PedestalColunas * Mapa.PedestalLinhas
+igual("28 pedestais para a vitrine nível máximo", maxPedestais, 8 + 4 * 5)
+for i = 1, maxPedestais do
+  local p = Mapa.pedestalLocal(i)
+  igual("pedestal " .. i .. " dentro da largura", math.abs(p.X) <= Mapa.LoteLargura / 2 - 2, true)
+  igual("pedestal " .. i .. " dentro da profundidade", math.abs(p.Z) <= Mapa.LoteProfundidade / 2 - 2, true)
+  igual("pedestal " .. i .. " longe do caixa", (p - Mapa.CaixaLocal).Magnitude > 4.5, true)
+  igual("pedestal " .. i .. " longe do escudo", (p - Mapa.EscudoLocal).Magnitude > 4.5, true)
+end
+for i, lote in Mapa.Lotes do
+  igual("centro do lote " .. i .. " é do lote", Mapa.dentroDoLote(i, lote.centro), true)
+  igual("esteira não é do lote " .. i, Mapa.dentroDoLote(i, Vector3.new(0, 0, lote.centro.Z)), false)
+  igual("entrada do lote " .. i .. " é do lote", Mapa.dentroDoLote(i, Mapa.cframeLote(i):PointToWorldSpace(Mapa.EntradaLocal)), true)
+  -- A frente (portão) aponta para a esteira
+  local frenteMundo = Mapa.cframeLote(i):PointToWorldSpace(Vector3.new(0, 0, -Mapa.LoteProfundidade / 2))
+  igual("portão do lote " .. i .. " virado para a esteira", math.abs(frenteMundo.X) < math.abs(lote.centro.X), true)
+  for j, outro in Mapa.Lotes do
+    if j ~= i then
+      igual("lote " .. i .. " não pega o centro do lote " .. j, Mapa.dentroDoLote(i, outro.centro), false)
+    end
+  end
+end
+
+-- Esteira ----------------------------------------------------------------------
+local Est = req("Esteira")
+local inicioEst = Est.posicao(100, 100)
+igual("esteira começa no início", inicioEst == Mapa.Esteira.inicio + Vector3.new(0, Mapa.Esteira.altura, 0), true)
+local fimEst = Est.posicao(100, 100 + Est.duracao())
+igual("esteira termina no fim", (fimEst - (Mapa.Esteira.fim + Vector3.new(0, Mapa.Esteira.altura, 0))).Magnitude < 1e-6, true)
+igual("não passa do fim", (Est.posicao(100, 100 + Est.duracao() * 3) - fimEst).Magnitude < 1e-6, true)
+igual("não volta antes do início", Est.posicao(100, 50) == inicioEst, true)
+igual("meio do caminho", (Est.posicao(0, Est.duracao() / 2) - (inicioEst + fimEst) / 2).Magnitude < 1e-6, true)
+igual("preço normal", Est.preco("pacoca", "normal"), 400)
+igual("preço dourado", Est.preco("pacoca", "dourado"), 800)
+igual("preço arco-íris", Est.preco("pacoca", "arcoiris"), 2000)
+igual("preço inválido", Est.preco("nada", "normal"), 0)
+
+local function contar(sorte)
+  local semente = 12345
+  local function rng()
+    semente = (semente * 1103515245 + 12345) % 2147483648
+    return semente / 2147483648
+  end
+  local porRaridade, porVariante = {}, {}
+  local N = 40000
+  for _ = 1, N do
+    local id, var = Est.sortear(rng, sorte)
+    local r = Catalogo.docinho(id).raridade
+    porRaridade[r] = (porRaridade[r] or 0) + 1
+    porVariante[var] = (porVariante[var] or 0) + 1
+  end
+  return porRaridade, porVariante, N
+end
+local pr, pv, N = contar(false)
+igual("secreto nunca sai na esteira", pr.secreto, nil)
+igual("comum ~60%", math.abs(pr.comum / N - 0.6) < 0.02, true)
+igual("incomum ~25%", math.abs(pr.incomum / N - 0.25) < 0.02, true)
+igual("raro ~10%", math.abs(pr.raro / N - 0.10) < 0.015, true)
+igual("lendário é raro (<2%)", (pr.lendario or 0) / N < 0.02, true)
+igual("dourado ~5%", math.abs((pv.dourado or 0) / N - 0.045) < 0.01, true)
+igual("arco-íris ~0,5%", math.abs((pv.arcoiris or 0) / N - 0.005) < 0.003, true)
+local prSorte = contar(true)
+igual("sorte aumenta raros", prSorte.raro > pr.raro, true)
+igual("sorte aumenta épicos", prSorte.epico > pr.epico, true)
+igual("sorte diminui comuns", prSorte.comum < pr.comum, true)
+igual("sorteio com aleatório 0 dá o primeiro", (Est.sortear(function() return 0 end, false)), "balaDeCoco")
+igual("sorteio com aleatório ~1 não quebra", Catalogo.docinho((Est.sortear(function() return 0.9999999 end, false))) ~= nil, true)
+
 print(string.format("%d testes, %d falhas", total, falhas))

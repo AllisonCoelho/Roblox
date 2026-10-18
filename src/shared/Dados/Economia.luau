@@ -39,6 +39,9 @@ export type Estado = {
 	codigos: { [string]: boolean },
 	tutorialFeito: boolean,
 	ultimaVez: number,
+	-- Docinho comprado na esteira e ainda não entregue na vitrine (nil quando não há).
+	-- Fica salvo: se o jogador sair ou cair carregando, recebe as moedas de volta.
+	carregando: { id: string, variante: string, preco: number }?,
 }
 
 Economia.VERSAO = 1
