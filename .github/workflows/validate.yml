@@ -1,17 +1,52 @@
-name: Validacao Roblox
+name: Roblox - Validacao e Deploy de Desenvolvimento
+
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+
 permissions:
   contents: read
+
 jobs:
-  build:
+  build-and-deploy-dev:
+    name: Construir e publicar no ambiente privado de testes
     runs-on: ubuntu-latest
+    env:
+      ROBLOX_TEST_UNIVERSE_ID: "10771776655"
+      ROBLOX_TEST_PLACE_ID: "112360499723635"
     steps:
-      - uses: actions/checkout@v4
-      - uses: Roblox/setup-foreman@v1
+      - name: Baixar codigo
+        uses: actions/checkout@v4
+
+      - name: Instalar ferramentas do projeto
+        uses: Roblox/setup-foreman@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-      - run: $HOME/.foreman/bin/rojo build default.project.json --output jogo.rbxl
+
+      - name: Construir jogo com Rojo
+        run: |
+          mkdir -p dist
+          "$HOME/.foreman/bin/rojo" build default.project.json --output dist/jogo.rbxlx
+
+      - name: Publicar apenas na experiencia de desenvolvimento
+        if: ${{ github.event_name != 'pull_request' }}
+        env:
+          ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
+        run: |
+          if [ -z "$ROBLOX_API_KEY" ]; then
+            echo "::notice::Build concluido. Deploy pendente: cadastre o secret ROBLOX_API_KEY no GitHub."
+            exit 0
+          fi
+          curl --fail-with-body --silent --show-error --retry 2 \
+            --request POST \
+            --url "https://apis.roblox.com/universes/v1/${ROBLOX_TEST_UNIVERSE_ID}/places/${ROBLOX_TEST_PLACE_ID}/versions?versionType=Published" \
+            --header "x-api-key: ${ROBLOX_API_KEY}" \
+            --header "Content-Type: application/xml" \
+            --data-binary "@dist/jogo.rbxlx"
+
+      - name: Confirmar destino
+        if: ${{ github.event_name != 'pull_request' }}
+        run: echo "Destino unico deste workflow - experiencia privada de desenvolvimento."
