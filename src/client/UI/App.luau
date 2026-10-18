@@ -94,13 +94,15 @@ function App.iniciar()
 	gui.Parent = player:WaitForChild("PlayerGui")
 
 	local raiz = Escala.montar(gui)
+	local LojaTela = require(Telas.Loja)
 	HUD.montar(raiz, {
 		abrir = Navegacao.abrir,
+		abrirLojaNa = LojaTela.irPara,
 		irParaVitrine = irParaVitrine,
 		posicaoVitrine = posicaoVitrine,
 	})
 	Navegacao.montar(raiz)
-	require(Telas.Loja).montar()
+	LojaTela.montar()
 	require(Telas.MeusDocinhos).montar()
 	require(Telas.Album).montar(HUD.marcarAlbumVisto)
 	require(Telas.Missoes).montar()

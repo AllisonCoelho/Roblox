@@ -38,6 +38,11 @@ function Recompensas.iniciar()
 			p.ultimoDia = hoje
 			local premio = Presentes.Dias[(p.sequencia - 1) % #Presentes.Dias + 1]
 			aplicarMoedasGranulados(estado, premio)
+			local extra = ""
+			if estado.passes.vip then
+				estado.granulados += LojaDados.BonusPresenteVip
+				extra = " (+" .. LojaDados.BonusPresenteVip .. " ✨ VIP)"
+			end
 			if premio.boost then
 				local boost = LojaDados.boost(premio.boost)
 				if boost then
@@ -47,7 +52,7 @@ function Recompensas.iniciar()
 				end
 			end
 			docinhoDoDia = premio.docinho
-			return true, premio.texto .. "!"
+			return true, premio.texto .. "!" .. extra
 		end)
 		if ok then
 			if docinhoDoDia and not Vitrine.adicionarDocinho(player, docinhoDoDia) then

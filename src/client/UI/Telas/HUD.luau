@@ -26,6 +26,7 @@ local BOTAO = 104
 
 export type Acoes = {
 	abrir: (nome: string) -> (),
+	abrirLojaNa: (aba: string) -> (),
 	irParaVitrine: () -> (),
 	posicaoVitrine: () -> Vector3?,
 }
@@ -67,7 +68,7 @@ function HUD.montar(raiz: Frame, acoes: Acoes)
 	})
 	if granulados.mais then
 		granulados.mais.Activated:Connect(function()
-			acoes.abrir("Loja")
+			acoes.abrirLojaNa("granulados")
 		end)
 	end
 

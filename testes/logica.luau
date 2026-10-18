@@ -84,6 +84,34 @@ local Loja = req("Loja")
 igual("custo nível 0", Loja.proximoCusto("vitrine", 0), 5000)
 igual("custo máximo", Loja.proximoCusto("vitrine", 5), nil)
 igual("custo item inválido", Loja.proximoCusto("xyz", 0), nil)
+-- Pacotes de granulados e entrega de compras (ProcessReceipt)
+local idsPacotes, precoAnterior, taxaAnterior = {}, 0, 0
+for _, p in Loja.Pacotes do
+  igual("pacote id único " .. p.id, idsPacotes[p.id], nil)
+  idsPacotes[p.id] = true
+  igual("pacote busca " .. p.id, Loja.pacote(p.id), p)
+  igual("pacote preço sobe " .. p.id, p.precoRobux > precoAnterior, true)
+  local taxa = p.granulados / p.precoRobux
+  igual("pacote maior rende mais por Robux " .. p.id, taxa > taxaAnterior, true)
+  precoAnterior, taxaAnterior = p.precoRobux, taxa
+end
+igual("produto 0 não é pacote", Loja.pacoteDoProduto(0), nil)
+local compra = { granulados = 10, recibos = {} }
+local pac = Loja.Pacotes[2]
+igual("recibo novo entrega", Loja.aplicarRecibo(compra, "c1", pac), "entregue")
+igual("recibo soma granulados", compra.granulados, 10 + pac.granulados)
+igual("recibo repetido não entrega", Loja.aplicarRecibo(compra, "c1", pac), "repetida")
+igual("recibo repetido mantém granulados", compra.granulados, 10 + pac.granulados)
+igual("recibo de produto desconhecido", Loja.aplicarRecibo(compra, "c2", nil), "invalida")
+igual("recibo inválido não guarda id", #compra.recibos, 1)
+for i = 1, Loja.MaxRecibos + 5 do
+  Loja.aplicarRecibo(compra, "x" .. i, Loja.Pacotes[1])
+end
+igual("recibos ficam limitados", #compra.recibos, Loja.MaxRecibos)
+igual("recibo mais novo fica", compra.recibos[#compra.recibos], "x" .. (Loja.MaxRecibos + 5))
+igual("recibo mais velho sai", table.find(compra.recibos, "c1"), nil)
+igual("padrao tem recibos vazios", #Economia.padrao().recibos, 0)
+
 for _, dia in Presentes.Dias do
   if dia.boost then igual("boost do presente existe " .. dia.boost, Loja.boost(dia.boost) ~= nil, true) end
   if dia.docinho then igual("docinho do presente existe", Catalogo.docinho(dia.docinho) ~= nil, true) end

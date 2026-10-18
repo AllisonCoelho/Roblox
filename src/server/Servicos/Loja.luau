@@ -1,4 +1,5 @@
--- Loja: melhorias (moedas), boosts (granulados) e passes (Robux)
+-- Loja: melhorias (moedas), boosts (granulados), pacotes de granulados e passes (Robux)
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local MarketplaceService = game:GetService("MarketplaceService")
 
@@ -6,11 +7,31 @@ local Shared = ReplicatedStorage.Shared
 local LojaDados = require(Shared.Dados.Loja)
 local Formato = require(Shared.Formato)
 local Economia = require(Shared.Dados.Economia)
+local Remotos = require(Shared.Remotos)
+local Tema = require(Shared.Tema)
+local Construtor = require(script.Parent.Parent.Mundo.Construtor)
 local Dados = require(script.Parent.Dados)
 local Acoes = require(script.Parent.Acoes)
 local Missoes = require(script.Parent.Missoes)
 
 local Loja = {}
+
+-- Coroa "VIP" em cima da cabeça de quem tem o passe
+local function coroaVip(player: Player)
+	local estado = Dados.de(player)
+	local personagem = player.Character
+	local cabeca = personagem and personagem:FindFirstChild("Head")
+	if not estado or not estado.passes.vip or not cabeca or cabeca:FindFirstChild("CoroaVip") then
+		return
+	end
+	Construtor.placa(cabeca, "👑 VIP", {
+		nome = "CoroaVip",
+		tamanho = UDim2.new(4, 0, 1.4, 0),
+		deslocamento = Vector3.new(0, 3.4, 0),
+		distancia = 80,
+		cor = Tema.Cores.OuroClaro,
+	})
+end
 
 local function marcarPasse(player: Player, passeId: string)
 	Dados.alterar(player, function(estado)
@@ -20,6 +41,39 @@ local function marcarPasse(player: Player, passeId: string)
 		estado.passes[passeId] = true
 		return true
 	end)
+	if passeId == "vip" then
+		coroaVip(player)
+	end
+end
+
+-- Compras de Developer Products (pacotes de granulados). O Roblox chama esta função até
+-- receber PurchaseGranted, inclusive em outra sessão: por isso só confirmamos depois de
+-- salvar, e a lista estado.recibos impede entregar a mesma compra duas vezes.
+local function processarRecibo(info: { [string]: any }): Enum.ProductPurchaseDecision
+	local player = Players:GetPlayerByUserId(info.PlayerId)
+	if not player or not Dados.podeSalvar(player) then
+		return Enum.ProductPurchaseDecision.NotProcessedYet
+	end
+	local estado = Dados.de(player) :: Economia.Estado
+	local pacote = LojaDados.pacoteDoProduto(info.ProductId)
+	local resultado = LojaDados.aplicarRecibo(estado, info.PurchaseId, pacote)
+	if resultado == "invalida" then
+		warn("[Loja] produto desconhecido: " .. tostring(info.ProductId))
+		return Enum.ProductPurchaseDecision.NotProcessedYet
+	end
+	if resultado == "entregue" then
+		Dados.enviar(player)
+	end
+	if not Dados.salvar(player) then
+		return Enum.ProductPurchaseDecision.NotProcessedYet
+	end
+	if resultado == "entregue" and pacote then
+		Remotos.evento("Aviso"):FireClient(player, {
+			tipo = "sucesso",
+			texto = "+" .. Formato.inteiro(pacote.granulados) .. " granulados! Obrigado 💖",
+		})
+	end
+	return Enum.ProductPurchaseDecision.PurchaseGranted
 end
 
 -- Confere no Roblox os passes que o jogador já tem (compras feitas fora do jogo também contam)
@@ -42,7 +96,14 @@ end
 function Loja.iniciar()
 	Dados.quandoCarregar(function(player: Player)
 		task.spawn(verificarPasses, player)
+		coroaVip(player)
+		player.CharacterAdded:Connect(function(personagem)
+			personagem:WaitForChild("Head", 10)
+			coroaVip(player)
+		end)
 	end)
+
+	MarketplaceService.ProcessReceipt = processarRecibo
 
 	MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, gamePassId, comprou)
 		if not comprou then
@@ -137,6 +198,22 @@ function Loja.iniciar()
 				bonus,
 				Economia.RenascerGranulados * feitos
 			)
+	end)
+
+	Acoes.registrar("ComprarPacote", function(player, id: any)
+		local pacote = type(id) == "string" and LojaDados.pacote(id)
+		if not pacote then
+			return false, "Item inválido"
+		end
+		if pacote.productId == 0 then
+			return false, "Este pacote chega em breve!"
+		end
+		if not Dados.podeSalvar(player) then
+			return false, "Seu progresso não carregou; compras estão pausadas"
+		end
+		-- A janela oficial do Roblox cobra; os granulados chegam pelo ProcessReceipt
+		MarketplaceService:PromptProductPurchase(player, pacote.productId)
+		return true
 	end)
 
 	Acoes.registrar("ComprarPasse", function(player, id: any)

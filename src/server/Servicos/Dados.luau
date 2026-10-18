@@ -236,13 +236,17 @@ function Dados.carregar(player: Player)
 end
 
 -- Salva o jogador. liberar = true (saída do jogo) também solta a trava da sessão.
-function Dados.salvar(player: Player, liberar: boolean?)
+-- Devolve true se o estado ficou guardado (sem DataStore, no Studio de teste, é sempre true).
+function Dados.salvar(player: Player, liberar: boolean?): boolean
 	local estado = estados[player]
-	if not estado or not store or semSalvar[player] then
-		return
+	if not estado or semSalvar[player] then
+		return false
+	end
+	if not store then
+		return true
 	end
 	estado.ultimaVez = os.time()
-	gravar(player, table.clone(estado), liberar == true)
+	return gravar(player, table.clone(estado), liberar == true)
 end
 
 -- Cópia atual para o cliente que pediu (handshake de entrada). nil enquanto carrega.
@@ -252,6 +256,11 @@ end
 
 function Dados.de(player: Player): Estado?
 	return estados[player]
+end
+
+-- true quando os dados do jogador carregaram e podem ser salvos (não houve falha ao ler)
+function Dados.podeSalvar(player: Player): boolean
+	return estados[player] ~= nil and not semSalvar[player]
 end
 
 -- Envia o estado ao cliente no fim do quadro (várias mudanças seguidas viram 1 envio)
