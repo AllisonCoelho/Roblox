@@ -112,14 +112,21 @@ O que só dá para ver dentro do jogo está no [checklist de playtest](playtest.
   - se quem resgatou cair ou sair do jogo, o Docinho volta para o dono.
   - na entrega o servidor confere se a viagem desde o resgate foi possível andando; quem se
     teletransporta perde o Docinho, que volta para o dono.
-  O Docinho que volta não conta de novo no álbum. Não há moedas de compensação
+  **O Docinho nunca some:** durante a corrida ele continua na vitrine do dono, só reservado
+  (`levadoPor`; não rende e o pedestal fica vazio), e só muda de vitrine na entrega, de uma vez.
+  Se o resgate não terminar (dono alcança, quem leva cai ou sai, o dono sai do jogo, o servidor
+  desliga ou cai), a reserva é desfeita. Não há moedas de compensação
   (evita que dois amigos fabriquem moedas resgatando um do outro).
 - **Portão do escudo:** com o escudo ligado o portão bloqueia todo mundo menos o dono
   (grupos de colisão). Quem estiver dentro quando o escudo ligar é levado para fora.
   As paredes laterais subiram para 10 studs para não dar para pular por cima.
 - **Caixa e escudo** têm esperas separadas: pisar num e logo no outro funciona.
 
-## Pronto para lançar (fase 4)
+## Preparação para o lançamento (fase 4)
+
+O código está pronto para o **playtest**; o lançamento público vem depois dele
+(seções 6 e 7 do [checklist de playtest](playtest.md)).
+
 
 - **Renascer** (painel com confirmação em dois toques) e **Ranking** (placar do servidor e recorde
   mundial de renda/s num OrderedDataStore; `leaderstats` com Renda/s, Álbum e Renascimentos).
@@ -129,10 +136,14 @@ O que só dá para ver dentro do jogo está no [checklist de playtest](playtest.
   carregando e ao Docinho mais perto durante a chuva.
 - **Prêmio do álbum completo** (500 granulados), **venda segura** (o servidor confere qual Docinho
   está sendo vendido) e o **Secreto** obtenível na chuva de sábado.
-- **Granulados com Robux** (ProcessReceipt que só confirma depois de salvar e nunca entrega a
-  mesma compra duas vezes) e **coroa VIP**.
+- **Granulados com Robux** e **coroa VIP**. O ProcessReceipt só confirma depois de uma gravação
+  que leva o crédito; as gravações de cada jogador vão em fila e copiam o estado na hora de
+  gravar (`Servicos/Gravacao.luau`), e cada compra fica marcada para sempre
+  (`Servicos/Compras.luau`).
 - **Conquistas** com emblemas do Roblox (`src/shared/Dados/Conquistas.luau`).
-- **Chuvisco de Doces** a cada 20 minutos e **balanceamento** pela simulação.
+- **Chuvisco de Doces** a cada 20 minutos e **balanceamento** pela simulação. O ritmo (vitrine
+  cheia, 1º Raro/Épico/Lendário, vitrine máxima, 1º Renascer) é conferido em faixas pelos
+  testes que o CI já roda (`testes/simulador.luau` + `testes/logica.luau`).
 
 ## Próximos passos
 

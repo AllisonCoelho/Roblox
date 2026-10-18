@@ -1,8 +1,10 @@
-# Pronto para lançar — checklist do dono
+# Lançamento — checklist do dono
 
-O código do jogo está completo para uma primeira versão pública. O que falta são passos que só
-o dono da conta pode fazer no Roblox (criar produtos, emblemas, subir imagens, responder o
-questionário). Siga na ordem; cada item diz **onde** mexer.
+O código está pronto para o **playtest**. **Não lance antes do playtest real** (seções 6 e 7 de
+[../design/playtest.md](../design/playtest.md): dois jogadores, escudo, resgate, chuva, Renascer,
+celular, sair e voltar com DataStore de verdade). O resto são passos que só o dono da conta pode
+fazer no Roblox (criar produtos, emblemas, subir imagens, responder o questionário). Siga na
+ordem; cada item diz **onde** mexer.
 
 ## 1. Experiência de produção
 
@@ -52,7 +54,11 @@ for `0`, o botão mostra "chega em breve" e nada é cobrado.
 - **Teste no Studio antes de publicar:** no Studio as compras são de teste (não cobram). Compre um
   pacote: os granulados entram e aparece "+N granulados! Obrigado 💖".
 - Segurança já feita no código: a compra só é confirmada ao Roblox **depois de salvar**; se falhar,
-  o Roblox tenta de novo e a mesma compra nunca é entregue duas vezes (`estado.recibos`).
+  o Roblox tenta de novo e a mesma compra nunca é entregue duas vezes (`estado.recibos` guarda
+  todas as compras). As gravações de cada jogador vão em fila, então um salvamento antigo não
+  apaga um crédito novo.
+- **Não coloque IDs de verdade antes de testar as compras** no Studio com DataStore de verdade
+  (item de compras na seção 7 do playtest).
 
 ## 4. Emblemas (conquistas)
 

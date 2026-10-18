@@ -346,6 +346,32 @@ do
   igual("concorrente: um aviso", m.avisos, 1)
 end
 
+-- Ritmo do jogo (balanceamento): a mesma simulação do relatório, mais curta -----------
+-- Se um número da economia mudar e o ritmo sair destas faixas, o teste avisa.
+local Simulador = req("Simulador")
+local function media(perfilBase, horas, marco)
+  local perfil = table.clone(perfilBase)
+  perfil.horas = horas
+  local soma, n = 0, 0
+  for _, semente in { 11, 23, 37 } do
+    local r = Simulador.simular(perfil, semente)
+    local t = if marco == "Renascer 1" then r.renasceuEm[1] else r.marcos[marco]
+    if t then soma += t; n += 1 end
+  end
+  return if n == 3 then soma / n / 60 else nil -- minutos (nil se não aconteceu em todos)
+end
+local function entre(nome, valor, minimo, maximo)
+  igual(nome .. " (" .. tostring(valor and math.floor(valor + 0.5)) .. " min)", valor ~= nil and valor >= minimo and valor <= maximo, true)
+end
+local casual, dedicado = Simulador.PERFIS.casual, Simulador.PERFIS.dedicado
+entre("ritmo: criança enche a vitrine nos primeiros minutos", media(casual, 1.5, "vitrine cheia (8)"), 0, 6)
+entre("ritmo: criança vê o 1º Raro na primeira sessão", media(casual, 1.5, "1º Raro"), 0, 15)
+entre("ritmo: criança vê o 1º Épico em até meia hora", media(casual, 1.5, "1º Épico"), 5, 30)
+entre("ritmo: criança renasce na 1ª hora e pouco", media(casual, 1.5, "Renascer 1"), 35, 85)
+entre("ritmo: dedicado chega à vitrine máxima perto de 1 h", media(dedicado, 1.5, "vitrine nível 5"), 40, 90)
+entre("ritmo: dedicado renasce depois de 30 min", media(dedicado, 1.5, "Renascer 1"), 30, 75)
+entre("ritmo: 1º Lendário do dedicado não é instantâneo", media(dedicado, 1.5, "1º Lendário"), 15, 70)
+
 -- Trava de sessão do DataStore -------------------------------------------------
 local Sessao = req("Sessao")
 local T = 1000000

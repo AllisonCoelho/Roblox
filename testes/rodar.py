@@ -28,6 +28,7 @@ mods = {
  "Resgate": "src/shared/Dados/Resgate.luau",
  "Chuva": "src/shared/Dados/Chuva.luau",
  "Conquistas": "src/shared/Dados/Conquistas.luau",
+ "Simulador": "testes/simulador.luau",
 }
 out = ['''
 -- stubs do Roblox

@@ -7,6 +7,11 @@ Os números saem de `testes/simulacao.luau`, que joga sozinho por horas usando a
 python3 testes/rodar.py simulacao
 ```
 
+O simulador fica em `testes/simulador.luau`. Uma versão curta dele roda junto com os testes de
+sempre (`python3 testes/rodar.py`, que o CI já executa) e confere o ritmo em faixas: vitrine
+cheia, 1º Raro, 1º Épico, 1º Lendário, vitrine máxima e 1º Renascer. Se um número da economia
+tirar o jogo dessas faixas, o CI fica vermelho.
+
 ## Como o jogador simulado joga
 
 - Fica na esteira e compra o **melhor Docinho que cabe no bolso** entre os que estão passando

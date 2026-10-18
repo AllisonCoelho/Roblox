@@ -81,11 +81,17 @@ Resgate e escudo (aba Test → 2 Players; jogadores A e B):
 - [ ] B tenta resgatar de novo logo em seguida: "Espere N s"; resgatar A de novo em menos de 60 s: bloqueado
 - [ ] Vitrine com menos de 3 Docinhos: "Vitrine de iniciante: protegida"
 - [ ] B resetar o personagem carregando o Docinho de A: o Docinho volta para A
+- [ ] Enquanto B leva: o pedestal de A fica vazio, Meus Docinhos de A mostra "Sendo levado!" e
+      não deixa vender, e o "+N/s" de A cai até o Docinho voltar ou ser entregue
+- [ ] A **sai do jogo** enquanto B leva: B perde a carga ("O dono saiu do jogo...");
+      A entra de novo: o Docinho está na vitrine dele
+- [ ] **B sai do jogo** carregando: o Docinho volta para A na hora
+- [ ] B chega com a vitrine cheia: "Sua vitrine está cheia!" e o Docinho volta para A
 - [ ] A liga o escudo: o portão azul aparece; B não passa; A passa normalmente
 - [ ] B dentro da vitrine de A quando A liga o escudo: B é levado para fora
 - [ ] Pisar no caixa e logo no escudo: os dois funcionam (esperas separadas)
 
-## 7. Pronto para lançar (fase 4)
+## 7. Preparação para o lançamento (fase 4)
 
 Progressão:
 
@@ -113,6 +119,8 @@ Loja, VIP e conquistas:
 - [ ] Com `productId = 0`: "Este pacote chega em breve!" e nada é cobrado
 - [ ] Com um `productId` de verdade (compra de teste no Studio): os granulados entram uma vez e
       aparece "+N granulados! Obrigado 💖"
+- [ ] Repetir com `ModoTeste = false` (DataStore de verdade): comprar, sair, entrar de novo e
+      conferir que os granulados ficaram **uma vez**; comprar dois pacotes seguidos rapidinho
 - [ ] Com o passe VIP (`gamePassId` de verdade): coroa "👑 VIP" em cima do personagem, também
       depois de resetar; presente diário com "+10 ✨ VIP"
 - [ ] Primeiro Docinho de um jogador novo: aviso "🍬 Conquista: Primeiro Docinho!"
