@@ -15,6 +15,7 @@ local Modelos = require(Shared.Dados.Modelos)
 local Remotos = require(Shared.Remotos)
 local Dados = require(script.Parent.Dados)
 local Vitrine = require(script.Parent.Vitrine)
+local Conquistas = require(script.Parent.Conquistas)
 
 local Cores = Tema.Cores
 local Chuva = {}
@@ -112,6 +113,7 @@ end
 local function pegar(player: Player, uid: number, item: Item)
 	remover(uid)
 	if Vitrine.adicionarDocinho(player, item.id, item.variante) then
+		Conquistas.dar(player, "chuva")
 		local d = Catalogo.docinho(item.id)
 		Remotos.evento("Aviso"):FireClient(player, {
 			tipo = "sucesso",

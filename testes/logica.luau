@@ -117,6 +117,48 @@ for _, dia in Presentes.Dias do
   if dia.docinho then igual("docinho do presente existe", Catalogo.docinho(dia.docinho) ~= nil, true) end
 end
 
+-- Conquistas -----------------------------------------------------------------
+local Conquistas = req("Conquistas")
+local idsConq = {}
+for _, c in Conquistas.Lista do
+  igual("conquista id único " .. c.id, idsConq[c.id], nil)
+  idsConq[c.id] = true
+  igual("conquista busca " .. c.id, Conquistas.conquista(c.id), c)
+end
+igual("no máximo 10 emblemas (1 consulta CheckUserBadgesAsync)", #Conquistas.Lista <= 10, true)
+local function tem(lista, id) return table.find(lista, id) ~= nil end
+local novo = Economia.padrao()
+local c0 = Conquistas.doEstado(novo)
+igual("jogador novo: só boas-vindas", #c0, 1)
+igual("jogador novo: boas-vindas", tem(c0, "bemVindo"), true)
+novo.album.brigadeiro = { qtd = 1, desde = 0, dourado = false, arcoiris = false }
+igual("primeiro Docinho", tem(Conquistas.doEstado(novo), "primeiroDocinho"), true)
+igual("comum não é lendário", tem(Conquistas.doEstado(novo), "lendario"), false)
+novo.album.brigadeiro.dourado = true
+igual("dourado", tem(Conquistas.doEstado(novo), "dourado"), true)
+local idLend
+for _, d in Catalogo.Lista do
+  local r = Catalogo.raridadeDe(d.id)
+  if r and r.ordem >= 5 then idLend = d.id break end
+end
+novo.album[idLend] = { qtd = 1, desde = 0, dourado = false, arcoiris = false }
+igual("lendário", tem(Conquistas.doEstado(novo), "lendario"), true)
+igual("álbum incompleto", tem(Conquistas.doEstado(novo), "albumCompleto"), false)
+for _, d in Catalogo.Lista do
+  novo.album[d.id] = novo.album[d.id] or { qtd = 1, desde = 0, dourado = false, arcoiris = false }
+end
+igual("álbum completo", tem(Conquistas.doEstado(novo), "albumCompleto"), true)
+novo.moedas = 999999
+igual("quase milionário", tem(Conquistas.doEstado(novo), "milionario"), false)
+novo.moedas = 1000000
+igual("milionário", tem(Conquistas.doEstado(novo), "milionario"), true)
+novo.renascimentos = 1
+igual("renascido", tem(Conquistas.doEstado(novo), "renascer"), true)
+for _, id in Conquistas.doEstado(novo) do
+  igual("conquista do estado existe " .. id, Conquistas.conquista(id) ~= nil, true)
+end
+igual("padrao tem conquistas vazias", next(Economia.padrao().conquistas), nil)
+
 -- Trava de sessão do DataStore -------------------------------------------------
 local Sessao = req("Sessao")
 local T = 1000000

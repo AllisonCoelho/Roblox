@@ -24,6 +24,7 @@ mods = {
  "Esteira": "src/shared/Dados/Esteira.luau",
  "Resgate": "src/shared/Dados/Resgate.luau",
  "Chuva": "src/shared/Dados/Chuva.luau",
+ "Conquistas": "src/shared/Dados/Conquistas.luau",
 }
 out = ['''
 -- stubs do Roblox

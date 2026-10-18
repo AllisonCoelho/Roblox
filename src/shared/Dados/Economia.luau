@@ -49,6 +49,7 @@ export type Estado = {
 	renascimentos: number,
 	config: { [string]: boolean }, -- preferências (sons, música)
 	recibos: { string }, -- últimas compras de Robux já entregues (PurchaseId)
+	conquistas: { [string]: boolean }, -- ids de Shared/Dados/Conquistas já ganhos
 	ultimaVez: number,
 	-- Docinho comprado na esteira e ainda não entregue na vitrine (nil quando não há).
 	-- Fica salvo: se o jogador sair ou cair carregando, recebe as moedas de volta.
@@ -89,6 +90,7 @@ function Economia.padrao(): Estado
 		renascimentos = 0,
 		config = { sons = true, musica = true },
 		recibos = {},
+		conquistas = {},
 		ultimaVez = 0,
 	}
 end

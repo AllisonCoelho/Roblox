@@ -13,6 +13,7 @@ local Dados = require(script.Parent.Dados)
 local Acoes = require(script.Parent.Acoes)
 local Lotes = require(script.Parent.Lotes)
 local Esteira = require(script.Parent.Esteira)
+local Conquistas = require(script.Parent.Conquistas)
 
 local Resgate = {}
 
@@ -110,6 +111,7 @@ local function verificarRecuperacoes()
 				<= ResgateDados.DistanciaRecuperar
 		then
 			Esteira.devolver(ladrao, "O dono te alcançou!")
+			Conquistas.dar(dono :: Player, "guardiao")
 		end
 	end
 end
