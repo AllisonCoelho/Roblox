@@ -40,12 +40,14 @@ local function despertar(player: Player): (boolean, string?, { [string]: any }?)
 	local quantidade = 0
 	local equipou = false
 	Dados.alterar(player, function(estado)
+		local eraVazia = Perfil.colecaoVazia(estado)
 		Perfil.registrarGiro(estado, aura.id)
 		quantidade = estado.auras[aura.id]
-		-- Obter não força a troca: só equipa sozinho a primeira aura, ou uma mais rara
-		-- quando o jogador ligou "equipar automaticamente"
+		-- Obter não força a troca (regras em Perfil.deveEquipar)
 		local atual = if estado.equipada then Auras.porId[estado.equipada] else nil
-		if not atual or (estado.configuracoes.equiparAutomatico and aura.chance > atual.chance) then
+		if
+			Perfil.deveEquipar(estado, eraVazia, aura.chance, if atual then atual.chance else nil)
+		then
 			estado.equipada = aura.id
 			equipou = true
 		end

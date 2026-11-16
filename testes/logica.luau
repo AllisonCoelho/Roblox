@@ -151,4 +151,21 @@ for chave in Perfil.CONFIGURACOES do
 	end
 end
 igual("toda configuracao tem padrao", faltando, 0)
+-- Obter não força equipar
+local pe = Perfil.padrao()
+igual("colecao vazia no inicio", Perfil.colecaoVazia(pe), true)
+igual("primeira aura equipa", Perfil.deveEquipar(pe, true, 5, nil), true)
+Perfil.registrarGiro(pe, "nevoa")
+igual("colecao com itens", Perfil.colecaoVazia(pe), false)
+pe.equipada = nil -- jogador desequipou pelo índice
+igual("desequipada + auto desligado: nao equipa", Perfil.deveEquipar(pe, false, 1000000, nil), false)
+pe.equipada = "nevoa"
+igual("auto desligado: mais rara nao troca", Perfil.deveEquipar(pe, false, 1000, 5), false)
+pe.configuracoes.equiparAutomatico = true
+igual("auto ligado: mais rara troca", Perfil.deveEquipar(pe, false, 1000, 5), true)
+igual("auto ligado: mais comum nao troca", Perfil.deveEquipar(pe, false, 5, 1000), false)
+igual("auto ligado: igual nao troca", Perfil.deveEquipar(pe, false, 5, 5), false)
+igual("auto ligado e nada equipado: equipa", Perfil.deveEquipar(pe, false, 5, nil), true)
+pe.auras = { nevoa = 0 }
+igual("contagem zerada conta como vazia", Perfil.colecaoVazia(pe), true)
 print(string.format("%d testes, %d falhas", total, falhas))

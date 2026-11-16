@@ -49,6 +49,36 @@ function Perfil.registrarGiro(estado: Estado, auraId: string)
 	estado.auras[auraId] = (estado.auras[auraId] or 0) + 1
 end
 
+-- A coleção ainda não tem nenhuma aura (usar ANTES de registrar o giro)
+function Perfil.colecaoVazia(estado: Estado): boolean
+	for _, qtd in estado.auras do
+		if type(qtd) == "number" and qtd > 0 then
+			return false
+		end
+	end
+	return true
+end
+
+-- Decide se a aura recém-obtida deve ser equipada sozinha. Obter não força a troca:
+--   * a primeira aura da coleção é sempre equipada;
+--   * depois, só com "equipar automaticamente" ligado e se for mais rara que a atual
+--     (chanceAtual nil = nada equipado).
+-- Quem desequipou de propósito e deixou o automático desligado continua sem aura.
+function Perfil.deveEquipar(
+	estado: Estado,
+	eraVazia: boolean,
+	chanceNova: number,
+	chanceAtual: number?
+): boolean
+	if eraVazia then
+		return true
+	end
+	if estado.configuracoes.equiparAutomatico ~= true then
+		return false
+	end
+	return chanceAtual == nil or chanceNova > chanceAtual
+end
+
 function Perfil.possui(estado: Estado, auraId: string): boolean
 	local qtd = estado.auras[auraId]
 	return type(qtd) == "number" and qtd > 0

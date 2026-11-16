@@ -60,8 +60,14 @@ local function apresentar(aura: Auras.Aura, dados: { [string]: any })
 	local comCartao = cat.cartao > 0
 
 	local function revelar()
+		-- O ritual terminou ou foi pulado: a espera da apresentação acaba aqui
+		-- (o cooldown do servidor, em proximoGiro, continua valendo)
+		ocupadoAte = 0
 		if not teste then
 			hud.registrarResultado(aura, nova)
+			-- O anúncio de quem girou só aparece agora, para não entregar o resultado antes
+			local jogador = Players.LocalPlayer
+			Avisos.anunciar(jogador.DisplayName, jogador.UserId, aura)
 		end
 		if comCartao then
 			local estado = Estado.atual
@@ -136,12 +142,14 @@ local function aoDespertou(dados: any)
 	if not aura then
 		return
 	end
-	-- O próprio jogador já está vendo a versão completa
-	if dados.userId ~= Players.LocalPlayer.UserId then
-		local jogador = Players:GetPlayerByUserId(dados.userId)
-		if jogador then
-			Despertar.alheio(jogador, aura, preferencias())
-		end
+	-- Quem girou vê a versão completa e recebe o próprio anúncio só na revelação
+	-- (em apresentar/revelar): aqui o evento chega antes do ritual terminar
+	if dados.userId == Players.LocalPlayer.UserId then
+		return
+	end
+	local jogador = Players:GetPlayerByUserId(dados.userId)
+	if jogador then
+		Despertar.alheio(jogador, aura, preferencias())
 	end
 	if type(dados.jogador) == "string" then
 		Avisos.anunciar(dados.jogador, dados.userId, aura)
