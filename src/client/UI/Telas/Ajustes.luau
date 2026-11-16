@@ -13,23 +13,43 @@ local SECOES = {
 		titulo = "Ritual",
 		opcoes = {
 			{ "sons", "Sons do ritual", "Toca os efeitos sonoros do giro." },
-			{ "animacoes", "Animações do giro", "Exibe o ritual, a pose e a câmera do despertar." },
-			{ "pularRepetidas", "Animação curta para auras repetidas", "Encurta o ritual de auras que você já tem." },
+			{
+				"animacoes",
+				"Animações do giro",
+				"Exibe o ritual, a pose e a câmera do despertar.",
+			},
+			{
+				"pularRepetidas",
+				"Animação curta para auras repetidas",
+				"Encurta o ritual de auras que você já tem.",
+			},
 		},
 	},
 	{
 		titulo = "Coleção e avisos",
 		opcoes = {
 			{ "anuncios", "Anúncios de auras raras", "Mostra as descobertas raras do servidor." },
-			{ "equiparAutomatico", "Equipar a mais rara automaticamente", "Troca a aura equipada quando sair uma mais rara." },
+			{
+				"equiparAutomatico",
+				"Equipar a mais rara automaticamente",
+				"Troca a aura equipada quando sair uma mais rara.",
+			},
 		},
 	},
 	{
 		titulo = "Acessibilidade e desempenho",
 		opcoes = {
-			{ "movimentoReduzido", "Movimento reduzido", "Evita movimentos de câmera, poses e tremor do ritual." },
+			{
+				"movimentoReduzido",
+				"Movimento reduzido",
+				"Evita movimentos de câmera, poses e tremor do ritual.",
+			},
 			{ "qualidadeBaixa", "Qualidade baixa", "Reduz anéis, partículas e rastros." },
-			{ "ocultarEfeitosAlheios", "Ocultar efeitos dos outros jogadores", "Oculta rituais e auras de outros jogadores na sua tela." },
+			{
+				"ocultarEfeitosAlheios",
+				"Ocultar efeitos dos outros jogadores",
+				"Oculta rituais e auras de outros jogadores na sua tela.",
+			},
 		},
 	},
 }
@@ -120,7 +140,8 @@ function Ajustes.montar(aoAviso: (string) -> ())
 					local controle = interruptores[chave].botao
 					controle.Interactable = false
 					task.spawn(function()
-						local ok, msg = Estado.pedir("Configurar", chave, not estado.configuracoes[chave])
+						local ok, msg =
+							Estado.pedir("Configurar", chave, not estado.configuracoes[chave])
 						controle.Interactable = true
 						if not ok and msg then
 							aoAviso(msg)

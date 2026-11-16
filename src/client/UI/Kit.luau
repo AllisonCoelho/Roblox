@@ -57,18 +57,8 @@ local function superficie(pai: Frame, cor: Color3, corte: number): { Frame }
 	local meio = bloco(pai, cor, UDim2.new(1, 0, 1, -2 * corte), UDim2.fromOffset(0, corte))
 	local topo = bloco(pai, cor, UDim2.new(1, -corte, 0, corte), UDim2.new())
 	local base = bloco(pai, cor, UDim2.new(1, -corte, 0, corte), UDim2.new(0, corte, 1, -corte))
-	local superior = bloco(
-		pai,
-		cor,
-		UDim2.fromOffset(corte, corte),
-		UDim2.new(1, -corte, 0, 0)
-	)
-	local inferior = bloco(
-		pai,
-		cor,
-		UDim2.fromOffset(corte, corte),
-		UDim2.new(0, 0, 1, -corte)
-	)
+	local superior = bloco(pai, cor, UDim2.fromOffset(corte, corte), UDim2.new(1, -corte, 0, 0))
+	local inferior = bloco(pai, cor, UDim2.fromOffset(corte, corte), UDim2.new(0, 0, 1, -corte))
 	local recorte = NumberSequence.new({
 		NumberSequenceKeypoint.new(0, 0),
 		NumberSequenceKeypoint.new(0.495, 0),
@@ -159,7 +149,8 @@ function Kit.alvo(pai: GuiObject, nome: string, aoClicar: () -> ()): TextButton
 		Size = UDim2.fromScale(1, 1),
 		Parent = botao,
 	})
-	local contorno = novo("UIStroke", { Color = Cores.Foco, Thickness = 2, Enabled = false, Parent = foco })
+	local contorno =
+		novo("UIStroke", { Color = Cores.Foco, Thickness = 2, Enabled = false, Parent = foco })
 	local vazio = novo("ImageLabel", {
 		BackgroundTransparency = 1,
 		ImageTransparency = 1,
@@ -228,7 +219,10 @@ function Kit.botaoPlaca(op: {
 			if primario then Cores.Lilas elseif ativo then Cores.Ativo else Cores.Painel,
 			if primario then Cores.Lilas elseif ativo then Cores.Menta else Cores.Borda
 		)
-		rotulo.TextColor3 = if primario then Cores.Fundo elseif ativo then Cores.Menta else Cores.Texto
+		rotulo.TextColor3 = if primario
+			then Cores.Fundo
+			elseif ativo then Cores.Menta
+			else Cores.Texto
 	end
 	definirTom(op.tom or "neutro")
 	return {

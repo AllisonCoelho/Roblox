@@ -190,7 +190,10 @@ function Indice.montar(aoAviso: (string) -> ())
 			)
 			c.nome.Text = if tem then aura.nome else "???"
 			c.quantidade.Text = if tem then "×" .. Formato.curto(estado.auras[aura.id]) else ""
-			c.situacao.Text = if equipada then "Equipada" elseif tem then "Equipar" else "A descobrir"
+			c.situacao.Text = if equipada
+				then "Equipada"
+				elseif tem then "Equipar"
+				else "A descobrir"
 			c.situacao.TextColor3 = if equipada
 				then Cores.Menta
 				elseif tem then Cores.Lilas

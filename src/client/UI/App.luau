@@ -252,7 +252,8 @@ function App.iniciar()
 	RunService.RenderStepped:Connect(function()
 		local agora = os.clock()
 		local falta = math.max(0, proximoGiro - agora, Revelacao.fimEm + 0.4 - agora)
-		local estado: HUD.EstadoGiro = if not Estado.atual then "perfil"
+		local estado: HUD.EstadoGiro = if not Estado.atual
+			then "perfil"
 			elseif girando then "pedido"
 			elseif agora < ocupadoAte then "pular"
 			elseif falta > 0 then "recarregando"

@@ -35,7 +35,10 @@ local function recalcular()
 	local entrada = UserInputService:GetLastInputType()
 	local controle = string.sub(entrada.Name, 1, 7) == "Gamepad"
 	local toque = UserInputService.TouchEnabled
-		and (entrada == Enum.UserInputType.Touch or (not UserInputService.KeyboardEnabled and not controle))
+		and (
+			entrada == Enum.UserInputType.Touch
+			or (not UserInputService.KeyboardEnabled and not controle)
+		)
 	local compacto = if Escala.modoCompacto == "auto"
 		then toque or real.X < 860 or real.Y < 510
 		else Escala.modoCompacto == "sim"

@@ -51,7 +51,9 @@ function Navegacao.fechar()
 	aberto = nil
 	fundo.Visible = false
 	if selecionado and selecionado:IsDescendantOf(registro.painel.quadro) then
-		GuiService.SelectedObject = if focoAnterior and focoAnterior.Parent then focoAnterior else nil
+		GuiService.SelectedObject = if focoAnterior and focoAnterior.Parent
+			then focoAnterior
+			else nil
 	end
 	focoAnterior = nil
 	for _, fn in ouvintes do

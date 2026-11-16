@@ -406,8 +406,13 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 		definirGiro = function(fracao: number, falta: number, estado: EstadoGiro)
 			local carregando = estado == "recarregando"
 			local disponivel = estado == "pronto" or estado == "pular"
-			anel.definir(fracao, if carregando then Cores.Menta elseif disponivel then Cores.Lilas else Cores.Borda)
-			local tempo = if carregando then string.format("%.1f s", math.ceil(falta * 10) / 10) else ""
+			anel.definir(
+				fracao,
+				if carregando then Cores.Menta elseif disponivel then Cores.Lilas else Cores.Borda
+			)
+			local tempo = if carregando
+				then string.format("%.1f s", math.ceil(falta * 10) / 10)
+				else ""
 			if tempo ~= tempoMostrado then
 				tempoMostrado = tempo
 				carga.Text = tempo:gsub("%.", ",")
@@ -416,7 +421,8 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 				return
 			end
 			estadoGiro = estado
-			local titulo = if estado == "perfil" then "Aguardando perfil"
+			local titulo = if estado == "perfil"
+				then "Aguardando perfil"
 				elseif estado == "pedido" then "Despertando…"
 				elseif estado == "pular" then "Pular ritual"
 				else "DESPERTAR"
@@ -431,13 +437,19 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 			hud.Visible = visivel
 		end,
 		atualizar = function(estado: Perfil.Estado)
-			giros.Text = if estado.giros < 1000000 then Formato.inteiro(estado.giros) else Formato.curto(estado.giros)
+			giros.Text = if estado.giros < 1000000
+				then Formato.inteiro(estado.giros)
+				else Formato.curto(estado.giros)
 			local aura = if estado.equipada then Auras.porId[estado.equipada] else nil
 			nomeEquipada.Text = if aura then aura.nome else "Nenhuma"
 			local cor = if aura then corTier(aura) else Cores.Borda
 			centroAura.BackgroundColor3 = cor
 			raridade.Text = if aura
-				then string.format("%s · 1 em %s", Auras.Tiers[aura.tier].nome, Formato.chance(aura.chance))
+				then string.format(
+					"%s · 1 em %s",
+					Auras.Tiers[aura.tier].nome,
+					Formato.chance(aura.chance)
+				)
 				else "Desperte uma aura"
 			raridade.TextColor3 = if aura then Kit.corLegivel(cor) else Cores.TextoSuave
 
@@ -446,7 +458,10 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 			valorAuto.TextColor3 = if ligado then Cores.Menta else Cores.Texto
 			estadoAuto.Text = if ligado then "●" else "○"
 			estadoAuto.TextColor3 = if ligado then Cores.Menta else Cores.TextoSuave
-			auto.definirCor(if ligado then Cores.Ativo else Cores.Painel, if ligado then Cores.Menta else Cores.Borda)
+			auto.definirCor(
+				if ligado then Cores.Ativo else Cores.Painel,
+				if ligado then Cores.Menta else Cores.Borda
+			)
 			autoBotao.Text = "Giro automático · " .. valorAuto.Text
 			local descobertas = Auras.contarDescobertas(estado.auras)
 			valorIndice.Text = string.format("%d / %d", descobertas, #Auras.lista)

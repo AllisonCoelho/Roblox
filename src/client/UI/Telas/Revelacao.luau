@@ -64,7 +64,9 @@ function Revelacao.fechar()
 	opcoes.aoPular()
 	opcoes.aoMudar(false)
 	if selecionado and selecionado:IsDescendantOf(camada) then
-		GuiService.SelectedObject = if focoAnterior and focoAnterior.Parent then focoAnterior else nil
+		GuiService.SelectedObject = if focoAnterior and focoAnterior.Parent
+			then focoAnterior
+			else nil
 	end
 	focoAnterior = nil
 end
