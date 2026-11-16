@@ -90,8 +90,18 @@ local function montar(parte: BasePart)
 	local importado = modeloImportado(nome)
 	if importado then
 		local m = importado:Clone()
-		m:ScaleTo(escala * (m:GetAttribute("Escala") or 1))
-		m:PivotTo(pe)
+		-- encaixe automático, seja qual for a escala do importador: mesma altura da peça do kit,
+		-- pés no chão e virado para a frente (atributo "Giro", em graus, corrige se vier de costas)
+		local giro = m:GetAttribute("Giro")
+		m:PivotTo(pe * CFrame.Angles(0, math.rad(if type(giro) == "number" then giro else 0), 0))
+		local _, tam = m:GetBoundingBox()
+		local alvo = d.tamanho[2] * escala * (m:GetAttribute("Escala") or 1)
+		if tam.Y > 0.01 then
+			m:ScaleTo(m:GetScale() * alvo / tam.Y)
+		end
+		local caixa, tam2 = m:GetBoundingBox()
+		local pes = caixa.Position - Vector3.new(0, tam2.Y / 2, 0)
+		m:PivotTo(m:GetPivot() + (pe.Position - pes))
 		for _, p in m:GetDescendants() do
 			if p:IsA("BasePart") then
 				p.Anchored = true
