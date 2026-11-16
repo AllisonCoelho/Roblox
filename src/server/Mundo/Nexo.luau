@@ -27,6 +27,9 @@ local COR = {
 	jade = Color3.fromHex("5BE37D"),
 }
 
+-- Peças do Núcleo que não são escondidas pelo kit 3D
+local KIT_MANTEM = { Coracao = true, Casca = true, Feixe = true }
+
 local function peca(pai: Instance, props: { [string]: any }): Part
 	local p = Instance.new("Part")
 	p.Anchored = true
@@ -789,8 +792,22 @@ function Nexo.construir(): Folder
 	pasta.Name = "Nexo"
 
 	construirChao(pasta)
+	-- A praça e o Núcleo feitos de peças básicas são PROVISÓRIOS: cada cliente monta por cima
+	-- o kit 3D (src/client/Mundo/Nexo3D) e esconde estas peças, que continuam servindo de
+	-- colisão. Se o kit falhar em algum cliente, elas seguem visíveis (fallback temporário).
+	local antes = #pasta:GetChildren()
 	construirPraca(pasta)
 	construirNucleo(pasta)
+	for i, filho in pasta:GetChildren() do
+		if i > antes then
+			for _, inst in { filho, table.unpack(filho:GetDescendants()) } do
+				-- O coração e a casca são tratados à parte pelo cliente; o feixe continua
+				if inst:IsA("BasePart") and not KIT_MANTEM[inst.Name] then
+					inst:SetAttribute("Provisorio", true)
+				end
+			end
+		end
+	end
 	construirCaminhos(pasta)
 	construirObelisco(pasta)
 	construirArquivo(pasta)

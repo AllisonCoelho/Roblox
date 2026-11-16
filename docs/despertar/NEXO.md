@@ -1,5 +1,7 @@
 # Nexo do Despertar — mapa da V1
 
+> A praça central e o Núcleo ganharam um kit 3D próprio: ver `NEXO-3D.md`. As peças básicas descritas aqui para esses dois lugares passaram a ser o fallback temporário.
+
 Mapa compacto, construído por código em `src/server/Mundo/Nexo.luau` (sem malhas nem assets enviados). Norte = −Z. O `default.project.json` não cria mais Baseplate nem SpawnLocation: o mapa cria os seus.
 
 | Lugar | Onde | Estado na V1 |

@@ -1,5 +1,6 @@
--- Vida do mapa no cliente: anima o Núcleo do Despertar (flutua, pulsa, anéis orbitais) e
--- trata as interações por proximidade. Só visual e navegação de interface.
+-- Vida do mapa no cliente: monta o kit 3D da praça, anima o Núcleo do Despertar (flutua,
+-- pulsa, estilhaços, anéis orbitais) e trata as interações por proximidade.
+-- Só visual e navegação de interface.
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -11,6 +12,8 @@ local Remotos = require(Shared.Remotos)
 local UI = script.Parent:WaitForChild("UI")
 local Navegacao = require(UI:WaitForChild("Navegacao"))
 local Avisos = require(UI:WaitForChild("Telas"):WaitForChild("Avisos"))
+local Montagem =
+	require(script.Parent:WaitForChild("Mundo"):WaitForChild("Nexo3D"):WaitForChild("Montagem"))
 
 local K_CIRCULO = 0.5523 -- fator de Bézier para 4 arcos formarem um círculo
 
@@ -81,9 +84,84 @@ local aneis = {
 	},
 }
 
--- O Núcleo reage quando alguém do servidor desperta uma aura rara
+-- Estado da reação do Núcleo a auras raras (ver o evento "Despertou" mais abaixo)
 local agitadoAte = 0
 local corAgitada = corBase
+
+-- Kit 3D da praça (modelado no Blender). Se o motor recusar criar as malhas, o cenário
+-- provisório do servidor continua visível: é o fallback temporário desta fase.
+local kit: Montagem.Resultado? = nil
+task.spawn(function()
+	local ok, resultado = pcall(Montagem.construir, nexo)
+	if not ok then
+		warn(
+			"[Nexo] kit 3D indisponível; mantendo o cenário provisório: " .. tostring(resultado)
+		)
+		return
+	end
+	kit = resultado
+	-- Esconde as peças provisórias da praça e do Núcleo (a colisão delas continua valendo)
+	for _, inst in nexo:GetDescendants() do
+		if inst:IsA("BasePart") and inst:GetAttribute("Provisorio") then
+			inst.Transparency = 1
+		end
+	end
+	coracao.Transparency = 1 -- segue como referência de posição e dono da luz
+	casca.Transparency = 1
+end)
+
+local BRANCO = Color3.new(1, 1, 1)
+
+-- Animação do kit: o coração pulsa, os estilhaços respiram e se afastam quando o Núcleo se
+-- agita, os fragmentos orbitam e as lanternas flutuam
+local function animarKit(
+	k: Montagem.Resultado,
+	agora: number,
+	posicao: Vector3,
+	pulso: number,
+	agitacao: number
+)
+	local giro = CFrame.Angles(0, agora * 0.12, 0)
+	local tinta = BRANCO:Lerp(corAgitada, 0.6 * agitacao)
+	if k.nucleo then
+		local n = k.nucleo
+		n.parte.Size = n.tamanho * pulso
+		n.parte.CFrame = CFrame.new(posicao)
+			* CFrame.Angles(0, -agora * 0.4, 0)
+			* CFrame.new(n.centro)
+		n.parte.Color = tinta
+	end
+	for i, e in k.estilhacos do
+		local d = e.dados.direcao
+		local afastar = 0.1 * math.sin(agora * 1.3 + i * 1.7) + 1.8 * agitacao
+		e.parte.CFrame = CFrame.new(posicao)
+			* giro
+			* CFrame.new(e.centro + Vector3.new(d[1], d[2], d[3]) * afastar)
+		e.parte.Color = tinta
+	end
+	for i, o in k.orbitas do
+		local d = o.dados
+		local a = math.rad(d.fase) + agora * (0.18 + 0.03 * i) * (1 + 3 * agitacao)
+		local p = posicao
+			+ Vector3.new(
+				math.cos(a) * d.raio,
+				d.altura + math.sin(agora * 0.9 + i) * 0.6,
+				math.sin(a) * d.raio
+			)
+		o.parte.CFrame = CFrame.new(p)
+			* CFrame.Angles(math.rad(d.inclinacao), agora * 0.5 + i, math.rad(20))
+			* CFrame.new(o.centro)
+	end
+	for _, l in k.lanternas do
+		local sobe = math.sin(agora * 0.7 + math.rad(l.dados.fase)) * 0.5
+		l.parte.CFrame = l.pivo
+			* CFrame.new(0, sobe, 0)
+			* CFrame.Angles(0, agora * 0.3, 0)
+			* CFrame.new(l.centro)
+	end
+end
+
+-- O Núcleo reage quando alguém do servidor desperta uma aura rara
 Remotos.evento("Despertou").OnClientEvent:Connect(function(dados: any)
 	local aura = if type(dados) == "table" and type(dados.aura) == "string"
 		then Auras.porId[dados.aura]
@@ -102,7 +180,9 @@ RunService.Heartbeat:Connect(function()
 	local dt = agora - ultimo
 	ultimo = agora
 	local agitacao = math.clamp((agitadoAte - agora) / 4, 0, 1)
-	local posicao = centro + Vector3.new(0, math.sin(agora * 0.8) * 0.8, 0)
+	local k = kit
+	local base = if k then k.centroCristal else centro
+	local posicao = base + Vector3.new(0, math.sin(agora * 0.8) * 0.8, 0)
 	local pulso = 1
 		+ 0.05 * math.sin(agora * 2.2)
 		+ 0.25 * agitacao * (0.5 + 0.5 * math.sin(agora * 14))
@@ -113,6 +193,9 @@ RunService.Heartbeat:Connect(function()
 	if luz then
 		luz.Brightness = 2.5 + 3 * agitacao
 		luz.Color = coracao.Color
+	end
+	if k then
+		animarKit(k, agora, posicao, pulso, agitacao)
 	end
 	for i, anel in aneis do
 		angulos[i] += dt * anel.velocidade * (1 + 5 * agitacao)
