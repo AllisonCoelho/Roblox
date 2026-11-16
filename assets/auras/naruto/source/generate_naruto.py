@@ -44,23 +44,23 @@ DIR_DADOS = os.path.join(DIR_LUAU, "Dados")
 # correm pela cauda; freq: rad/s; cores em hex: fora (casca) e dentro (núcleo brilhante).
 ESTAGIOS = [
     dict(id="naruto_2", nome="Modo 2 Caudas", caudas=2, abertura=55, elevacao=40, elevLados=28, curva=32, comprimento=1.0, grossura=1.05,
-         fora="FF2A12", dentro="FF9A3A", transpFora=0.3, onda=0.2, freq=2.4, alterna=False, pulso=False, contracao=False, raposa=False, seis=False),
+         fora="FF2A12", dentro="FF9A3A", transpFora=0.3, onda=0.2, freq=2.4, alterna=False, pulso=False, contracao=False, raposa=False, seis=False, manto="v1", esqueleto=False, cabelo=False),
     dict(id="naruto_3", nome="Modo 3 Caudas", caudas=3, abertura=62, elevacao=48, elevLados=24, curva=32, comprimento=1.0, grossura=1,
-         fora="FF2A12", dentro="FF9A3A", transpFora=0.3, onda=0.22, freq=2.5, alterna=False, pulso=False, contracao=False, raposa=False, seis=False),
+         fora="FF2A12", dentro="FF9A3A", transpFora=0.3, onda=0.22, freq=2.5, alterna=False, pulso=False, contracao=False, raposa=False, seis=False, manto="v1", esqueleto=False, cabelo=False),
     dict(id="naruto_4", nome="Modo 4 Caudas", caudas=4, abertura=70, elevacao=50, elevLados=18, curva=32, comprimento=1.05, grossura=1.08,
-         fora="B3120A", dentro="FF4A1A", transpFora=0.22, onda=0.26, freq=2.8, alterna=False, pulso=True, contracao=False, raposa=False, seis=False),
+         fora="B3120A", dentro="FF4A1A", transpFora=0.22, onda=0.26, freq=2.8, alterna=False, pulso=True, contracao=False, raposa=False, seis=False, manto="v2", esqueleto=False, cabelo=False),
     dict(id="naruto_5", nome="Modo 5 Caudas", caudas=5, abertura=78, elevacao=52, elevLados=14, curva=31, comprimento=1.08, grossura=1.12,
-         fora="B3120A", dentro="FF4A1A", transpFora=0.22, onda=0.26, freq=2.6, alterna=False, pulso=True, contracao=True, raposa=False, seis=False),
+         fora="B3120A", dentro="FF4A1A", transpFora=0.22, onda=0.26, freq=2.6, alterna=False, pulso=True, contracao=True, raposa=False, seis=False, manto="v2", esqueleto=False, cabelo=False),
     dict(id="naruto_6", nome="Modo 6 Caudas", caudas=6, abertura=86, elevacao=55, elevLados=10, curva=30, comprimento=1.2, grossura=1.12,
-         fora="A80F08", dentro="FF3A14", transpFora=0.2, onda=0.3, freq=2.9, alterna=False, pulso=True, contracao=False, raposa=False, seis=False),
+         fora="A80F08", dentro="FF3A14", transpFora=0.2, onda=0.3, freq=2.9, alterna=False, pulso=True, contracao=False, raposa=False, seis=False, manto="v2", esqueleto=True, cabelo=False),
     dict(id="naruto_7", nome="Modo 7 Caudas", caudas=7, abertura=92, elevacao=58, elevLados=6, curva=30, comprimento=1.22, grossura=1.15,
-         fora="A80F08", dentro="FF3A14", transpFora=0.2, onda=0.28, freq=2.7, alterna=True, pulso=True, contracao=False, raposa=False, seis=False),
+         fora="A80F08", dentro="FF3A14", transpFora=0.2, onda=0.28, freq=2.7, alterna=True, pulso=True, contracao=False, raposa=False, seis=False, manto="v2", esqueleto=True, cabelo=False),
     dict(id="naruto_8", nome="Modo 8 Caudas", caudas=8, abertura=98, elevacao=60, elevLados=4, curva=29, comprimento=1.28, grossura=1.25,
-         fora="9E0C06", dentro="FF3A14", transpFora=0.18, onda=0.28, freq=2.6, alterna=True, pulso=True, contracao=False, raposa=False, seis=False),
+         fora="9E0C06", dentro="FF3A14", transpFora=0.18, onda=0.28, freq=2.6, alterna=True, pulso=True, contracao=False, raposa=False, seis=False, manto="v2", esqueleto=True, cabelo=False),
     dict(id="naruto_9", nome="Modo 9 Caudas", caudas=9, abertura=104, elevacao=62, elevLados=2, curva=29, comprimento=1.32, grossura=1.28,
-         fora="9E0C06", dentro="FF5A1A", transpFora=0.18, onda=0.3, freq=2.6, alterna=True, pulso=True, contracao=False, raposa=True, seis=False),
+         fora="9E0C06", dentro="FF5A1A", transpFora=0.18, onda=0.3, freq=2.6, alterna=True, pulso=True, contracao=False, raposa=True, seis=False, manto="v2", esqueleto=True, cabelo=False),
     dict(id="naruto_seis", nome="Modo Sábio dos Seis Caminhos", caudas=6, abertura=100, elevacao=42, elevLados=0, curva=25, comprimento=1.25, grossura=0.78,
-         fora="FFC93A", dentro="FFF6D0", transpFora=0.35, onda=0.12, freq=1.1, alterna=False, pulso=False, contracao=False, raposa=False, seis=True),
+         fora="FFC93A", dentro="FFF6D0", transpFora=0.35, onda=0.12, freq=1.1, alterna=False, pulso=False, contracao=False, raposa=False, seis=True, manto="", esqueleto=False, cabelo=True),
 ]
 
 # Segmentos: comprimento (studs) e quanto avança até a próxima junta (sobreposição esconde a junta)
@@ -181,7 +181,7 @@ def segmento(rng, comp, r0, r1, chamas_borda, ponta=False):
             r = r0 + (r1 - r0) * f / (0.62 if ponta else 1.0)
             fora = Vector((0, lado, 0))
             base = p + fora * r * 1.05
-            chama(tubos, base, fora * 0.35 + t, fora, comp * rng.uniform(0.45, 0.6), r * rng.uniform(0.34, 0.42), gancho=0.45)
+            chama(tubos, base, fora * 0.2 + t, fora, comp * rng.uniform(0.4, 0.55), r * rng.uniform(0.24, 0.3), gancho=0.35)
     bm = vol.malha()
     suavizar(bm, 2)
     junta(bm, tubos)
@@ -540,9 +540,87 @@ def objeto(nome, bm):
     return obj
 
 
+# ---------------------------------------------------------------- manto de chakra (Versão 1 / 2)
+# Mangá/anime: na Versão 1 um manto de chakra borbulhante cobre o corpo todo, com orelhas de raposa;
+# na Versão 2 o manto fica vermelho-escuro quase preto, com olhos e boca brancos; a partir de 6
+# caudas aparece o esqueleto de raposa sobre o corpo. As peças são modeladas em tamanho UNITÁRIO
+# (caixa 1x1x1 centrada) e o jogo reescala pelo tamanho real de cada parte do corpo.
+
+
+def fazer_casca(rng):
+    """Casca borbulhante para qualquer parte do corpo (caixa unitária + bolhas)."""
+    vol = Volume("casca")
+    vol.mb.resolution = 0.03
+    n = 3
+    for i in range(n + 1):
+        for j in range(n + 1):
+            for k in range(n + 1):
+                vol.bola(((i / n - 0.5) * 0.7, (j / n - 0.5) * 0.7, (k / n - 0.5) * 0.7), 0.3)
+    for _ in range(14):  # bolhas na superfície (o chakra ferve)
+        d = Vector((rng.uniform(-1, 1), rng.uniform(-1, 1), rng.uniform(-1, 1))).normalized()
+        vol.bola(d * 0.5, rng.uniform(0.1, 0.17))
+    bm = vol.malha()
+    suavizar(bm, 1)
+    bmesh.ops.triangulate(bm, faces=bm.faces)
+    return bm
+
+
+def fazer_orelhas(rng):
+    """Orelhas de raposa de chakra no alto da cabeça (cabeça unitária)."""
+    bm = bmesh.new()
+    for lado in (1, -1):
+        chama(bm, (lado * 0.3, -0.05, 0.4), (lado * 0.35, -0.15, 1), (lado, 0, 0), 0.75, 0.2, gancho=0.2, n=20)
+    bmesh.ops.triangulate(bm, faces=bm.faces)
+    return bm
+
+
+def fazer_rosto(rng):
+    """Versão 2: olhos e boca brancos, brilhando na frente do manto escuro (cabeça unitária)."""
+    vol = Volume("rosto")
+    vol.mb.resolution = 0.02
+    for lado in (1, -1):
+        for j in range(4):
+            f = j / 3
+            vol.bola((lado * (0.12 + 0.2 * f), 0.56, 0.12 + 0.07 * f), 0.06)
+    for j in range(7):  # boca larga, um sorriso feroz
+        f = j / 6 - 0.5
+        vol.bola((f * 0.6, 0.56, -0.2 + 0.12 * f * f * 4), 0.05)
+    bm = vol.malha()
+    bmesh.ops.triangulate(bm, faces=bm.faces)
+    return bm
+
+
+def fazer_costelas(rng):
+    """Esqueleto de raposa (6+ caudas): coluna e costelas sobre o tronco (tronco unitário)."""
+    bm = bmesh.new()
+    coluna = [Vector((0, -0.58, -0.5 + j / 11)) for j in range(12)]
+    tubo_liso(bm, coluna, [0.06] * 12, lados=6)
+    for k in range(4):
+        z = 0.32 - k * 0.2
+        for lado in (1, -1):
+            pts = []
+            for j in range(14):
+                a = math.radians(-100 + 190 * j / 13)
+                pts.append(Vector((lado * 0.6 * math.cos(math.radians(90) - a) * (1 - 0.1 * k), 0.58 * math.sin(a - math.radians(90)) * -1, z - 0.05 * math.sin(math.pi * j / 13))))
+            tubo_liso(bm, pts, [0.045 - 0.02 * j / 13 for j in range(14)], lados=6)
+    bmesh.ops.triangulate(bm, faces=bm.faces)
+    return bm
+
+
+def fazer_cabelo(rng):
+    """Seis Caminhos: cabelo em chamas douradas para cima (cabeça unitária)."""
+    bm = bmesh.new()
+    for j in range(11):
+        a = math.radians(-75 + 150 * j / 10)
+        base = Vector((0.4 * math.sin(a), -0.1 - 0.25 * math.cos(a) * 0.5, 0.35))
+        chama(bm, base, (math.sin(a) * 0.6, -0.4, 1), (math.sin(a), -0.3, 0.2), 0.6 + 0.25 * (j % 2), 0.13, gancho=0.5, n=16)
+    bmesh.ops.triangulate(bm, faces=bm.faces)
+    return bm
+
+
 PECAS = [
     ("cauda_base", lambda r: segmento(r, 2.3, 0.62, 0.82, 1), 3200),
-    ("cauda_meio1", lambda r: segmento(r, 2.2, 0.82, 0.74, 2), 3000),
+    ("cauda_meio1", lambda r: segmento(r, 2.2, 0.82, 0.74, 1), 3000),
     ("cauda_meio2", lambda r: segmento(r, 2.0, 0.74, 0.55, 1), 2600),
     ("cauda_ponta", lambda r: segmento(r, 2.8, 0.55, 0.4, 1, ponta=True), 2600),
     ("cauda_base_nucleo", lambda r: nucleo(r, 2.3, 0.62, 0.82), 3000),
@@ -559,6 +637,11 @@ PECAS = [
     ("roupa_marcas", fazer_roupa_marcas, 2500),
     ("roupa_manga", fazer_roupa_manga, 1500),
     ("roupa_aba", fazer_roupa_aba, 3500),
+    ("casca", fazer_casca, 1600),
+    ("orelhas", fazer_orelhas, 800),
+    ("rosto", fazer_rosto, 800),
+    ("costelas", fazer_costelas, 2500),
+    ("cabelo", fazer_cabelo, 2500),
 ]
 
 
@@ -738,6 +821,21 @@ def renderizar(objs):
         for i, nome, cf in pose_caudas(e):
             instancia(objs[nome], cf, (g, c, g), fora, col)
             instancia(objs[nome + "_nucleo"], cf, (g, c, g), dentro, col)
+        caixas = [((-0.5, -2, 0), (0.9, 2, 0.9)), ((0.5, -2, 0), (0.9, 2, 0.9)), ((0, 0, 0), (2, 2, 1)),
+                  ((-1.5, 0, 0), (0.95, 2, 0.95)), ((1.5, 0, 0), (0.95, 2, 0.95)), ((0, 1.6, 0), (1.2, 1.2, 1.2))]
+        if e["manto"]:
+            v2 = e["manto"] == "v2"
+            mm = material_chakra("manto_" + e["id"], "4A0806" if v2 else "FF3A1A", 1.2 if v2 else 2.0, 0.92 if v2 else 0.3)
+            for c, t in caixas:
+                instancia(objs["casca"], tr(*c), (t[0] * 1.12 + 0.1, t[1] * 1.06 + 0.1, t[2] * 1.12 + 0.1), mm, col)
+            cab = tr(0, 1.6, 0)
+            instancia(objs["orelhas"], cab, (1.2, 1.2, 1.2), mm, col)
+            if v2:
+                instancia(objs["rosto"], cab, (1.2, 1.2, 1.2), material_chakra("rosto", "FFFFFF", 8, 1), col)
+        if e["esqueleto"]:
+            instancia(objs["costelas"], tr(0, 0, 0), (2.2, 2, 1.25), material_chakra("osso", "FF8A6A", 3, 0.9), col)
+        if e["cabelo"]:
+            instancia(objs["cabelo"], tr(0, 1.6, 0), (1.2, 1.2, 1.2), material_chakra("cabelo", "FFD24A", 5, 1), col)
         if e["raposa"]:
             m = tr(0, 5.6, 1.3) @ Matrix.Diagonal((2.6, 2.6, 2.6, 1))
             instancia(objs["raposa"], m, (1, 1, 1), material_chakra("rap", e["fora"], 2.5, 0.55), col)
