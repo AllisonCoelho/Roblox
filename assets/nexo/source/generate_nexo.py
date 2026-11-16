@@ -1294,6 +1294,65 @@ def fazer_caminho(tema, comprimento, semente):
 
 # ---------------------------------------------------------------- registro e montagem
 
+def fazer_poste_caminho():
+    rng = random.Random(1951)
+    perfil = [(0.63, 0.0), (0.63, 0.18), (0.29, 0.32), (0.20, 2.95), (0.40, 3.12)]
+    bm = torno(perfil, 8, METAL, rng)
+    juntar(bm, torno([(0.41, 3.63), (0.35, 3.78), (0.14, 3.94)], 8, METAL, rng))
+    return bm
+
+
+def fazer_luz_caminho():
+    perfil = [(0.28, 3.08), (0.38, 3.20), (0.38, 3.57), (0.28, 3.69)]
+    return torno(perfil, 8, (1.0, 0.90, 0.68), random.Random(1952), tinta=1.0)
+
+
+def fazer_canteiro():
+    rng = random.Random(1953)
+    bm = novo_bm()
+    lados = 20
+    raios = [rng.uniform(0.86, 1.06) for _ in range(lados)]
+    aneis = []
+    for escala, z in ((10.0, 0.03), (9.7, 0.16), (7.8, 0.22)):
+        anel = []
+        for i, r in enumerate(raios):
+            a = 2 * math.pi * i / lados
+            anel.append(bm.verts.new((r * escala * math.cos(a), r * escala * math.sin(a), z)))
+        aneis.append(anel)
+    for baixo, alto in zip(aneis, aneis[1:]):
+        for i in range(lados):
+            j = (i + 1) % lados
+            bm.faces.new((baixo[i], baixo[j], alto[j], alto[i]))
+    centro = bm.verts.new((0.0, 0.0, 0.24))
+    for i in range(lados):
+        bm.faces.new((centro, aneis[-1][i], aneis[-1][(i + 1) % lados]))
+    camada = bm.loops.layers.color["Col"]
+    for face in bm.faces:
+        cor = misturar(GRAMA, MUSGO, rng.uniform(0, 0.65))
+        for loop in face.loops:
+            loop[camada] = (*cor, 1.0)
+    return bm
+
+
+def fazer_brotos_canteiro():
+    rng = random.Random(1954)
+    bm = novo_bm()
+    for i in range(17):
+        a = i * math.radians(137.508) + rng.uniform(-0.2, 0.2)
+        r = rng.uniform(2.4, 7.6)
+        x, y = r * math.cos(a), r * math.sin(a)
+        largura = rng.uniform(0.12, 0.30)
+        altura = rng.uniform(0.24, 0.78)
+        pontos = [
+            (x - largura, y, 0.24), (x + largura, y, 0.24),
+            (x, y - largura, 0.24), (x, y + largura, 0.24),
+            (x + 0.10, y, 0.24 + altura),
+        ]
+        cor = misturar((1.0, 0.95, 0.74), (0.58, 1.0, 0.78), rng.random())
+        juntar(bm, casco(pontos, cor))
+    return bm
+
+
 PECAS = {}  # nome -> objeto do Blender
 ESTILHACOS = []  # (nome, direcao em coordenadas do Roblox)
 
@@ -1313,6 +1372,8 @@ def registrar(nome, bm, material):
 
 def criar_material(nome, emissao=0.0, rugosidade=0.85, transmissao=0.0, metalico=0.0):
     mat = bpy.data.materials.new(nome)
+    if mat.node_tree is None:
+        mat.use_nodes = True
     nos = mat.node_tree.nodes
     bsdf = nos["Principled BSDF"]
     cor = nos.new("ShaderNodeVertexColor")
@@ -1354,6 +1415,10 @@ def construir_kit():
     registrar("rocha_b", fazer_rocha(22, 0.9), pedra)
     registrar("praca_piso", fazer_piso(), pedra)
     registrar("praca_energia", fazer_piso_energia(), energia)
+    registrar("caminho_poste", fazer_poste_caminho(), metal)
+    registrar("caminho_luz", fazer_luz_caminho(), energia)
+    registrar("campo_canteiro", fazer_canteiro(), pedra)
+    registrar("campo_brotos", fazer_brotos_canteiro(), energia)
 
     # Locais em volta da praça
     registrar("arquivo_base", fazer_arquivo_base(), pedra)
@@ -1495,7 +1560,49 @@ def montar_cena():
         por("rocha_a" if i % 2 == 0 else "rocha_b", (x, TOPO, z), giro=rng.uniform(0, 360), escala=rng.uniform(0.8, 1.5))
 
     montar_locais(por, rng)
+    montar_decoracao(por)
     return cena
+
+
+def montar_decoracao(por):
+    """Postes nas margens e os detalhes entre os lugares, como na vista aérea de referência."""
+    for tema, (graus, dist) in LOCAIS.items():
+        a = math.radians(graus)
+        dx, dz = math.sin(a), -math.cos(a)
+        inicio, fim = INICIO_CAMINHO + 8, dist - BORDAS[tema] - 9
+        for i in range(4):
+            r = inicio + (fim - inicio) * i / 3
+            for lado in (-1, 1):
+                x, z = r * dx - lado * 8 * dz, r * dz + lado * 8 * dx
+                p = (x, 0.0, z)
+                por("caminho_poste", p, material="Metal")
+                por("caminho_luz", p, material="Neon")
+
+    rng = random.Random(1955)
+    canteiros = [
+        (-171, 108, 1.0), (-142, 162, 0.7), (-98, 148, 0.54),
+        (-43, 138, 0.75), (35, 136, 0.98), (155, 66, 0.93),
+        (184, 23, 1.18), (194, -22, 1.0), (222, -43, 0.80),
+        (192, -80, 0.84), (208, -92, 0.91), (199, -113, 0.55),
+        (138, 45, 0.86), (41, -66, 0.85), (88, 20, 0.53),
+        (-134, 2, 1.03), (-156, -72, 1.18), (-115, -162, 1.12),
+        (-34, -155, 1.0), (-38, 207, 0.8),
+    ]
+    for i, (x, z, escala) in enumerate(canteiros):
+        giro = rng.uniform(0, 360)
+        pos = (x, 0.0, z)
+        por("campo_canteiro", pos, giro=giro, escala=escala, material="Grass")
+        por("campo_brotos", pos, giro=giro, escala=escala, material="Neon")
+        cristal = "cristal_aglomerado_a" if i % 2 == 0 else "cristal_aglomerado_b"
+        por(
+            cristal, (x, 0.22 * escala, z), giro=giro, escala=0.6 * escala,
+            material="Glass", transparencia=0.08,
+        )
+
+    for x, z, giro, escala in [(-98, 164, -24, 0.36), (89, -46, 40, 0.52), (124, 41, -33, 0.42)]:
+        por("arco_partido", (x, 0.0, z), giro=giro, escala=escala)
+    for x, z, giro, escala in [(-122, 192, 30, 0.60), (76, 2, -28, 0.52), (-35, 89, 70, 0.44)]:
+        por("ruina_parede_b", (x, 0.0, z), giro=giro, escala=escala)
 
 
 def montar_locais(por, rng):
@@ -1808,6 +1915,8 @@ def preparar_render():
     cena.render.resolution_x, cena.render.resolution_y = 1280, 720
     cena.view_settings.view_transform = "Filmic" if "Filmic" in [i.identifier for i in type(cena.view_settings).bl_rna.properties["view_transform"].enum_items] else "AgX"
     mundo = bpy.data.worlds.new("Noite")
+    if mundo.node_tree is None:
+        mundo.use_nodes = True
     fundo = mundo.node_tree.nodes["Background"]
     fundo.inputs["Color"].default_value = (0.035, 0.03, 0.08, 1)
     fundo.inputs["Strength"].default_value = 1.0
@@ -1816,6 +1925,8 @@ def preparar_render():
     bpy.ops.mesh.primitive_circle_add(vertices=96, radius=300, fill_type="NGON", location=(0, 0, 0))
     chao = bpy.context.object
     mat = bpy.data.materials.new("Chao")
+    if mat.node_tree is None:
+        mat.use_nodes = True
     mat.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = (0.02, 0.018, 0.035, 1)
     chao.data.materials.append(mat)
     # luar frio e a luz do coração
@@ -1875,7 +1986,7 @@ def main():
         renderizar("arena", tuple(roblox_para_blender(mundo(180, 156, 0, 16, -50))), tuple(roblox_para_blender(mundo(180, 156, 0, 3, 0))), lente=24)
         renderizar("caminho_arquivo", tuple(roblox_para_blender(mundo(315, 72, 0, 4.5, -2))), tuple(roblox_para_blender(mundo(315, 150, 0, 3, 0))), lente=26)
         renderizar("caminho_portais", tuple(roblox_para_blender(mundo(135, 72, 0, 4.5, -2))), tuple(roblox_para_blender(mundo(135, 150, 0, 3, 0))), lente=26)
-    bpy.ops.wm.save_as_mainfile(filepath=os.path.join(DIR_SOURCE, "nexo_master.blend"))
+    bpy.ops.wm.save_as_mainfile(filepath=os.path.join(DIR_SOURCE, "nexo_master.blend"), compress=True)
 
 
 if __name__ == "__main__":
