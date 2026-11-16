@@ -12,3 +12,6 @@
 
 # Backups automáticos do Blender
 *.blend1
+
+# Cache do Python (geradores do Blender)
+__pycache__/
