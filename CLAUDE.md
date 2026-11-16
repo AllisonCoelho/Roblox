@@ -16,7 +16,7 @@ Este repositório passa a hospedar **Despertar — Aura RNG**, em **Luau + Rojo 
 - Validar tipos, valores e frequência de todas as entradas dos remotes.
 - Esquema novo no store **`Despertar_v1`**, sem ler ou modificar stores anteriores.
 - Ao implementar a V1, criar `src/shared/Dados/Auras.luau` com aproximadamente 30 auras originais e pesos.
-- Não utilizar nomes, personagens, técnicas, marcas ou conteúdo sem licença de animes reais.
+- Nomes e técnicas de animes reais: **autorizados pelo dono** (nov/2026) como referência das auras (ex.: Gear 5). Modelos, texturas, movimentos e sons são sempre próprios — nunca copiar frames, assets ou áudio dos animes. Antes do lançamento público, o dono decide sobre licença ou adaptação dos nomes.
 - Não incluir chaves, tokens, senhas, arquivos .env nem dados sensíveis.
 - **Não alterar os workflows CI/CD, permissões ou segredos sem autorização explícita do dono.**
 - Testar `rojo build default.project.json --output build.rbxlx` e `python3 testes/rodar.py` quando disponível; relatar testes não executados.

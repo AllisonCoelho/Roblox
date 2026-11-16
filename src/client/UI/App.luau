@@ -22,6 +22,7 @@ local Indice = require(Telas.Indice)
 local Revelacao = require(Telas.Revelacao)
 local Mundo = script.Parent.Parent:WaitForChild("Mundo")
 local Despertar = require(Mundo:WaitForChild("Despertar"))
+local AurasControlador = require(Mundo:WaitForChild("Auras"):WaitForChild("Controlador"))
 local EfeitosAlheios = require(Mundo:WaitForChild("EfeitosAlheios"))
 
 local App = {}
@@ -219,9 +220,16 @@ function App.iniciar()
 	Navegacao.ajustar()
 
 	EfeitosAlheios.iniciar()
+	AurasControlador.iniciar()
 	Estado.aoMudar(function(estado)
 		hud.atualizar(estado)
-		EfeitosAlheios.definir(estado.configuracoes.ocultarEfeitosAlheios == true)
+		local c = estado.configuracoes
+		EfeitosAlheios.definir(c.ocultarEfeitosAlheios == true)
+		AurasControlador.definir({
+			qualidadeBaixa = c.qualidadeBaixa == true,
+			movimentoReduzido = c.movimentoReduzido == true,
+			ocultarEfeitosAlheios = c.ocultarEfeitosAlheios == true,
+		})
 	end)
 	Estado.iniciar()
 	Remotos.evento("Despertou").OnClientEvent:Connect(aoDespertou)
@@ -243,6 +251,18 @@ function App.iniciar()
 		end
 		if input.KeyCode == Enum.KeyCode.E then
 			task.spawn(aoApertar)
+		elseif
+			RunService:IsStudio()
+			and UserInputService:IsKeyDown(Enum.KeyCode.LeftAlt)
+			and input.KeyCode == Enum.KeyCode.G
+		then
+			-- Só no Studio: Alt+G liga/desliga a prévia da Gear 5 (sem posse nem save)
+			task.spawn(function()
+				local _, msg = Estado.pedir("PreviaAura", "gear5")
+				if msg then
+					Avisos.toast(msg)
+				end
+			end)
 		elseif RunService:IsStudio() and UserInputService:IsKeyDown(Enum.KeyCode.LeftAlt) then
 			local indice = input.KeyCode.Value - Enum.KeyCode.One.Value + 1
 			if indice >= 1 and indice <= #Apresentacao.Categorias then

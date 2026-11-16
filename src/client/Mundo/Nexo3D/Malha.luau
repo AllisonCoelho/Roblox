@@ -48,6 +48,9 @@ local function decodificar(pedacos: { string }, bytes: number): buffer
 	return saida
 end
 
+-- Também usada pelas malhas das auras (Mundo/Auras/MalhaNuvem), que guardam o mesmo formato
+Malha.decodificar = decodificar
+
 -- Os vértices separados por face dão o sombreado facetado do kit.
 local function preencher(editavel: EditableMesh, d: Dados, tamanho: Vector3)
 	local nv, nt = d.vertices, d.triangulos

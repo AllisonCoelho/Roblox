@@ -2,10 +2,14 @@
 -- Só partículas, luz e Highlight: leve e sem modelos 3D.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Auras = require(Shared.Dados.Auras)
+local AurasVfx = require(Shared.Dados.AurasVfx)
 local Perfil = require(Shared.Dados.Perfil)
+local Acoes = require(script.Parent.Acoes)
 local Dados = require(script.Parent.Dados)
 
 local AuraVisual = {}
@@ -19,6 +23,8 @@ local TEXTURAS = {
 
 -- Aura que está aplicada em cada jogador ("" = nenhuma), para só refazer quando mudar
 local aplicada: { [Player]: string } = {}
+-- Só no Studio: aura de VFX mostrada como prévia (não é posse, não salva, não sorteia)
+local previa: { [Player]: string } = {}
 
 local function emissor(pai: Instance, props: { [string]: any }): ParticleEmitter
 	local e = Instance.new("ParticleEmitter")
@@ -140,7 +146,8 @@ end
 
 local function aplicar(player: Player, forcar: boolean?)
 	local estado = Dados.de(player)
-	local id = if estado and estado.equipada then estado.equipada else ""
+	local equipada = if estado and estado.equipada then estado.equipada else ""
+	local id = previa[player] or equipada
 	if not forcar and aplicada[player] == id then
 		return
 	end
@@ -149,12 +156,37 @@ local function aplicar(player: Player, forcar: boolean?)
 	if not personagem or not raiz or not raiz:IsA("BasePart") then
 		return
 	end
+	local mudou = aplicada[player] ~= nil and aplicada[player] ~= id
 	aplicada[player] = id
 	limpar(personagem)
+	-- Auras com VFX próprio: cada cliente monta o efeito a partir deste atributo.
+	-- "AuraVfxEm" só muda quando o jogador troca de aura (não no respawn): é a deixa da manifestação.
+	if AurasVfx[id] then
+		if mudou then
+			personagem:SetAttribute("AuraVfxEm", Workspace:GetServerTimeNow())
+		end
+		personagem:SetAttribute("AuraVfx", id)
+		return
+	end
+	personagem:SetAttribute("AuraVfx", nil)
 	local aura = Auras.porId[id]
 	if aura then
 		criarEfeito(aura, personagem, raiz)
 	end
+end
+
+-- Studio: liga/desliga a prévia de uma aura de VFX no próprio personagem (Alt+G no cliente)
+local function alternarPrevia(player: Player, id: any): (boolean, string?)
+	if type(id) ~= "string" or not AurasVfx[id] then
+		return false, "Prévia inválida"
+	end
+	if previa[player] == id then
+		previa[player] = nil
+	else
+		previa[player] = id
+	end
+	aplicar(player)
+	return true, if previa[player] then "Prévia ligada: " .. id else "Prévia desligada"
 end
 
 local function aoCarregar(player: Player, _estado: Perfil.Estado)
@@ -174,7 +206,11 @@ function AuraVisual.iniciar()
 	end)
 	Players.PlayerRemoving:Connect(function(player)
 		aplicada[player] = nil
+		previa[player] = nil
 	end)
+	if RunService:IsStudio() then
+		Acoes.registrar("PreviaAura", alternarPrevia)
+	end
 end
 
 return AuraVisual
