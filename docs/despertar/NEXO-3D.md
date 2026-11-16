@@ -1,4 +1,4 @@
-# Nexo 3D — kit "Ruínas do Nexo" (praça e Núcleo)
+# Nexo 3D — kit "Ruínas do Nexo"
 
 > **Estado: integração escrita, ainda não vista dentro do Roblox.** Os modelos foram criados e renderizados no Blender; o código que os monta no jogo passou por testes, tipos e `rojo build`, mas ninguém abriu o resultado no Studio. As imagens em `assets/nexo/previews/` são **renders do Blender**, não capturas do jogo.
 
@@ -33,10 +33,11 @@ assets/nexo/
   previews/*.jpg              renders do Blender: spawn, nucleo, alto
 src/client/Mundo/Nexo3D/
   Dados/*.luau                GERADO: geometria compacta de cada peça (base64)
-  Cena.luau                   GERADO: posição, giro, escala, material e colisores de cada peça
+  Cena.luau                   GERADO: posição, giro, escala e material de cada peça
   Malha.luau                  dados -> EditableMesh -> MeshPart
-  Montagem.luau               monta a praça e os colisores locais
+  Montagem.luau               monta as peças 3D (só visual; não cria colisão)
 src/client/Nexo.client.luau   chama a montagem, esconde o provisório e anima o kit
+src/shared/Dados/NexoColisores.luau  GERADO: caixas de colisão do kit no espaço do mundo (o servidor cria)
 src/server/Mundo/Nexo.luau    marca as peças antigas da praça/Núcleo com o atributo Provisorio
 ```
 
@@ -49,7 +50,7 @@ Daqui não há Roblox Studio nem permissão para enviar assets, então **não ex
 3. `rojo build` leva tudo no `.rbxlx`; o deploy automático não precisa de nenhum passo manual.
 
 Consequências:
-- As peças visuais não colidem. A colisão vem do piso e do pedestal provisórios do servidor (escondidos, não removidos) e de caixas invisíveis locais nos pilares, muros e pés dos arcos.
+- As peças visuais não colidem. A colisão é toda do servidor: o piso, o pedestal e o esqueleto dos lugares (escondidos, não removidos) e as caixas de `src/shared/Dados/NexoColisores.luau` (pilares, muros, pés dos arcos, troncos e ruínas), geradas pelo Blender a partir dos mesmos dados que posicionam as malhas. Assim todos os jogadores colidem igual, com ou sem o kit carregado.
 - Sem texturas: a cor vem dos vértices e a superfície do material do Roblox (`Slate` na pedra, `Metal` nas garras, `Glass` nos cristais, `Neon` na energia).
 - **Fallback temporário:** se `Montagem.construir` falhar, o cliente avisa no Output e o cenário antigo continua visível. Remover o cenário antigo do servidor só depois de validar o kit no Studio e no celular.
 
@@ -91,4 +92,46 @@ Convenções: 1 unidade do Blender = 1 stud; norte = +Y no Blender e −Z no Rob
 - **Neon e cor por vértice:** se o material Neon ignorar a cor por vértice, as canaletas ficam brancas; a correção é separar as peças de energia por cor.
 - **Vidro transparente** pode ter ordenação estranha entre estilhaços; alternativa: `Transparency = 0`.
 - **Custo:** 54 MeshParts e a criação das malhas na entrada (a montagem cede o quadro a cada 6 peças). Memória de EditableMesh no celular não medida.
-- **Colisão:** arcos e pilares só colidem para o próprio jogador (colisores locais). Outros jogadores veem todos respeitando os mesmos obstáculos porque cada cliente simula o próprio personagem.
+- **Colisão por caixas:** as caixas são aproximações das peças (um bloco por pilar, por pé de arco, por muro). Se alguma ficar maior ou menor que o modelo, o ajuste é em `colisores` na `montar_cena` do gerador.
+
+
+## Fase 2: os seis lugares, caminhos de transição e mapa fechado
+
+> **Estado: modelado e integrado no código, ainda não visto no Roblox.** Renders em `assets/nexo/previews/` (Blender).
+
+O mapa ficou maior e fechado:
+- Os lugares saíram de 95 para **150 studs** do centro (a Arena a 156). O chão vai até 260.
+- **Anel de penhascos** em volta de tudo: 56 paredões de ~80–100 studs na frente (raio 244) e 40 de ~125–155 atrás (raio 266). Não dá para ver o que há fora.
+- **Parede invisível** do servidor no raio 238 (64 painéis de 400 de altura): ninguém sai, nem pulando.
+- As ilhas flutuantes de fora e a borda de rochas antiga foram removidas.
+
+### Lugares
+| Lugar | Peças 3D | Funcional (servidor) |
+|---|---|---|
+| Arquivo dos Ecos (NO) | plataforma em dois degraus com lajes de mármore, 9 colunas caneladas, cornija circular, cúpula de nervuras de metal aberta, console, eco flutuante girando, 6 painéis de projeção | console "Abrir índice" |
+| Obelisco das Lendas (N) | base em três patamares, fuste afunilado em tambores com cintas de metal, ponta dourada, canais dourados nas quatro faces, 4 pilones com cristais flutuando, moldura de pedra do painel | painel do ranking (agora a 17 studs na frente do obelisco) |
+| Jardim dos Fragmentos (SO) | gramado em montes com borda de pedras, 5 árvores de pedra viva com copa de cristais, 8 aglomerados de cristal, fissuras verdes, pedras de passagem, arco/pilares/muro em ruínas | fragmento sussurrante atrás do muro |
+| Altar da Ressonância (NE) | base em três degraus com placas entalhadas, 6 monólitos com runas magenta, mesa do altar, anel de pedra partido flutuando e girando, cristal suspenso | "Em construção" |
+| Portais Fragmentados (SE) | estrado com lajes cada vez mais soltas para o fundo, 2 molduras ogivais e 1 partida (blocos caídos), runas violeta e espinhos de cristal | véus de energia, "Em construção" |
+| Arena dos Despertos (S) | piso com anéis e emblema, arquibancada de 240° em três degraus, 8 colunas, 4 estandartes vermelhos | "Em construção" |
+
+### Caminhos como transição
+Cada caminho é uma peça única, modelada da praça (pedra comum, 10 studs de largura) até o lugar (até 14 de largura), mudando ao longo do comprimento:
+- **Arquivo:** a pedra clareia até o mármore e surgem símbolos azuis, cada vez mais densos.
+- **Jardim:** a pedra ganha musgo, lajes dão lugar a tufos de vegetação e aparecem fissuras verdes; as bordas somem.
+- **Portais:** o chão vai se fraturando, com lascas levantadas e inclinadas e brilho violeta saindo das frestas; as bordas somem.
+- **Obelisco:** filetes dourados nas laterais e travessas douradas perto do destino.
+- **Altar:** círculos de runas magenta cada vez mais frequentes.
+- **Arena:** marcas vermelhas transversais, como faixas de pista.
+
+### Como a colisão funciona agora
+O servidor (`src/server/Mundo/Nexo.luau`) monta só o **esqueleto**: plataformas, colunas, monólitos, pilares dos portais, arquibancada e caminhos com as mesmas medidas dos modelos, mais as partes funcionais e as placas. Tudo que não é funcional recebe o atributo `Provisorio` e o cliente esconde ao montar o kit. As 26 caixas de `src/shared/Dados/NexoColisores.luau` (arcos, pilares e muros da praça; troncos, arco, pilares e muro do Jardim) são criadas pelo servidor (`construirColisoresKit`) e também são `Provisorio`: no cenário de reserva aparecem como blocos simples.
+
+No cenário de reserva, um anel opaco de rocha (`BordaProvisoria`, raio 243, sem colisão) fecha a borda do mapa; ele some quando os penhascos 3D carregam. A parede invisível (`ParedeLimite`, raio 238) vale sempre.
+
+**As medidas estão duplicadas** em `generate_nexo.py` (`LOCAIS`, `BORDAS`, `montar_locais`) e no servidor (`LOCAIS` e `construir*`). Ao mudar um, mudar o outro.
+
+### Peso
+- 313 peças na cena, cerca de 66 mil triângulos no kit, ~2,4 MB de dados de malha em `Dados/` (decodificados por cada cliente ao entrar).
+- Os maiores: `caminho_portais` (4,5 mil triângulos), `arquivo_estrutura` (5,5 mil), `caminho_*` (~4,7 mil cada), `arena_arquibancada` (3,3 mil).
+- Não medido no celular. Se pesar, os primeiros cortes são o chanfro das lajes dos caminhos e o número de penhascos.

@@ -9,3 +9,6 @@
 .env
 .env.*
 !.env.example
+
+# Backups automáticos do Blender
+*.blend1

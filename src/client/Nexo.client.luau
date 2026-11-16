@@ -159,6 +159,13 @@ local function animarKit(
 			* CFrame.Angles(0, agora * 0.3, 0)
 			* CFrame.new(l.centro)
 	end
+	for i, g in k.giram do
+		local velocidade = g.dados.velocidade or 0.2
+		g.parte.CFrame = g.pivo
+			* CFrame.new(0, math.sin(agora * 0.5 + i) * 0.3, 0)
+			* CFrame.Angles(0, agora * velocidade, 0)
+			* CFrame.new(g.centro)
+	end
 end
 
 -- O Núcleo reage quando alguém do servidor desperta uma aura rara

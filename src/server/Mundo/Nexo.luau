@@ -1,18 +1,24 @@
 -- Constrói o mapa "Nexo do Despertar" por código (o repositório é a fonte da verdade).
--- Compacto: praça central com o Núcleo e seis lugares a ~95 studs, ligados por caminhos.
+-- Praça central com o Núcleo e seis lugares a ~150 studs, ligados por caminhos, dentro de
+-- um anel de penhascos (o mapa é fechado: parede invisível em RAIO_LIMITE).
 --   Norte     Obelisco das Lendas   (ranking do servidor)            funcional
 --   Noroeste  Arquivo dos Ecos      (abre o índice)                  funcional
 --   Sudoeste  Jardim dos Fragmentos (exploração leve, um eco oculto) funcional simples
 --   Nordeste  Altar da Ressonância  | Sudeste Portais Fragmentados | Sul Arena dos Despertos
 --             -> só cenário, marcados honestamente como "Em construção"
--- Tudo ancorado, sem malhas nem assets enviados. Norte = -Z.
+-- O servidor monta colisão e partes funcionais; o visual 3D vem do kit de cada cliente
+-- (src/client/Mundo/Nexo3D). Tudo ancorado. Norte = -Z.
 local Lighting = game:GetService("Lighting")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local NexoColisores = require(
+	ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Dados"):WaitForChild("NexoColisores")
+)
 
 local Nexo = {}
 
-local RAIO_MUNDO = 150
+local RAIO_MUNDO = 260
 local RAIO_PRACA = 46
-local DISTANCIA = 95
 
 local COR = {
 	chao = Color3.fromHex("14121F"),
@@ -27,8 +33,18 @@ local COR = {
 	jade = Color3.fromHex("5BE37D"),
 }
 
--- Peças do Núcleo que não são escondidas pelo kit 3D
-local KIT_MANTEM = { Coracao = true, Casca = true, Feixe = true }
+-- Peças que o kit 3D NÃO esconde: funcionais ou que já são o visual final
+local KIT_MANTEM = {
+	Chao = true,
+	Coracao = true,
+	Casca = true,
+	Feixe = true,
+	PainelRanking = true,
+	Placa = true,
+	PortalVeu = true,
+	FragmentoSussurrante = true,
+	ParedeLimite = true,
+}
 
 local function peca(pai: Instance, props: { [string]: any }): Part
 	local p = Instance.new("Part")
@@ -196,23 +212,6 @@ end
 
 local function construirChao(pasta: Instance)
 	cilindro(pasta, Vector3.new(0, -4, 0), RAIO_MUNDO, 4, { Name = "Chao", Color = COR.chao })
-	-- Borda de rochas (barreira natural)
-	local rng = Random.new(11)
-	local n = 44
-	for i = 1, n do
-		local a = (i / n) * 360
-		local d = direcao(a)
-		local altura = rng:NextNumber(7, 15)
-		peca(pasta, {
-			Name = "Rocha",
-			Color = COR.pedra:Lerp(COR.chao, rng:NextNumber(0, 0.6)),
-			Size = Vector3.new(24, altura, rng:NextNumber(8, 13)),
-			CFrame = CFrame.lookAt(
-				d * (RAIO_MUNDO - 3) + Vector3.new(0, altura / 2 - 1, 0),
-				Vector3.new(0, altura / 2 - 1, 0)
-			) * CFrame.Angles(0, 0, math.rad(rng:NextNumber(-7, 7))),
-		})
-	end
 end
 
 local function construirPraca(pasta: Instance)
@@ -327,91 +326,210 @@ local function construirNucleo(pasta: Instance)
 	placa(pasta, Vector3.new(0, 30, 0), "Núcleo do Despertar", nil, COR.energia)
 end
 
+-- ===================================================================== Locais (fase 2)
+-- Cada lugar fica num ângulo e distância (LOCAIS) e é montado no espaço local
+-- `olhar = CFrame.lookAt(centro, origem)`: -Z local aponta para a praça.
+-- O que se constrói aqui é o ESQUELETO: colisão com as mesmas medidas dos modelos 3D
+-- (assets/nexo/source/generate_nexo.py usa os mesmos números) e as partes funcionais
+-- (painel do ranking, console do índice, fragmento, véus, mesa do altar e placas).
+-- O cliente esconde o esqueleto quando o kit 3D monta; se o kit falhar, ele aparece.
+
+local LOCAIS = {
+	obelisco = { graus = 0, dist = 150, borda = 20 },
+	altar = { graus = 45, dist = 150, borda = 22 },
+	portais = { graus = 135, dist = 150, borda = 23 },
+	arena = { graus = 180, dist = 156, borda = 25 },
+	jardim = { graus = 225, dist = 150, borda = 33 },
+	arquivo = { graus = 315, dist = 150, borda = 22 },
+}
+local INICIO_CAMINHO = 47
+local RAIO_LIMITE = 238 -- parede invisível; os penhascos 3D ficam logo atrás
+
+local function referencia(nome: string): CFrame
+	local l = LOCAIS[nome]
+	local centro = direcao(l.graus) * l.dist
+	return CFrame.lookAt(centro, Vector3.zero)
+end
+
+-- Ponto num círculo do lugar, com o ângulo medido a partir da frente (lado da praça)
+local function polar(raio: number, graus: number): (number, number)
+	local a = math.rad(graus)
+	return raio * math.sin(a), -raio * math.cos(a)
+end
+
+-- Cilindro em pé com base no ponto local (x, y, z) do lugar
+local function cilindroLocal(
+	pai: Instance,
+	olhar: CFrame,
+	x: number,
+	y: number,
+	z: number,
+	raio: number,
+	altura: number,
+	props: { [string]: any }
+): Part
+	return cilindro(pai, (olhar * CFrame.new(x, y, z)).Position, raio, altura, props)
+end
+
+-- Caixa no espaço local do lugar; `giro` (graus) vira a caixa em torno do Y
+local function caixaLocal(
+	pai: Instance,
+	olhar: CFrame,
+	x: number,
+	y: number,
+	z: number,
+	tamanho: Vector3,
+	giro: number?,
+	props: { [string]: any }?
+): Part
+	local p = props or {}
+	p.Size = tamanho
+	p.CFrame = olhar * CFrame.new(x, y, z) * CFrame.Angles(0, math.rad(giro or 0), 0)
+	return peca(pai, p)
+end
+
+local function construirLimite(pasta: Instance)
+	-- Parede invisível em anel: ninguém sai do Nexo, nem pulando
+	local n = 64
+	local largura = 2 * math.pi * RAIO_LIMITE / n + 1
+	for i = 0, n - 1 do
+		local a = 360 * i / n
+		local d = direcao(a)
+		peca(pasta, {
+			Name = "ParedeLimite",
+			Transparency = 1,
+			CanQuery = false,
+			CastShadow = false,
+			Size = Vector3.new(largura, 400, 4),
+			CFrame = CFrame.lookAt(
+				d * RAIO_LIMITE + Vector3.new(0, 196, 0),
+				Vector3.new(0, 196, 0)
+			),
+		})
+	end
+end
+
+-- Borda visível do cenário de reserva: um anel simples e opaco de rocha logo atrás da parede
+-- invisível. É provisória: some quando o kit 3D (com os penhascos) carrega no cliente.
+local function construirBordaProvisoria(pasta: Instance)
+	local n = 48
+	local raio = RAIO_LIMITE + 5
+	local largura = 2 * math.pi * raio / n + 2
+	for i = 0, n - 1 do
+		local d = direcao(360 * i / n)
+		local altura = if i % 2 == 0 then 110 else 92
+		peca(pasta, {
+			Name = "BordaProvisoria",
+			Material = Enum.Material.Rock,
+			Color = COR.pedra,
+			CanCollide = false,
+			CanQuery = false,
+			Size = Vector3.new(largura, altura, 8),
+			CFrame = CFrame.lookAt(
+				d * raio + Vector3.new(0, altura / 2, 0),
+				Vector3.new(0, altura / 2, 0)
+			),
+		})
+	end
+end
+
+-- Colisão das peças do kit 3D (arcos, pilares, muros, troncos), criada no servidor para que
+-- todos os jogadores colidam igual, com ou sem o kit carregado. Os dados vêm do gerador do
+-- Blender (src/shared/Dados/NexoColisores.luau). As caixas são provisórias: aparecem como
+-- blocos simples no cenário de reserva e o cliente as esconde quando o kit monta.
+local function construirColisoresKit(pasta: Instance)
+	for _, c in NexoColisores :: { { [string]: any } } do
+		local pos, tam = c.posicao, c.tamanho
+		peca(pasta, {
+			Name = "ColisorKit",
+			Color = COR.pedra,
+			CastShadow = false,
+			Size = Vector3.new(tam[1], tam[2], tam[3]),
+			CFrame = CFrame.new(pos[1], pos[2], pos[3]) * CFrame.Angles(0, math.rad(c.giro), 0),
+		})
+	end
+end
+
 local function construirCaminhos(pasta: Instance)
-	for _, graus in { 0, 45, 135, 180, 225, 315 } do
-		local d = direcao(graus)
-		local inicio, fim = RAIO_PRACA - 2, DISTANCIA - 16
+	for _, l in LOCAIS do
+		local d = direcao(l.graus)
+		local inicio, fim = INICIO_CAMINHO - 1, l.dist - l.borda
 		local meio = d * ((inicio + fim) / 2)
 		peca(pasta, {
 			Name = "Caminho",
 			Color = COR.caminho,
 			Material = Enum.Material.Cobblestone,
-			Size = Vector3.new(11, 0.4, fim - inicio),
+			Size = Vector3.new(12, 0.4, fim - inicio),
 			CFrame = CFrame.lookAt(meio + Vector3.new(0, 0.1, 0), Vector3.new(0, 0.1, 0)),
 		})
-		for lado = -1, 1, 2 do
-			local lateral = Vector3.new(-d.Z, 0, d.X) * 5.8 * lado
-			peca(
-				pasta,
-				neon({
-					Name = "Guia",
-					Color = COR.violeta,
-					Size = Vector3.new(0.25, 0.1, fim - inicio),
-					CFrame = CFrame.lookAt(
-						meio + lateral + Vector3.new(0, 0.32, 0),
-						lateral + Vector3.new(0, 0.32, 0)
-					),
-				})
-			)
-		end
 	end
 end
 
-local function construirObelisco(pasta: Instance)
-	local centro = direcao(0) * DISTANCIA
-	local olhar = CFrame.lookAt(centro, Vector3.zero)
-	cilindro(
-		pasta,
-		centro,
-		15,
-		0.8,
-		{ Name = "ObeliscoBase", Color = COR.pedraClara, Material = Enum.Material.Marble }
-	)
-	cilindro(
-		pasta,
-		centro + Vector3.new(0, 0.8, 0),
-		10,
-		0.8,
-		{ Name = "ObeliscoBase2", Color = COR.pedra }
-	)
-	local y = 1.6
-	for i, lado in { 7, 5.4, 3.8 } do
-		local altura = 13 - i
-		peca(pasta, {
-			Name = "Obelisco" .. i,
-			Color = COR.pedra,
-			Material = Enum.Material.Basalt,
-			Size = Vector3.new(lado, altura, lado),
-			CFrame = olhar * CFrame.new(0, y + altura / 2, 0),
-		})
-		peca(
-			pasta,
-			neon({
-				Name = "ObeliscoLinha" .. i,
-				Color = COR.ouro,
-				Size = Vector3.new(lado + 0.1, 0.3, lado + 0.1),
-				CFrame = olhar * CFrame.new(0, y + altura, 0),
-			})
-		)
-		y += altura
+local function construirArquivo(pasta: Instance)
+	local olhar = referencia("arquivo")
+	cilindroLocal(pasta, olhar, 0, 0, 0, 21, 1, { Name = "ArquivoBase", Color = COR.pedraClara })
+	cilindroLocal(pasta, olhar, 0, 1, 0, 17, 1, { Name = "ArquivoBase2", Color = COR.pedraClara })
+	for i = 1, 9 do
+		local x, z = polar(15, 36 * i)
+		cilindroLocal(pasta, olhar, x, 2, z, 1.4, 14, { Name = "Coluna", Color = COR.marmore })
 	end
-	local ponta = peca(
+	local console =
+		cilindroLocal(pasta, olhar, 0, 2, 0, 2, 2.8, { Name = "Console", Color = COR.pedra })
+	interacao(console, "indice", "Abrir índice", "Arquivo dos Ecos")
+	placa(
 		pasta,
-		neon({
-			Name = "ObeliscoPonta",
-			Color = COR.ouro,
-			Size = Vector3.new(2.4, 2.4, 2.4),
-			CFrame = olhar * CFrame.new(0, y + 2, 0) * CFrame.Angles(math.rad(45), 0, math.rad(45)),
-		})
+		(olhar * CFrame.new(0, 32, 0)).Position,
+		"Arquivo dos Ecos",
+		"Coleção de auras",
+		COR.energia
 	)
-	luz(ponta, COR.ouro, 40, 2)
+end
+
+local function construirObelisco(pasta: Instance)
+	local olhar = referencia("obelisco")
+	for i, lado in { 26, 20, 14 } do
+		caixaLocal(pasta, olhar, 0, 0.6 + 1.2 * (i - 1), 0, Vector3.new(lado, 1.2, lado), 0, {
+			Name = "ObeliscoBase" .. i,
+			Color = COR.pedra,
+		})
+	end
+	caixaLocal(
+		pasta,
+		olhar,
+		0,
+		18.6,
+		0,
+		Vector3.new(5.6, 30, 5.6),
+		0,
+		{ Name = "Obelisco", Color = COR.pedra }
+	)
+	for _, sx in { -1, 1 } do
+		for _, sz in { -1, 1 } do
+			caixaLocal(pasta, olhar, sx * 15.5, 4.3, sz * 15.5, Vector3.new(2.6, 8.6, 2.6), 0, {
+				Name = "Pilone",
+				Color = COR.pedra,
+			})
+		end
+	end
+	-- Moldura de pedra em volta do painel (mesmas medidas da peça 3D)
+	for _, sx in { -1, 1 } do
+		caixaLocal(
+			pasta,
+			olhar,
+			sx * 7.9,
+			5.3,
+			-17,
+			Vector3.new(1.6, 10.6, 1.6),
+			0,
+			{ Name = "Moldura" }
+		)
+	end
+	caixaLocal(pasta, olhar, 0, 0.8, -17, Vector3.new(18, 1.6, 2.4), 0, { Name = "MolduraBase" })
 	-- Painel do ranking, virado para a praça
-	local painel = peca(pasta, {
+	local painel = caixaLocal(pasta, olhar, 0, 6.2, -17.2, Vector3.new(14, 8, 0.6), 0, {
 		Name = "PainelRanking",
 		Color = Color3.fromHex("0B0A10"),
 		Material = Enum.Material.SmoothPlastic,
-		Size = Vector3.new(14, 8, 0.6),
-		CFrame = olhar * CFrame.new(0, 6.2, -9),
 	})
 	local gui = Instance.new("SurfaceGui")
 	gui.Name = "Ranking"
@@ -436,92 +554,10 @@ local function construirObelisco(pasta: Instance)
 	gui.Parent = painel
 	placa(
 		pasta,
-		centro + Vector3.new(0, y + 8, 0),
+		(olhar * CFrame.new(0, 45, 0)).Position,
 		"Obelisco das Lendas",
 		"Ranking do servidor",
 		COR.ouro
-	)
-end
-
-local function construirArquivo(pasta: Instance)
-	local centro = direcao(315) * DISTANCIA
-	cilindro(
-		pasta,
-		centro,
-		17,
-		0.8,
-		{ Name = "ArquivoBase", Color = COR.pedraClara, Material = Enum.Material.Marble }
-	)
-	filete(pasta, centro + Vector3.new(0, 0.8, 0), 15, 0.4, COR.energia, COR.pedraClara)
-	for i = 1, 8 do
-		local d = direcao(i * 45)
-		-- deixa a entrada (lado da praça) livre
-		if i ~= 3 then
-			cilindro(pasta, centro + d * 14 + Vector3.new(0, 0.8, 0), 1.1, 13, {
-				Name = "Coluna",
-				Color = COR.marmore,
-				Material = Enum.Material.Marble,
-			})
-		end
-	end
-	cilindro(
-		pasta,
-		centro + Vector3.new(0, 13.8, 0),
-		16.5,
-		1,
-		{ Name = "Cobertura", Color = COR.pedra }
-	)
-	cilindro(
-		pasta,
-		centro + Vector3.new(0, 14.8, 0),
-		9,
-		1.4,
-		{ Name = "Cupula", Color = COR.pedraClara, Material = Enum.Material.Marble }
-	)
-	-- Console central: abre o índice
-	local console = cilindro(
-		pasta,
-		centro + Vector3.new(0, 0.8, 0),
-		2.2,
-		3,
-		{ Name = "Console", Color = COR.pedra }
-	)
-	local esfera = peca(
-		pasta,
-		neon({
-			Name = "Eco",
-			Shape = Enum.PartType.Ball,
-			Color = COR.energia,
-			Size = Vector3.new(2.4, 2.4, 2.4),
-			Position = centro + Vector3.new(0, 5.6, 0),
-		})
-	)
-	luz(esfera, COR.energia, 30, 1.8)
-	interacao(console, "indice", "Abrir índice", "Arquivo dos Ecos")
-	-- Projeções: painéis translúcidos em volta (silhuetas de auras por descobrir)
-	local cores = { COR.energia, COR.violeta, COR.ouro, COR.jade, COR.selo, COR.violeta }
-	for i, cor in cores do
-		local d = direcao(i * 60 + 10)
-		peca(
-			pasta,
-			neon({
-				Name = "Projecao",
-				Color = cor,
-				Transparency = 0.6,
-				Size = Vector3.new(3, 4.5, 0.15),
-				CFrame = CFrame.lookAt(
-					centro + d * 8.5 + Vector3.new(0, 6, 0),
-					centro + Vector3.new(0, 6, 0)
-				),
-			})
-		)
-	end
-	placa(
-		pasta,
-		centro + Vector3.new(0, 20, 0),
-		"Arquivo dos Ecos",
-		"Coleção de auras",
-		COR.energia
 	)
 end
 
@@ -532,92 +568,61 @@ local ECOS = {
 }
 
 local function construirJardim(pasta: Instance)
-	local centro = direcao(225) * DISTANCIA
-	local rng = Random.new(23)
-	cilindro(pasta, centro + Vector3.new(0, -0.1, 0), 24, 0.4, {
+	local olhar = referencia("jardim")
+	cilindroLocal(pasta, olhar, 0, 0, 0, 32, 0.5, {
 		Name = "JardimChao",
 		Color = Color3.fromHex("1E2A26"),
 		Material = Enum.Material.Grass,
 	})
-	local cores = { COR.jade, COR.energia, COR.violeta }
-	for i = 1, 16 do
-		local d = direcao(rng:NextNumber(0, 360))
-		local base = centro + d * rng:NextNumber(5, 22) + Vector3.new(0, 0.2, 0)
-		local inclinacao =
-			CFrame.Angles(math.rad(rng:NextNumber(-18, 18)), math.rad(rng:NextNumber(0, 360)), 0)
-		cristal(pasta, base, rng:NextNumber(2.5, 8), cores[i % 3 + 1], inclinacao)
-	end
-	-- Ruínas: arcos quebrados
-	for i = 1, 3 do
-		local d = direcao(120 * i + 30)
-		local base = centro + d * 13
-		local olhar = CFrame.lookAt(base, centro)
-		peca(pasta, {
-			Name = "Ruina",
-			Material = Enum.Material.Cobblestone,
-			Size = Vector3.new(2, 9, 2),
-			CFrame = olhar * CFrame.new(-3.5, 4.5, 0),
-		})
-		peca(pasta, {
-			Name = "Ruina",
-			Material = Enum.Material.Cobblestone,
-			Size = Vector3.new(2, if i == 2 then 5 else 9, 2),
-			CFrame = olhar * CFrame.new(3.5, if i == 2 then 2.5 else 4.5, 0),
-		})
-		if i ~= 2 then
-			peca(pasta, {
-				Name = "Ruina",
-				Material = Enum.Material.Cobblestone,
-				Size = Vector3.new(10, 1.6, 2.2),
-				CFrame = olhar * CFrame.new(0, 9.6, 0),
-			})
-		end
-	end
-	-- Eco oculto atrás da ruína mais distante: só curiosidade, sem recompensa
-	local escondido = centro + direcao(225) * 19 + Vector3.new(0, 1.4, 0)
+	-- Árvores, ruínas e muro: colisão em construirColisoresKit (dados gerados pelo Blender)
+	-- Eco oculto atrás do muro em ruínas: só curiosidade, sem recompensa
 	local fragmento = peca(
 		pasta,
 		neon({
 			Name = "FragmentoSussurrante",
 			Color = COR.ouro,
 			Size = Vector3.new(1.4, 1.4, 1.4),
-			CFrame = CFrame.new(escondido) * CFrame.Angles(math.rad(45), 0, math.rad(45)),
+			CFrame = olhar
+				* CFrame.new(-6, 1.9, 22.5)
+				* CFrame.Angles(math.rad(45), 0, math.rad(45)),
 		})
 	)
 	luz(fragmento, COR.ouro, 12, 1.5)
+	local rng = Random.new(23)
 	interacao(fragmento, "eco", "Ouvir", "Fragmento sussurrante", ECOS[rng:NextInteger(1, #ECOS)])
-	placa(pasta, centro + Vector3.new(0, 14, 0), "Jardim dos Fragmentos", nil, COR.jade)
+	placa(pasta, (olhar * CFrame.new(0, 18, 0)).Position, "Jardim dos Fragmentos", nil, COR.jade)
 end
 
 local function construirAltar(pasta: Instance)
-	local centro = direcao(45) * DISTANCIA
-	for i, raio in { 14, 10.5, 7 } do
-		cilindro(pasta, centro + Vector3.new(0, (i - 1) * 0.9, 0), raio, 0.9, {
-			Name = "AltarDegrau",
-			Color = if i == 3 then COR.pedraClara else COR.pedra,
-			Material = if i == 3 then Enum.Material.Marble else Enum.Material.Slate,
-		})
+	local olhar = referencia("altar")
+	for i, raio in { 16, 12, 8 } do
+		cilindroLocal(
+			pasta,
+			olhar,
+			0,
+			i - 1,
+			0,
+			raio,
+			1,
+			{ Name = "AltarDegrau", Color = COR.pedra }
+		)
 	end
-	filete(pasta, centro + Vector3.new(0, 2.7, 0), 6, 0.35, COR.violeta, COR.pedraClara)
-	for i = 1, 3 do
-		local d = direcao(i * 120)
-		peca(pasta, {
-			Name = "Monolito",
-			Material = Enum.Material.Basalt,
-			Size = Vector3.new(2.4, 11, 1.4),
-			CFrame = CFrame.lookAt(
-				centro + d * 9 + Vector3.new(0, 7.3, 0),
-				centro + Vector3.new(0, 7.3, 0)
-			),
-		})
+	for i = 0, 5 do
+		local a = 30 + 60 * i
+		local x, z = polar(19.5, a)
+		caixaLocal(
+			pasta,
+			olhar,
+			x,
+			7,
+			z,
+			Vector3.new(2.7, 14, 1.9),
+			-a,
+			{ Name = "Monolito", Color = COR.pedra }
+		)
 	end
-	local mesa = cilindro(
-		pasta,
-		centro + Vector3.new(0, 2.7, 0),
-		1.6,
-		2.2,
-		{ Name = "AltarMesa", Color = COR.pedra }
-	)
+	local mesa =
+		cilindroLocal(pasta, olhar, 0, 3, 0, 2, 2.8, { Name = "AltarMesa", Color = COR.pedra })
 	interacao(
 		mesa,
 		"em_construcao",
@@ -627,7 +632,7 @@ local function construirAltar(pasta: Instance)
 	)
 	placa(
 		pasta,
-		centro + Vector3.new(0, 17, 0),
+		(olhar * CFrame.new(0, 24, 0)).Position,
 		"Altar da Ressonância",
 		"Em construção",
 		COR.violeta
@@ -635,33 +640,21 @@ local function construirAltar(pasta: Instance)
 end
 
 local function construirPortais(pasta: Instance)
-	local centro = direcao(135) * DISTANCIA
-	cilindro(pasta, centro, 16, 0.6, { Name = "PortaisBase", Color = COR.pedra })
+	local olhar = referencia("portais")
+	cilindroLocal(pasta, olhar, 0, 0, 0, 22, 0.8, { Name = "PortaisBase", Color = COR.pedra })
 	local cores = { COR.violeta, COR.energia, COR.selo }
-	for i = 1, 3 do
-		local d = direcao(135 + (i - 2) * 38)
-		local base = centro + d * 9 + direcao(135) * 2
-		local olhar = CFrame.lookAt(base, Vector3.new(0, base.Y, 0))
-		peca(pasta, {
-			Name = "PortalPilar",
-			Material = Enum.Material.Basalt,
-			Size = Vector3.new(1.8, 13, 1.8),
-			CFrame = olhar * CFrame.new(-3.6, 7, 0) * CFrame.Angles(0, 0, math.rad(-4)),
-		})
-		peca(pasta, {
-			Name = "PortalPilar",
-			Material = Enum.Material.Basalt,
-			Size = Vector3.new(1.8, if i == 3 then 8 else 13, 1.8),
-			CFrame = olhar
-				* CFrame.new(3.6, if i == 3 then 4.5 else 7, 0)
-				* CFrame.Angles(0, 0, math.rad(4)),
-		})
-		if i ~= 3 then
+	for i, b in { -38, 0, 38 } do
+		local quebrado = b == -38
+		local x, z = math.sin(math.rad(b)) * 10, math.cos(math.rad(b)) * 10
+		-- referencial do portal: frente virada para o centro do lugar
+		local portal = olhar * CFrame.new(x, 0.8, z) * CFrame.Angles(0, math.rad(b), 0)
+		for _, lado in { -1, 1 } do
+			local alto = if quebrado and lado == 1 then 6.5 else 12
 			peca(pasta, {
-				Name = "PortalVerga",
-				Material = Enum.Material.Basalt,
-				Size = Vector3.new(10, 1.6, 2),
-				CFrame = olhar * CFrame.new(0, 14, 0),
+				Name = "PortalPilar",
+				Color = COR.pedra,
+				Size = Vector3.new(2.4, alto, 2.4),
+				CFrame = portal * CFrame.new(lado * 5, alto / 2, 0),
 			})
 		end
 		local veu = peca(pasta, {
@@ -670,11 +663,11 @@ local function construirPortais(pasta: Instance)
 			Color = cores[i],
 			CanCollide = false,
 			CastShadow = false,
-			Size = Vector3.new(5.6, 11, 0.3),
-			CFrame = olhar * CFrame.new(0, 6.8, 0),
+			Size = Vector3.new(7.4, if quebrado then 12 else 17.4, 0.3),
+			CFrame = portal * CFrame.new(0, if quebrado then 6 else 8.7, 0),
 		})
 		luz(veu, cores[i], 16, 1.2)
-		if i == 2 then
+		if b == 0 then
 			interacao(
 				veu,
 				"em_construcao",
@@ -686,7 +679,7 @@ local function construirPortais(pasta: Instance)
 	end
 	placa(
 		pasta,
-		centro + Vector3.new(0, 19, 0),
+		(olhar * CFrame.new(0, 25, 4)).Position,
 		"Portais Fragmentados",
 		"Em construção",
 		COR.violeta
@@ -694,60 +687,43 @@ local function construirPortais(pasta: Instance)
 end
 
 local function construirArena(pasta: Instance)
-	local centro = direcao(180) * (DISTANCIA + 4)
-	cilindro(
-		pasta,
-		centro,
-		22,
-		0.5,
-		{ Name = "ArenaPiso", Color = COR.pedraClara, Material = Enum.Material.Marble }
-	)
-	filete(pasta, centro + Vector3.new(0, 0.5, 0), 12, 0.4, COR.selo, COR.pedraClara)
-	-- Arquibancada em arco (aberta para a praça)
+	local olhar = referencia("arena")
+	cilindroLocal(pasta, olhar, 0, 0, 0, 24, 0.5, { Name = "ArenaPiso", Color = COR.pedraClara })
+	-- Arquibancada em arco de 240 graus, aberta para a praça (mesmas medidas do modelo)
+	local segmentos = 16
 	for degrau = 1, 3 do
-		for i = -5, 5 do
-			local d = direcao(180 + i * 15)
-			local raio = 20 + degrau * 3
-			peca(pasta, {
-				Name = "Arquibancada",
-				Size = Vector3.new(6.4, degrau * 1.4, 3),
-				CFrame = CFrame.lookAt(
-					centro + d * raio + Vector3.new(0, degrau * 0.7, 0),
-					centro + Vector3.new(0, degrau * 0.7, 0)
-				),
-			})
+		local r0, r1 = 24.5 + 3 * (degrau - 1), 24.5 + 3 * degrau
+		local raio = (r0 + r1) / 2
+		for k = 0, segmentos - 1 do
+			local a = 60 + 240 * (k + 0.5) / segmentos
+			local x, z = polar(raio, a)
+			local largura = 2 * math.pi * raio * (240 / 360) / segmentos + 0.4
+			caixaLocal(
+				pasta,
+				olhar,
+				x,
+				0.7 * degrau,
+				z,
+				Vector3.new(largura, 1.4 * degrau, 3),
+				-a,
+				{
+					Name = "Arquibancada",
+					Color = COR.pedra,
+				}
+			)
 		end
 	end
-	placa(pasta, centro + Vector3.new(0, 12, 0), "Arena dos Despertos", "Em construção", COR.selo)
-end
-
-local function construirIlhas(pasta: Instance)
-	local rng = Random.new(5)
-	for i = 1, 7 do
-		local d = direcao(i * 51 + 12)
-		local centro = d * rng:NextNumber(210, 290) + Vector3.new(0, rng:NextNumber(25, 95), 0)
-		local largura = rng:NextNumber(26, 48)
-		peca(pasta, {
-			Name = "Ilha",
-			Color = COR.pedra,
-			Size = Vector3.new(largura, 7, largura * 0.8),
-			CFrame = CFrame.new(centro) * CFrame.Angles(0, rng:NextNumber(0, 3), 0),
-		})
-		peca(pasta, {
-			Name = "IlhaBase",
-			Color = COR.chao,
-			Size = Vector3.new(largura * 0.6, 9, largura * 0.5),
-			CFrame = CFrame.new(centro - Vector3.new(0, 7, 0))
-				* CFrame.Angles(0, rng:NextNumber(0, 3), 0),
-		})
-		cristal(
-			pasta,
-			centro + Vector3.new(0, 3.5, 0),
-			rng:NextNumber(10, 20),
-			if i % 2 == 0 then COR.violeta else COR.energia,
-			CFrame.Angles(math.rad(rng:NextNumber(-10, 10)), 0, 0)
-		)
+	for k = 0, 7 do
+		local x, z = polar(35.5, 67.5 + k * (225 / 7))
+		cilindroLocal(pasta, olhar, x, 0, z, 1.4, 14, { Name = "ArenaColuna", Color = COR.marmore })
 	end
+	placa(
+		pasta,
+		(olhar * CFrame.new(0, 16, 0)).Position,
+		"Arena dos Despertos",
+		"Em construção",
+		COR.selo
+	)
 end
 
 local function configurarCeu()
@@ -767,12 +743,12 @@ local function configurarCeu()
 	ceu.CelestialBodiesShown = false
 	ceu.Parent = Lighting
 	local atmosfera = Instance.new("Atmosphere")
-	atmosfera.Density = 0.32
+	atmosfera.Density = 0.38
 	atmosfera.Offset = 0.2
 	atmosfera.Color = Color3.fromHex("6C5FA8")
 	atmosfera.Decay = Color3.fromHex("1A1030")
 	atmosfera.Glare = 0
-	atmosfera.Haze = 1.6
+	atmosfera.Haze = 2
 	atmosfera.Parent = Lighting
 	local bloom = Instance.new("BloomEffect")
 	bloom.Name = "NexoBloom"
@@ -792,22 +768,10 @@ function Nexo.construir(): Folder
 	pasta.Name = "Nexo"
 
 	construirChao(pasta)
-	-- A praça e o Núcleo feitos de peças básicas são PROVISÓRIOS: cada cliente monta por cima
-	-- o kit 3D (src/client/Mundo/Nexo3D) e esconde estas peças, que continuam servindo de
-	-- colisão. Se o kit falhar em algum cliente, elas seguem visíveis (fallback temporário).
-	local antes = #pasta:GetChildren()
+	construirLimite(pasta)
+	construirBordaProvisoria(pasta)
 	construirPraca(pasta)
 	construirNucleo(pasta)
-	for i, filho in pasta:GetChildren() do
-		if i > antes then
-			for _, inst in { filho, table.unpack(filho:GetDescendants()) } do
-				-- O coração e a casca são tratados à parte pelo cliente; o feixe continua
-				if inst:IsA("BasePart") and not KIT_MANTEM[inst.Name] then
-					inst:SetAttribute("Provisorio", true)
-				end
-			end
-		end
-	end
 	construirCaminhos(pasta)
 	construirObelisco(pasta)
 	construirArquivo(pasta)
@@ -815,7 +779,15 @@ function Nexo.construir(): Folder
 	construirAltar(pasta)
 	construirPortais(pasta)
 	construirArena(pasta)
-	construirIlhas(pasta)
+	construirColisoresKit(pasta)
+	-- Tudo o que tem forma básica é PROVISÓRIO: cada cliente monta por cima o kit 3D
+	-- (src/client/Mundo/Nexo3D) e esconde estas peças, que continuam servindo de colisão.
+	-- Se o kit falhar em algum cliente, elas seguem visíveis (fallback temporário).
+	for _, inst in pasta:GetDescendants() do
+		if inst:IsA("BasePart") and not KIT_MANTEM[inst.Name] then
+			inst:SetAttribute("Provisorio", true)
+		end
+	end
 
 	-- Spawn ao sul da praça, já olhando para o Núcleo
 	local spawn = Instance.new("SpawnLocation")

@@ -1,0 +1,161 @@
+-- GERADO por assets/nexo/source/generate_nexo.py. Não editar à mão.
+-- Colisão das peças do kit 3D do Nexo, no espaço do mundo (studs do Roblox).
+-- O servidor cria uma caixa por linha: { posicao, giro (graus em Y), tamanho, peça }.
+return {
+	{
+		posicao = { -15.625, 7.5, -31 },
+		giro = 0,
+		tamanho = { 5.75, 13, 5.5 },
+		peca = "arco_partido",
+	},
+	{
+		posicao = { 15.625, 7.5, -31 },
+		giro = 0,
+		tamanho = { 5.75, 13, 5.5 },
+		peca = "arco_partido",
+	},
+	{
+		posicao = { -35.351, 3.86, -5.54 },
+		giro = 70,
+		tamanho = { 2.53, 5.72, 2.42 },
+		peca = "arco_partido",
+	},
+	{
+		posicao = { -30.649, 3.86, -18.46 },
+		giro = 70,
+		tamanho = { 2.53, 5.72, 2.42 },
+		peca = "arco_partido",
+	},
+	{
+		posicao = { 30.649, 3.86, -18.46 },
+		giro = -70,
+		tamanho = { 2.53, 5.72, 2.42 },
+		peca = "arco_partido",
+	},
+	{
+		posicao = { 35.351, 3.86, -5.54 },
+		giro = -70,
+		tamanho = { 2.53, 5.72, 2.42 },
+		peca = "arco_partido",
+	},
+	{
+		posicao = { 15.69, 7.092, -37.879 },
+		giro = 104.117,
+		tamanho = { 2.948, 12.183, 2.948 },
+		peca = "ruina_pilar_a",
+	},
+	{
+		posicao = { 37.879, 7.426, -15.69 },
+		giro = 85.326,
+		tamanho = { 3.109, 12.851, 3.109 },
+		peca = "ruina_pilar_a",
+	},
+	{
+		posicao = { 37.879, 7.413, 15.69 },
+		giro = 23.11,
+		tamanho = { 3.103, 12.825, 3.103 },
+		peca = "ruina_pilar_a",
+	},
+	{
+		posicao = { 15.69, 7.299, 37.879 },
+		giro = 282.32,
+		tamanho = { 3.048, 12.599, 3.048 },
+		peca = "ruina_pilar_a",
+	},
+	{
+		posicao = { -15.69, 7.08, 37.879 },
+		giro = 208.194,
+		tamanho = { 2.942, 12.16, 2.942 },
+		peca = "ruina_pilar_a",
+	},
+	{
+		posicao = { -37.879, 6.841, 15.69 },
+		giro = 96.125,
+		tamanho = { 2.827, 11.683, 2.827 },
+		peca = "ruina_pilar_a",
+	},
+	{
+		posicao = { -37.879, 7.657, -15.69 },
+		giro = 104.966,
+		tamanho = { 3.221, 13.313, 3.221 },
+		peca = "ruina_pilar_a",
+	},
+	{
+		posicao = { -15.69, 7.484, -37.879 },
+		giro = 186.06,
+		tamanho = { 3.137, 12.968, 3.137 },
+		peca = "ruina_pilar_a",
+	},
+	{
+		posicao = { -30.096, 3.6, -32.512 },
+		giro = 24,
+		tamanho = { 12.8, 5.2, 1.9 },
+		peca = "ruina_parede_b",
+	},
+	{
+		posicao = { 30.096, 3.6, -32.512 },
+		giro = 156,
+		tamanho = { 12.8, 5.2, 1.9 },
+		peca = "ruina_parede_b",
+	},
+	{
+		posicao = { -111.723, 4.9, 91.924 },
+		giro = 101.471,
+		tamanho = { 1.6, 9, 1.6 },
+		peca = "arvore_tronco",
+	},
+	{
+		posicao = { -89.095, 4.9, 107.48 },
+		giro = 73.118,
+		tamanho = { 1.6, 9, 1.6 },
+		peca = "arvore_tronco",
+	},
+	{
+		posicao = { -125.865, 4.9, 101.823 },
+		giro = 239.186,
+		tamanho = { 1.6, 9, 1.6 },
+		peca = "arvore_tronco",
+	},
+	{
+		posicao = { -98.995, 4.9, 124.451 },
+		giro = 70.423,
+		tamanho = { 1.6, 9, 1.6 },
+		peca = "arvore_tronco",
+	},
+	{
+		posicao = { -111.016, 4.9, 123.744 },
+		giro = 298.257,
+		tamanho = { 1.6, 9, 1.6 },
+		peca = "arvore_tronco",
+	},
+	{
+		posicao = { -120.544, 2.74, 103.04 },
+		giro = 20,
+		tamanho = { 2.07, 4.68, 1.98 },
+		peca = "arco_partido",
+	},
+	{
+		posicao = { -109.973, 2.74, 99.192 },
+		giro = 20,
+		tamanho = { 2.07, 4.68, 1.98 },
+		peca = "arco_partido",
+	},
+	{
+		posicao = { -98.288, 5.05, 115.258 },
+		giro = 341.491,
+		tamanho = { 2.25, 9.3, 2.25 },
+		peca = "ruina_pilar_a",
+	},
+	{
+		posicao = { -100.409, 4.12, 93.338 },
+		giro = 323.753,
+		tamanho = { 1.8, 7.44, 1.8 },
+		peca = "ruina_pilar_a",
+	},
+	{
+		posicao = { -123.631, 2.22, 113.957 },
+		giro = 315,
+		tamanho = { 8.96, 3.64, 1.33 },
+		peca = "ruina_parede_b",
+	},
+}
