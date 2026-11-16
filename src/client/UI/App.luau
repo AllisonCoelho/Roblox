@@ -79,6 +79,15 @@ local function apresentar(aura: Auras.Aura, dados: { [string]: any })
 		end
 	end
 
+	-- Animações desligadas: nada de ritual nem câmera; o resultado (e o cartão) vem na hora
+	if not prefs.animacoes then
+		if comCartao then
+			Revelacao.cena(false)
+		end
+		revelar()
+		return
+	end
+
 	ocupadoAte = os.clock() + Apresentacao.tempoAteRevelacao(cat)
 	if comCartao then
 		Revelacao.cena(cat.camera and not prefs.movimentoReduzido)
@@ -102,6 +111,20 @@ local function girar()
 	elseif resposta then
 		Avisos.toast(resposta)
 	end
+end
+
+-- Botão DESPERTAR / tecla E: se há um ritual em andamento, o toque PULA a animação;
+-- senão, gira. O giro automático nunca pula.
+local function aoApertar()
+	-- ocupadoAte só vale enquanto o ritual corre: revelar() o zera antes de abrir o cartão.
+	-- Por isso a condição não olha Revelacao.ativa(): nas cenas raras a tela já está reservada
+	-- desde o início, e era isso que impedia o pulo pela tecla.
+	if not girando and os.clock() < ocupadoAte then
+		Despertar.pular()
+		return
+	end
+	-- Com o cartão aberto, girar() não faz nada (a tecla não fecha o cartão nem gira de novo)
+	girar()
 end
 
 -- Só no Studio: Alt+1..6 encena uma categoria sem sortear nem salvar nada
@@ -168,7 +191,7 @@ function App.iniciar()
 	Navegacao.montar(raiz)
 	hud = HUD.montar(raiz, {
 		aoDespertar = function()
-			task.spawn(girar)
+			task.spawn(aoApertar)
 		end,
 		aoAlternarAuto = function()
 			alternarConfiguracao("giroAutomatico")
@@ -219,7 +242,7 @@ function App.iniciar()
 			return
 		end
 		if input.KeyCode == Enum.KeyCode.E then
-			task.spawn(girar)
+			task.spawn(aoApertar)
 		elseif RunService:IsStudio() and UserInputService:IsKeyDown(Enum.KeyCode.LeftAlt) then
 			local indice = input.KeyCode.Value - Enum.KeyCode.One.Value + 1
 			if indice >= 1 and indice <= #Apresentacao.Categorias then

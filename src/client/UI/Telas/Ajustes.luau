@@ -18,6 +18,11 @@ local OPCOES = {
 	},
 	{ "sons", "Sons do ritual", "Efeitos sonoros do giro." },
 	{
+		"animacoes",
+		"Animações do giro",
+		"Desligado: sem ritual, pose nem câmera. O resultado aparece na hora.",
+	},
+	{
 		"equiparAutomatico",
 		"Equipar a mais rara automaticamente",
 		"Troca sozinho de aura quando sair uma mais rara que a equipada.",

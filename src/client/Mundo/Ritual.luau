@@ -8,6 +8,9 @@
 --   Ruptura       o núcleo se contrai, há um instante de silêncio e os anéis se partem
 --   Revelação     chama `aoRevelar` (a interface mostra o nome) e os efeitos somem
 --
+-- O personagem acompanha (Motion): nas raridades comuns faz um gesto curto; nas altas ele
+-- alcança a energia, agarra, força e RASGA uma fenda no ar (Fenda), de onde sai a ruptura.
+--
 -- Os anéis são Beams curvos (4 arcos de Bézier formam um círculo), então são leves:
 -- nenhuma malha, nenhum asset, poucas instâncias.
 local Debris = game:GetService("Debris")
@@ -18,6 +21,9 @@ local TweenService = game:GetService("TweenService")
 local Shared = ReplicatedStorage.Shared
 local Apresentacao = require(Shared.Dados.Apresentacao)
 local Auras = require(Shared.Dados.Auras)
+local Trilha = require(Shared.Dados.Trilha)
+local Fenda = require(script.Parent.Fenda)
+local Motion = require(script.Parent.Motion)
 local Sons = require(script.Parent.Sons)
 
 local Ritual = {}
@@ -34,25 +40,8 @@ local TEXTURA_BRILHO = "rbxasset://textures/particles/sparkles_main.dds"
 local K_CIRCULO = 0.5523 -- fator de Bézier para 4 arcos formarem um círculo
 local BRANCO = Color3.new(1, 1, 1)
 
--- Poses (deslocamentos do C0 das juntas R15) por cima da animação normal
-local POSES = {
-	Root = { conter = CFrame.new(), ruptura = CFrame.new() },
-	Neck = {
-		conter = CFrame.Angles(math.rad(-12), 0, 0),
-		ruptura = CFrame.Angles(math.rad(18), 0, 0),
-	},
-	RightShoulder = {
-		conter = CFrame.Angles(math.rad(70), 0, math.rad(-14)),
-		ruptura = CFrame.Angles(0, 0, math.rad(100)),
-	},
-	LeftShoulder = {
-		conter = CFrame.Angles(math.rad(70), 0, math.rad(14)),
-		ruptura = CFrame.Angles(0, 0, math.rad(-100)),
-	},
-}
 local ALTURA_FLUTUAR = 1.8
 
-type Junta = { motor: Motor6D, original: CFrame, pose: { [string]: CFrame } }
 type Anel = {
 	base: Part,
 	anexos: { Attachment },
@@ -280,7 +269,12 @@ function Ritual.tocar(personagem: Model, aura: Auras.Aura, op: Opcoes): () -> ()
 	local corTier = Color3.fromHex(Auras.Tiers[aura.tier].cor)
 	local c1 = Color3.fromHex(aura.cores[1])
 	local c2 = Color3.fromHex(aura.cores[2])
-	local comPose = cat.rachaduras > 0 and not op.movimentoReduzido
+	-- Toda raridade tem pose: um gesto curto nas comuns e o "rasgar" nas altas
+	local comPose = not op.movimentoReduzido
+	local rasga = cat.rachaduras > 0
+	local tempo: Trilha.Tempos =
+		{ t1 = t1, t2 = t2, t3 = t3, tEstouro = tEstouro, t4 = t4, fim = fim }
+	local trilha = if rasga then Trilha.rasgar(tempo) else Trilha.gesto(tempo, cat.circulo)
 	local flutua = cat.flutua and op.completo and not op.movimentoReduzido
 
 	local pasta = Instance.new("Folder")
@@ -452,15 +446,18 @@ function Ritual.tocar(personagem: Model, aura: Auras.Aura, op: Opcoes): () -> ()
 		suporteRachaduras = suporte
 	end
 
-	-- Juntas para a pose
-	local juntas: { Junta } = {}
-	if comPose then
-		for nome, pose in POSES do
-			local motor = personagem:FindFirstChild(nome, true)
-			if motor and motor:IsA("Motor6D") then
-				table.insert(juntas, { motor = motor, original = motor.C0, pose = pose })
-			end
-		end
+	-- Mãos do R15 (guiam a fenda). R6 não tem estas peças: usa o ponto fixo.
+	local function mao(nome: string): BasePart?
+		local p = personagem:FindFirstChild(nome)
+		return if p and p:IsA("BasePart") then p else nil
+	end
+	local maoDireita, maoEsquerda = mao("RightHand"), mao("LeftHand")
+
+	-- Pose do personagem e a fenda que ele rasga (raridades altas)
+	local motion: Motion.Controle? = if comPose then Motion.criar(personagem) else nil
+	local fenda: Fenda.Controle? = nil
+	if rasga then
+		fenda = Fenda.criar(pasta, corTier, c1, 1.8 + 0.55 * cat.aneis, 5 + 1.3 * cat.aneis)
 	end
 
 	local inicio = os.clock()
@@ -492,28 +489,14 @@ function Ritual.tocar(personagem: Model, aura: Auras.Aura, op: Opcoes): () -> ()
 		for _, c in conexoes do
 			c:Disconnect()
 		end
-		for _, j in juntas do
-			if j.motor.Parent then
-				j.motor.C0 = j.original
-			end
+		if motion then
+			motion.restaurar()
 		end
 		pasta:Destroy()
 		-- Se foi interrompido antes da hora, quem girou ainda precisa saber o resultado
 		revelar()
 	end
 	ativos[personagem] = finalizar
-
-	local function pose(peso: number, nome: string, de: string?, altura: number)
-		for _, j in juntas do
-			local alvo = j.pose[nome] or CFrame.new()
-			local origem = if de then j.pose[de] or CFrame.new() else CFrame.new()
-			local c = origem:Lerp(alvo, peso)
-			if j.motor.Name == "Root" then
-				c = CFrame.new(0, altura, 0) * c
-			end
-			j.motor.C0 = j.original * c
-		end
-	end
 
 	Sons.tocar("chamado", nucleo, 0.8 + cat.aneis * 0.08, 0.35)
 
@@ -548,20 +531,6 @@ function Ritual.tocar(personagem: Model, aura: Auras.Aura, op: Opcoes): () -> ()
 			local contracao = math.clamp((t - t3) / math.max(tContrai - t3, 0.01), 0, 1)
 			local aposEstouro = math.clamp((t - tEstouro) / 0.3, 0, 1)
 
-			-- Pose e flutuação
-			if comPose then
-				local altura = if flutua
-					then ALTURA_FLUTUAR * suave(carga) * (1 - suave((t - t4) / 0.35))
-					else 0
-				if t < tEstouro then
-					pose(suave(t / math.max(t2, 0.01)), "conter", nil, altura)
-				elseif t < t4 then
-					pose(suave((t - tEstouro) / 0.15), "ruptura", "conter", altura)
-				else
-					pose(1 - suave((t - t4) / 0.35), "ruptura", nil, altura)
-				end
-			end
-
 			-- Batidas da instabilidade: aceleram com o tempo (ritmo, não ruído)
 			local batidasAgora = math.floor(cat.pulsos * instavel ^ 1.6 + 0.0001)
 			if op.completo and t < t3 and batidasAgora > batidas then
@@ -586,8 +555,31 @@ function Ritual.tocar(personagem: Model, aura: Auras.Aura, op: Opcoes): () -> ()
 				then math.max(0, 1 - (t - ultimaBatida) / 0.12)
 				else 0
 
-			-- Posição do núcleo: à frente do peito, com vibração crescente
+			-- Pose: a trilha diz qual pose vale agora; os braços tremem com o esforço
+			if motion then
+				local altura = if flutua
+					then ALTURA_FLUTUAR * suave(carga) * (1 - suave((t - t4) / 0.35))
+					else 0
+				local de, para, peso = Trilha.avaliar(trilha, t)
+				local tremor = if rasga and t < tEstouro
+					then 0.035 * instavel + 0.05 * impulso
+					else 0
+				motion.aplicar(de, para, peso, altura, tremor, t)
+			end
+
+			-- Posição do núcleo: à frente do peito, com vibração crescente.
+			-- Quando o personagem está rasgando a fenda, a âncora são as MÃOS: o ponto médio
+			-- entre elas, mantido à frente do corpo. Assim acompanha a escala do avatar e a
+			-- flutuação. Sem pose (R6 ou movimento reduzido), vale o ponto fixo à frente do peito.
 			local base = raiz.CFrame * CFrame.new(0, 0.5, -2.3)
+			local distanciaMaos: number? = nil
+			if rasga and motion and maoDireita and maoEsquerda and t >= t1 then
+				local pd, pe = maoDireita.Position, maoEsquerda.Position
+				local meio = raiz.CFrame:PointToObjectSpace((pd + pe) / 2)
+				base = raiz.CFrame
+					* CFrame.new(meio.X, meio.Y, math.min(meio.Z, -Trilha.FRENTE_MINIMA))
+				distanciaMaos = (pd - pe).Magnitude
+			end
 			local vibra = if op.movimentoReduzido
 				then 0
 				else 0.06 * cat.aneis * instavel * (1 - contracao)
@@ -678,6 +670,17 @@ function Ritual.tocar(personagem: Model, aura: Auras.Aura, op: Opcoes): () -> ()
 						end
 					end
 				end
+			end
+
+			-- A fenda fica onde as mãos estão, virada para a frente do personagem
+			if fenda then
+				local giro = raiz.CFrame - raiz.CFrame.Position
+				local abertura = Trilha.aberturaFenda(tempo, t, instavel, impulso)
+				-- Com as mãos como guia, as bordas ficam entre elas e abrem junto com os braços
+				local meia = if distanciaMaos
+					then Trilha.meiaLarguraPelasMaos(tempo, t, distanciaMaos, abertura)
+					else nil
+				fenda.atualizar(CFrame.new(centro) * giro, abertura, meia)
 			end
 
 			-- Rachaduras acompanham o núcleo, de frente para a câmera

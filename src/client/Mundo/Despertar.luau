@@ -17,6 +17,7 @@ local Despertar = {}
 
 export type Preferencias = {
 	sons: boolean,
+	animacoes: boolean, -- false = sem ritual nem câmera: o resultado aparece na hora
 	movimentoReduzido: boolean,
 	qualidadeBaixa: boolean,
 	ocultarEfeitosAlheios: boolean,
@@ -28,6 +29,7 @@ function Despertar.preferencias(configuracoes: { [string]: boolean }?): Preferen
 	local c = configuracoes or {}
 	return {
 		sons = c.sons ~= false,
+		animacoes = c.animacoes ~= false,
 		movimentoReduzido = c.movimentoReduzido == true,
 		qualidadeBaixa = c.qualidadeBaixa == true,
 		ocultarEfeitosAlheios = c.ocultarEfeitosAlheios == true,
@@ -100,7 +102,7 @@ end
 -- Versão abreviada no personagem de OUTRO jogador: sem câmera, sem travar ninguém.
 function Despertar.alheio(jogador: Player, aura: Auras.Aura, prefs: Preferencias)
 	local cat = Apresentacao.de(aura.chance)
-	if not cat.alheios or prefs.ocultarEfeitosAlheios then
+	if not cat.alheios or prefs.ocultarEfeitosAlheios or not prefs.animacoes then
 		return
 	end
 	local personagem = jogador.Character
@@ -112,7 +114,7 @@ function Despertar.alheio(jogador: Player, aura: Auras.Aura, prefs: Preferencias
 		categoria = cat,
 		completo = false,
 		qualidadeBaixa = prefs.qualidadeBaixa,
-		movimentoReduzido = true, -- sem pose nem vibração no personagem dos outros
+		movimentoReduzido = prefs.movimentoReduzido, -- os outros também são vistos rasgando a fenda
 		aoRevelar = nil,
 	})
 	if cat.ceu and not prefs.movimentoReduzido then

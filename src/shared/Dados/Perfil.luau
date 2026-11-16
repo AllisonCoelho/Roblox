@@ -18,6 +18,7 @@ Perfil.CONFIGURACOES = {
 	anuncios = true,
 	equiparAutomatico = true, -- equipar sozinho quando sair uma aura mais rara que a atual
 	sons = true,
+	animacoes = true, -- ritual, pose do personagem e câmera do giro
 	movimentoReduzido = true, -- sem câmera, tremor nem escurecimento
 	qualidadeBaixa = true, -- menos anéis, partículas e rastros
 	ocultarEfeitosAlheios = true, -- não mostrar rituais e auras dos outros jogadores
@@ -35,6 +36,7 @@ function Perfil.padrao(): Estado
 			anuncios = true,
 			equiparAutomatico = false,
 			sons = true,
+			animacoes = true,
 			movimentoReduzido = false,
 			qualidadeBaixa = false,
 			ocultarEfeitosAlheios = false,
