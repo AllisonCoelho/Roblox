@@ -107,4 +107,65 @@ igual("texto curto pequeno", Formato.chanceCurta(4.26), "4,3")
 igual("melhor da colecao", Auras.melhorDe({ faisca = 3, chama_azul = 1, inexistente = 9 }).id, "chama_azul")
 igual("colecao vazia sem melhor", Auras.melhorDe({}), nil)
 igual("descobertas", Auras.contarDescobertas({ faisca = 1, brasa = 0, x = 2 }), 1)
+-- Apresentação do giro: categorias pela chance real e durações dentro das faixas do design
+local Apresentacao = req("Apresentacao")
+igual("6 categorias", #Apresentacao.Categorias, 6)
+igual("faisca = baixa", Apresentacao.de(Auras.porId.faisca.chance).id, "baixa")
+igual("1 em 49 = baixa", Apresentacao.de(49).id, "baixa")
+igual("1 em 50 = moderada", Apresentacao.de(50).id, "moderada")
+igual("1 em 999 = moderada", Apresentacao.de(999).id, "moderada")
+igual("1 em 1.000 = alta", Apresentacao.de(1000).id, "alta")
+igual("1 em 10.000 = muito alta", Apresentacao.de(10000).id, "muito_alta")
+igual("1 em 100.000 = extrema", Apresentacao.de(100000).id, "extrema")
+igual("1 em 1.000.000 = absoluta", Apresentacao.de(1000000).id, "absoluta")
+local faixas = { { 0.4, 0.6 }, { 0.8, 1.2 }, { 1.5, 2 }, { 2, 3 }, { 3, 4 }, { 4, 6 } }
+local anterior = 0
+for i, c in Apresentacao.Categorias do
+	local d = Apresentacao.tempoAteRevelacao(c)
+	igual("duracao " .. c.id .. " na faixa", d >= faixas[i][1] and d <= faixas[i][2], true)
+	igual("duracao cresce " .. c.id, d > anterior, true)
+	igual("silencio cabe na ruptura " .. c.id, c.silencio < c.ruptura, true)
+	anterior = d
+end
+igual("anuncio e versao alheia no mesmo limiar", Apresentacao.de(Auras.ANUNCIO_MINIMO).alheios, true)
+igual("comuns nao aparecem para os outros", Apresentacao.de(999).alheios, false)
+igual("abreviada = baixa", Apresentacao.abreviada().id, "baixa")
+local semCategoria = 0
+for i = 1, #Apresentacao.Categorias do
+	local tem = false
+	for _, a in Auras.lista do
+		if Apresentacao.indiceDe(a.chance) == i then
+			tem = true
+		end
+	end
+	if not tem then
+		semCategoria += 1
+	end
+end
+igual("toda categoria tem aura (teste visual)", semCategoria, 0)
+igual("config nova tem padrao", Perfil.padrao().configuracoes.equiparAutomatico, false)
+local faltando = 0
+for chave in Perfil.CONFIGURACOES do
+	if Perfil.padrao().configuracoes[chave] == nil then
+		faltando += 1
+	end
+end
+igual("toda configuracao tem padrao", faltando, 0)
+-- Obter não força equipar
+local pe = Perfil.padrao()
+igual("colecao vazia no inicio", Perfil.colecaoVazia(pe), true)
+igual("primeira aura equipa", Perfil.deveEquipar(pe, true, 5, nil), true)
+Perfil.registrarGiro(pe, "nevoa")
+igual("colecao com itens", Perfil.colecaoVazia(pe), false)
+pe.equipada = nil -- jogador desequipou pelo índice
+igual("desequipada + auto desligado: nao equipa", Perfil.deveEquipar(pe, false, 1000000, nil), false)
+pe.equipada = "nevoa"
+igual("auto desligado: mais rara nao troca", Perfil.deveEquipar(pe, false, 1000, 5), false)
+pe.configuracoes.equiparAutomatico = true
+igual("auto ligado: mais rara troca", Perfil.deveEquipar(pe, false, 1000, 5), true)
+igual("auto ligado: mais comum nao troca", Perfil.deveEquipar(pe, false, 5, 1000), false)
+igual("auto ligado: igual nao troca", Perfil.deveEquipar(pe, false, 5, 5), false)
+igual("auto ligado e nada equipado: equipa", Perfil.deveEquipar(pe, false, 5, nil), true)
+pe.auras = { nevoa = 0 }
+igual("contagem zerada conta como vazia", Perfil.colecaoVazia(pe), true)
 print(string.format("%d testes, %d falhas", total, falhas))

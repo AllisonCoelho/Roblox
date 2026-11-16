@@ -8,6 +8,7 @@ MODULOS = {
     "Formato": "src/shared/Formato.luau",
     "Perfil": "src/shared/Dados/Perfil.luau",
     "Auras": "src/shared/Dados/Auras.luau",
+    "Apresentacao": "src/shared/Dados/Apresentacao.luau",
     "Sessao": "src/server/Servicos/Sessao.luau",
 }
 codigo = ["""

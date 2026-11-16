@@ -25,14 +25,14 @@ function Estado.agora(): number
 	return workspace:GetServerTimeNow()
 end
 
--- Pede uma ação ao servidor. Devolve (ok, mensagem)
-function Estado.pedir(acao: string, ...: any): (boolean, string?)
-	local ok, sucesso, msg =
-		pcall(Remotos.funcao("Acao").InvokeServer, Remotos.funcao("Acao"), acao, ...)
+-- Pede uma ação ao servidor. Devolve (ok, mensagem, dados)
+function Estado.pedir(acao: string, ...: any): (boolean, string?, { [string]: any }?)
+	local funcao = Remotos.funcao("Acao")
+	local ok, sucesso, msg, dados = pcall(funcao.InvokeServer, funcao, acao, ...)
 	if not ok then
-		return false, "Sem conexão com o servidor"
+		return false, "Sem conexão com o servidor", nil
 	end
-	return sucesso == true, msg
+	return sucesso == true, msg, if type(dados) == "table" then dados else nil
 end
 
 -- Revisão da cópia que temos: cópias com número menor ou igual chegaram atrasadas

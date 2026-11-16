@@ -20,14 +20,14 @@ export type Opcoes = {
 	aoDespertar: () -> (),
 	aoAlternarAuto: () -> (),
 	aoAbrirIndice: () -> (),
-	aoAlternarAnuncios: () -> (),
+	aoAbrirAjustes: () -> (),
 }
 
 export type Api = {
 	definirCarga: (fracao: number) -> (),
 	definirVisivel: (visivel: boolean) -> (),
 	atualizar: (estado: Perfil.Estado) -> (),
-	registrarResultado: (aura: Auras.Aura) -> (),
+	registrarResultado: (aura: Auras.Aura, nova: boolean) -> (),
 }
 
 local function corTier(aura: Auras.Aura): Color3
@@ -126,18 +126,18 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 		Parent = placaAura.conteudo,
 	})
 
-	-- Sino dos anúncios
+	-- Engrenagem: abre os Ajustes (anúncios, sons, acessibilidade)
 	local sino = Kit.circulo({
-		Name = "Anuncios",
+		Name = "Ajustes",
 		BackgroundColor3 = Cores.TintaClara,
 		Position = UDim2.fromOffset(24, 230),
 		Size = UDim2.fromOffset(52, 52),
 		Parent = hud,
 	})
-	local sinoContorno = Kit.novo("UIStroke", { Color = Cores.Borda, Thickness = 2, Parent = sino })
+	Kit.novo("UIStroke", { Color = Cores.Papel, Thickness = 2, Parent = sino })
 	local sinoTexto = Kit.texto({
-		Text = "🔔",
-		TextSize = 26,
+		Text = "⚙",
+		TextSize = 30,
 		Size = UDim2.fromScale(1, 1),
 		Parent = sino,
 	})
@@ -149,7 +149,7 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 		ZIndex = 3,
 		Parent = sino,
 	})
-	sinoBotao.Activated:Connect(op.aoAlternarAnuncios)
+	sinoBotao.Activated:Connect(op.aoAbrirAjustes)
 
 	-- Feed "Últimos despertares" (direita)
 	local feed = Kit.novo("Frame", {
@@ -355,13 +355,10 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 				faixaTier.definirCor(Cores.Borda)
 			end
 			auto.definirAtivo(estado.configuracoes.giroAutomatico == true)
-			local anuncios = estado.configuracoes.anuncios ~= false
-			sinoTexto.TextTransparency = if anuncios then 0 else 0.6
-			sinoContorno.Color = if anuncios then Cores.Papel else Cores.Borda
 			local descobertas = Auras.contarDescobertas(estado.auras)
 			indice.definirTexto(string.format("ÍNDICE %d/%d", descobertas, #Auras.lista))
 		end,
-		registrarResultado = function(aura: Auras.Aura)
+		registrarResultado = function(aura: Auras.Aura, nova: boolean)
 			table.insert(recentes, 1, aura)
 			if #recentes > RECENTES then
 				table.remove(recentes)
@@ -381,7 +378,12 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 			-- Nome acima do botão
 			resultadoToken += 1
 			local meu = resultadoToken
-			resultado.Text = string.format("%s · 1 em %s", aura.nome, Formato.chance(aura.chance))
+			resultado.Text = string.format(
+				"%s%s · 1 em %s",
+				if nova then "NOVA! " else "",
+				aura.nome,
+				Formato.chance(aura.chance)
+			)
 			resultado.TextColor3 = corTier(aura)
 			resultado.TextTransparency = 0
 			resultadoContorno.Transparency = 0

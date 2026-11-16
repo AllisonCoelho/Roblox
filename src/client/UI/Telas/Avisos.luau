@@ -1,5 +1,4 @@
 -- Avisos na tela: mensagens curtas (toast) e anúncios de auras raras para o servidor inteiro.
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TextChatService = game:GetService("TextChatService")
 
@@ -37,14 +36,14 @@ function Avisos.toast(texto: string)
 	end)
 end
 
--- Anúncio de aura rara (dados vindos do remote "Despertou")
+-- Anúncio de aura rara: dos outros (remote "Despertou") ou o próprio, na hora da revelação
 function Avisos.anunciar(nomeJogador: string, userId: number, aura: Auras.Aura)
 	if aura.chance < Auras.ANUNCIO_MINIMO then
 		return
 	end
-	local proprio = userId == Players.LocalPlayer.UserId
+	-- "Anúncios" desligado vale para todos, inclusive os próprios (o cartão já mostra o resultado)
 	local estado = Estado.atual
-	if not proprio and estado and estado.configuracoes.anuncios == false then
+	if estado and estado.configuracoes.anuncios == false then
 		return
 	end
 	local tier = Auras.Tiers[aura.tier]
