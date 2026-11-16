@@ -49,7 +49,7 @@ function Avisos.anunciar(nomeJogador: string, userId: number, aura: Auras.Aura)
 	end
 	local tier = Auras.Tiers[aura.tier]
 	local nome = escapar(string.upper(nomeJogador))
-	local chance = Formato.inteiro(aura.chance)
+	local chance = Formato.chance(aura.chance)
 	-- No banner (fundo papel) a cor da raridade é escurecida para dar contraste
 	local corBanner = Color3.fromHex(tier.cor):Lerp(Cores.Tinta, 0.35):ToHex()
 	bannerTexto.Text = string.format(

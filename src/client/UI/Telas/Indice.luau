@@ -87,7 +87,7 @@ function Indice.montar(aoAviso: (string) -> ())
 		local tier = Auras.Tiers[aura.tier]
 		C.texto({
 			Name = "Chance",
-			Text = string.format("%s\n1 em %s", tier.nome, Formato.inteiro(aura.chance)),
+			Text = string.format("%s\n1 em %s", tier.nome, Formato.chance(aura.chance)),
 			TextSize = 18,
 			TextColor3 = Color3.fromHex(tier.cor),
 			Position = UDim2.fromOffset(0, 62),

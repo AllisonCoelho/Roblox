@@ -34,6 +34,24 @@ function Formato.curto(n: number): string
 	return Formato.inteiro(n)
 end
 
+-- Valor N de uma chance "1 em N": inteiro com separador ("1.000") ou, quando é quebrado e
+-- pequeno (a aura de reserva), uma casa decimal ("4,3")
+function Formato.chance(n: number): string
+	local arredondado = math.floor(n + 0.5)
+	if n < 100 and math.abs(n - arredondado) >= 0.05 then
+		return decimal(n)
+	end
+	return Formato.inteiro(arredondado)
+end
+
+-- Versão curta para espaços pequenos: "25 mil", "1,2 mi" ou Formato.chance
+function Formato.chanceCurta(n: number): string
+	if n >= 1e4 then
+		return Formato.curto(n)
+	end
+	return Formato.chance(n)
+end
+
 -- 3725 -> "1:02:05", 42 -> "0:42", 97200 -> "1d 03:00"
 function Formato.tempo(segundos: number): string
 	local s = math.max(0, math.floor(segundos))

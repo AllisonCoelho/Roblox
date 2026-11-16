@@ -1,16 +1,16 @@
 -- Catálogo de auras do Despertar e lógica pura do sorteio (testada em testes/logica.luau).
 -- Este módulo não usa APIs do Roblox (cores ficam em hex) para rodar também no luau puro.
 --
--- Sorteio "do mais raro para o mais comum": para cada aura, da mais rara à mais comum,
--- tenta acertar 1 em N; a primeira que acertar é a sorteada. Se nenhuma acertar, sai a mais comum.
--- Assim as auras raras saem quase exatamente "1 em N"; as comuns saem um pouco menos que o nominal
--- (veja Auras.probabilidadeReal).
+-- Sorteio com UM número aleatório em [0, 1) e faixas acumuladas: cada aura (exceto a Faísca)
+-- sai com probabilidade exata 1/chance. A Faísca é a aura de reserva e recebe o restante;
+-- a chance dela é calculada ao carregar (veja CHANCE_RESERVA) para que o "1 em N" mostrado ao
+-- jogador seja sempre a probabilidade real. A soma das outras precisa ficar abaixo de 100%.
 local Auras = {}
 
 export type Aura = {
 	id: string,
 	nome: string,
-	chance: number, -- "1 em chance"
+	chance: number, -- "1 em chance": probabilidade exata de sair = 1 / chance
 	cores: { string }, -- { principal, secundária } em hex
 	estilo: string, -- "brilho" | "chama" | "nevoa"
 	tier: number, -- índice em Auras.Tiers
@@ -33,19 +33,22 @@ Auras.Tiers = {
 -- Auras raras a partir desta chance geram anúncio para o servidor inteiro
 Auras.ANUNCIO_MINIMO = 1000
 
+-- Marca da aura de reserva (a primeira): a chance real é calculada a partir das outras
+local CHANCE_RESERVA = 0
+
 -- Nomes originais (sem referência a obras existentes). Ordem: mais comum -> mais rara.
 local DEFINICOES = {
-	{ "faisca", "Faísca", 2, "FFF1A8", "FFB13D", "brilho" },
-	{ "nevoa", "Névoa", 3, "DDE6F0", "9AA8B8", "nevoa" },
-	{ "brasa", "Brasa", 4, "FF9A4D", "D9480F", "chama" },
-	{ "orvalho", "Orvalho", 5, "B8F2FF", "4CC9F0", "brilho" },
-	{ "folha_dancante", "Folha Dançante", 8, "B6F27A", "3FA34D", "nevoa" },
-	{ "pedra_viva", "Pedra Viva", 10, "D8C3A5", "8D6E4C", "nevoa" },
-	{ "mare_calma", "Maré Calma", 16, "7FD8FF", "1E6FD9", "nevoa" },
-	{ "brasa_sussurrante", "Brasa Sussurrante", 25, "FFC46B", "FF5A1F", "chama" },
-	{ "vento_cortante", "Vento Cortante", 40, "E8FFF6", "6FE3C1", "brilho" },
-	{ "raiz_antiga", "Raiz Antiga", 50, "C9E39A", "5C7A2E", "nevoa" },
-	{ "gelo_fino", "Gelo Fino", 75, "E6FBFF", "7CC4FF", "brilho" },
+	{ "faisca", "Faísca", CHANCE_RESERVA, "FFF1A8", "FFB13D", "brilho" },
+	{ "nevoa", "Névoa", 5, "DDE6F0", "9AA8B8", "nevoa" },
+	{ "brasa", "Brasa", 7, "FF9A4D", "D9480F", "chama" },
+	{ "orvalho", "Orvalho", 9, "B8F2FF", "4CC9F0", "brilho" },
+	{ "folha_dancante", "Folha Dançante", 12, "B6F27A", "3FA34D", "nevoa" },
+	{ "pedra_viva", "Pedra Viva", 16, "D8C3A5", "8D6E4C", "nevoa" },
+	{ "mare_calma", "Maré Calma", 20, "7FD8FF", "1E6FD9", "nevoa" },
+	{ "brasa_sussurrante", "Brasa Sussurrante", 30, "FFC46B", "FF5A1F", "chama" },
+	{ "vento_cortante", "Vento Cortante", 45, "E8FFF6", "6FE3C1", "brilho" },
+	{ "raiz_antiga", "Raiz Antiga", 60, "C9E39A", "5C7A2E", "nevoa" },
+	{ "gelo_fino", "Gelo Fino", 80, "E6FBFF", "7CC4FF", "brilho" },
 	{ "trovao_jovem", "Trovão Jovem", 100, "FFF6A0", "F5C400", "brilho" },
 	{ "lotus_rubra", "Lótus Rubra", 150, "FF9EC1", "E0245E", "brilho" },
 	{ "pluma_celeste", "Pluma Celeste", 250, "FFFFFF", "9FD3FF", "nevoa" },
@@ -80,6 +83,15 @@ end
 Auras.lista = {} :: { Aura }
 Auras.porId = {} :: { [string]: Aura }
 
+-- Probabilidade somada de todas as auras exceto a de reserva
+local somaOutras = 0
+for i = 2, #DEFINICOES do
+	somaOutras += 1 / DEFINICOES[i][3]
+end
+assert(somaOutras < 1, "As chances das auras somam 100% ou mais: aumente o 1 em N das comuns")
+Auras.PROBABILIDADE_RESERVA = 1 - somaOutras
+DEFINICOES[1][3] = 1 / Auras.PROBABILIDADE_RESERVA
+
 for i, d in DEFINICOES do
 	local aura: Aura = {
 		id = d[1],
@@ -94,30 +106,32 @@ for i, d in DEFINICOES do
 	Auras.porId[aura.id] = aura
 end
 
--- Sorteia uma aura. aleatorio() devolve um número em [0, 1). sorte multiplica as chances (1 = normal).
+-- Sorteia uma aura. aleatorio() devolve um número em [0, 1). sorte multiplica as chances das
+-- auras que não são a reserva (1 = normal); com sorte > 1 as mais raras têm prioridade.
 function Auras.sortear(aleatorio: () -> number, sorte: number?): Aura
 	local s = math.max(1, sorte or 1)
+	local u = aleatorio()
+	local acumulado = 0
 	for i = #Auras.lista, 2, -1 do
 		local aura = Auras.lista[i]
-		if aleatorio() < s / aura.chance then
+		acumulado += s / aura.chance
+		if u < acumulado then
 			return aura
 		end
 	end
 	return Auras.lista[1]
 end
 
--- Probabilidade real de sair cada aura com o método acima (sorte normal)
+-- Probabilidade real de sair cada aura num giro (sorte normal)
 function Auras.probabilidadeReal(id: string): number
-	local naoSaiu = 1
-	for i = #Auras.lista, 1, -1 do
-		local aura = Auras.lista[i]
-		local p = if i == 1 then 1 else 1 / aura.chance
-		if aura.id == id then
-			return naoSaiu * p
-		end
-		naoSaiu *= 1 - p
+	local aura = Auras.porId[id]
+	if not aura then
+		return 0
 	end
-	return 0
+	if aura.ordem == 1 then
+		return Auras.PROBABILIDADE_RESERVA
+	end
+	return 1 / aura.chance
 end
 
 -- A aura mais rara de uma coleção { [id] = quantidade }

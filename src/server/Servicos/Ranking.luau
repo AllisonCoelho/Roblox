@@ -21,7 +21,7 @@ local function atualizar(player: Player, estado: Perfil.Estado)
 	end
 	if melhor then
 		local aura = Auras.melhorDe(estado.auras)
-		melhor.Value = if aura then "1/" .. Formato.curto(aura.chance) else "-"
+		melhor.Value = if aura then "1/" .. Formato.chanceCurta(aura.chance) else "-"
 	end
 end
 

@@ -345,7 +345,7 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 				raridade.Text = string.format(
 					"%s · 1 em %s",
 					Auras.Tiers[aura.tier].nome,
-					Formato.inteiro(aura.chance)
+					Formato.chance(aura.chance)
 				)
 				faixaTier.definirCor(cor)
 			else
@@ -372,7 +372,7 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 				if a then
 					local cor = corTier(a)
 					linha.nome.Text = a.nome
-					linha.chance.Text = "1/" .. Formato.curto(a.chance)
+					linha.chance.Text = "1/" .. Formato.chanceCurta(a.chance)
 					linha.chance.TextColor3 = cor
 					linha.faixa.BackgroundColor3 = cor
 					linha.quadro.BackgroundTransparency = (i - 1) * 0.15
@@ -381,7 +381,7 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 			-- Nome acima do botão
 			resultadoToken += 1
 			local meu = resultadoToken
-			resultado.Text = string.format("%s · 1 em %s", aura.nome, Formato.inteiro(aura.chance))
+			resultado.Text = string.format("%s · 1 em %s", aura.nome, Formato.chance(aura.chance))
 			resultado.TextColor3 = corTier(aura)
 			resultado.TextTransparency = 0
 			resultadoContorno.Transparency = 0

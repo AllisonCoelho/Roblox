@@ -59,24 +59,51 @@ igual("mais rara", Auras.lista[30].chance, 1000000)
 igual("tier comum", Auras.porId.faisca.tier, 1)
 igual("tier divino", Auras.porId.despertar_absoluto.tier, 7)
 igual("tier epico", Auras.tierDe(1000), 4)
-igual("rng 0 = mais rara", Auras.sortear(function() return 0 end).id, "despertar_absoluto")
-igual("rng alto = mais comum", Auras.sortear(function() return 0.9999 end).id, "faisca")
+igual("rng 0 = mais rara", Auras.sortear(function()
+	return 0
+end).id, "despertar_absoluto")
+igual("rng alto = reserva", Auras.sortear(function()
+	return 0.9999
+end).id, "faisca")
+
+-- A chance exibida ("1 em N") é a probabilidade real de cada aura, inclusive a de reserva
 local soma = 0
+local todasExatas = true
 for _, a in Auras.lista do
-	soma += Auras.probabilidadeReal(a.id)
+	local p = Auras.probabilidadeReal(a.id)
+	soma += p
+	if math.abs(p - 1 / a.chance) > 1e-12 then
+		todasExatas = false
+		print("chance divergente: " .. a.id)
+	end
 end
 igual("probabilidades somam 1", math.abs(soma - 1) < 1e-9, true)
-igual("rara quase nominal", math.abs(Auras.probabilidadeReal("despertar_absoluto") - 1e-6) < 1e-9, true)
+igual("chance exibida = chance real (todas)", todasExatas, true)
+igual("reserva continua a mais comum", Auras.probabilidadeReal("faisca") > Auras.probabilidadeReal("nevoa"), true)
+
+-- O texto mostrado ao jogador (Formato.chance) bate com a frequência efetiva do sorteio
+local function lerTexto(texto: string): number
+	return tonumber((texto:gsub("%.", ""):gsub(",", "."))) :: number
+end
 math.randomseed(42)
-local N, contagem = 200000, {}
+local N, contagem = 400000, {}
 for _ = 1, N do
 	local a = Auras.sortear(math.random)
 	contagem[a.id] = (contagem[a.id] or 0) + 1
 end
-for _, id in { "faisca", "pedra_viva", "trovao_jovem" } do
-	local esperado = Auras.probabilidadeReal(id) * N
-	igual("frequencia " .. id, math.abs((contagem[id] or 0) - esperado) < esperado * 0.1, true)
+for _, id in { "faisca", "nevoa", "brasa", "pedra_viva", "trovao_jovem" } do
+	local exibido = lerTexto(Formato.chance(Auras.porId[id].chance))
+	local efetivo = N / (contagem[id] or 1)
+	igual(
+		"exibido x efetivo " .. id .. " (1 em " .. exibido .. " vs " .. string.format("%.2f", efetivo) .. ")",
+		math.abs(efetivo - exibido) / exibido < 0.05,
+		true
+	)
 end
+igual("texto reserva", Formato.chance(Auras.porId.faisca.chance), "4,2")
+igual("texto inteiro", Formato.chance(1000), "1.000")
+igual("texto curto", Formato.chanceCurta(25000), "25 mil")
+igual("texto curto pequeno", Formato.chanceCurta(4.26), "4,3")
 igual("melhor da colecao", Auras.melhorDe({ faisca = 3, chama_azul = 1, inexistente = 9 }).id, "chama_azul")
 igual("colecao vazia sem melhor", Auras.melhorDe({}), nil)
 igual("descobertas", Auras.contarDescobertas({ faisca = 1, brasa = 0, x = 2 }), 1)

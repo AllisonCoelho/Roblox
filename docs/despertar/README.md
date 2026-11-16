@@ -9,7 +9,7 @@ O jogador clica em **Despertar**. O servidor sorteia uma aura usando `Random.new
 ## MVP
 
 - Aproximadamente 30 auras originais em `src/shared/Dados/Auras.luau`: id, nome, raridade `1 em N`, cores e parâmetros de partículas.
-- Raridades de 1 em 2 até 1 em 1.000.000, sem seed vinda do cliente.
+- Raridades de ≈1 em 4,2 (Faísca, a aura de reserva) até 1 em 1.000.000, sem seed vinda do cliente. Sorteio com um único número e faixas acumuladas: o "1 em N" exibido é a probabilidade real de cada aura.
 - Partículas, luzes, brilho ou beams leves. Sem modelos 3D complexos.
 - Índice com colecionáveis visíveis e silhuetas para desconhecidos.
 - Anúncios no servidor quando raridade ≥ 1 em 1.000.

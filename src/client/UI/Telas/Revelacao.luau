@@ -204,7 +204,7 @@ local function mostrarTitulo(aura: Auras.Aura)
 	tween(faixa, 0.18, { Position = UDim2.fromScale(0.5, 0.7) }, Enum.EasingStyle.Quart)
 	seloTier.Text = string.upper(tier.nome)
 	seloTier.TextColor3 = cor
-	seloChance.Text = "1 em " .. Formato.inteiro(aura.chance)
+	seloChance.Text = "1 em " .. Formato.chance(aura.chance)
 	seloContorno.Color = cor
 	task.delay(0.2, function()
 		if not faixa.Visible then
