@@ -4,7 +4,7 @@ Marcar cada item no Studio (`rojo serve` + Play) e depois na experiência privad
 
 ## Montagem
 - [ ] Output sem `[Nexo] kit 3D indisponível`.
-- [ ] `Workspace.Nexo.Kit3D` existe no cliente, com as peças do kit (313 na fase 2).
+- [ ] `Workspace.Nexo.Kit3D` existe no cliente, com as 475 peças do kit.
 - [ ] As caixas `ColisorKit` existem no servidor e somem (ficam transparentes) no cliente quando o kit monta.
 - [ ] Peças viradas para fora (não "do avesso") e no lugar: pedestal no centro, cristal acima, arco ao norte.
 - [ ] As peças antigas da praça e do Núcleo sumiram; nada duplicado.
@@ -41,6 +41,7 @@ Marcar cada item no Studio (`rojo serve` + Play) e depois na experiência privad
 ## Fase 2 — lugares, caminhos e mapa fechado
 - [ ] Os seis lugares aparecem em 3D e o esqueleto cinza some.
 - [ ] Caminhos: a transição de cada um é perceptível (mármore e símbolos azuis no Arquivo, vegetação e verde no Jardim, chão fraturado nos Portais).
+- [ ] Os postes delimitam os seis caminhos. Os canteiros e as ruínas aparecem no terreno entre as áreas.
 - [ ] Ninguém sai do mapa: andar e pular contra os penhascos em vários pontos.
 - [ ] Cenário de reserva (kit desligado, por exemplo com erro forçado em `Montagem.construir`): o anel `BordaProvisoria` fecha a borda e os blocos `ColisorKit` aparecem onde estão os obstáculos.
 - [ ] Do alto do Obelisco ou pulando perto da borda, não se vê o lado de fora.
@@ -49,4 +50,4 @@ Marcar cada item no Studio (`rojo serve` + Play) e depois na experiência privad
 - [ ] Jardim: troncos e ruínas bloqueiam; fragmento sussurrante atrás do muro.
 - [ ] Altar e Portais: interações "Em construção"; véus dentro das molduras.
 - [ ] Arena: subir e descer a arquibancada.
-- [ ] Tempo de entrada e FPS no celular com as 313 peças.
+- [ ] Tempo de entrada e FPS no celular com as 475 peças.

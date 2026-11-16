@@ -131,7 +131,11 @@ No cenário de reserva, um anel opaco de rocha (`BordaProvisoria`, raio 243, sem
 
 **As medidas estão duplicadas** em `generate_nexo.py` (`LOCAIS`, `BORDAS`, `montar_locais`) e no servidor (`LOCAIS` e `construir*`). Ao mudar um, mudar o outro.
 
+### Detalhes dos caminhos e do terreno
+
+Quatro pares de postes com topo em Neon marcam as margens de cada caminho. O campo tem 20 canteiros com brotos luminosos e cristais, três arcos partidos e três muros desabados. Essas peças são visuais e reutilizam as malhas do kit quando possível.
+
 ### Peso
-- 313 peças na cena, cerca de 66 mil triângulos no kit, ~2,4 MB de dados de malha em `Dados/` (decodificados por cada cliente ao entrar).
+- 475 peças na cena, 77 malhas únicas e cerca de 66 mil triângulos no kit, ~2,4 MB de dados de malha em `Dados/` (decodificados por cada cliente ao entrar).
 - Os maiores: `caminho_portais` (4,5 mil triângulos), `arquivo_estrutura` (5,5 mil), `caminho_*` (~4,7 mil cada), `arena_arquibancada` (3,3 mil).
 - Não medido no celular. Se pesar, os primeiros cortes são o chanfro das lajes dos caminhos e o número de penhascos.
