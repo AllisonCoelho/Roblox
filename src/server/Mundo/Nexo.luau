@@ -9,6 +9,11 @@
 -- O servidor monta colisão e partes funcionais; o visual 3D vem do kit de cada cliente
 -- (src/client/Mundo/Nexo3D). Tudo ancorado. Norte = -Z.
 local Lighting = game:GetService("Lighting")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local NexoColisores = require(
+	ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Dados"):WaitForChild("NexoColisores")
+)
 
 local Nexo = {}
 
@@ -404,6 +409,47 @@ local function construirLimite(pasta: Instance)
 	end
 end
 
+-- Borda visível do cenário de reserva: um anel simples e opaco de rocha logo atrás da parede
+-- invisível. É provisória: some quando o kit 3D (com os penhascos) carrega no cliente.
+local function construirBordaProvisoria(pasta: Instance)
+	local n = 48
+	local raio = RAIO_LIMITE + 5
+	local largura = 2 * math.pi * raio / n + 2
+	for i = 0, n - 1 do
+		local d = direcao(360 * i / n)
+		local altura = if i % 2 == 0 then 110 else 92
+		peca(pasta, {
+			Name = "BordaProvisoria",
+			Material = Enum.Material.Rock,
+			Color = COR.pedra,
+			CanCollide = false,
+			CanQuery = false,
+			Size = Vector3.new(largura, altura, 8),
+			CFrame = CFrame.lookAt(
+				d * raio + Vector3.new(0, altura / 2, 0),
+				Vector3.new(0, altura / 2, 0)
+			),
+		})
+	end
+end
+
+-- Colisão das peças do kit 3D (arcos, pilares, muros, troncos), criada no servidor para que
+-- todos os jogadores colidam igual, com ou sem o kit carregado. Os dados vêm do gerador do
+-- Blender (src/shared/Dados/NexoColisores.luau). As caixas são provisórias: aparecem como
+-- blocos simples no cenário de reserva e o cliente as esconde quando o kit monta.
+local function construirColisoresKit(pasta: Instance)
+	for _, c in NexoColisores :: { { [string]: any } } do
+		local pos, tam = c.posicao, c.tamanho
+		peca(pasta, {
+			Name = "ColisorKit",
+			Color = COR.pedra,
+			CastShadow = false,
+			Size = Vector3.new(tam[1], tam[2], tam[3]),
+			CFrame = CFrame.new(pos[1], pos[2], pos[3]) * CFrame.Angles(0, math.rad(c.giro), 0),
+		})
+	end
+end
+
 local function construirCaminhos(pasta: Instance)
 	for _, l in LOCAIS do
 		local d = direcao(l.graus)
@@ -528,7 +574,7 @@ local function construirJardim(pasta: Instance)
 		Color = Color3.fromHex("1E2A26"),
 		Material = Enum.Material.Grass,
 	})
-	-- Árvores, ruínas e muro: a colisão vem dos colisores do kit 3D (Cena.luau)
+	-- Árvores, ruínas e muro: colisão em construirColisoresKit (dados gerados pelo Blender)
 	-- Eco oculto atrás do muro em ruínas: só curiosidade, sem recompensa
 	local fragmento = peca(
 		pasta,
@@ -723,6 +769,7 @@ function Nexo.construir(): Folder
 
 	construirChao(pasta)
 	construirLimite(pasta)
+	construirBordaProvisoria(pasta)
 	construirPraca(pasta)
 	construirNucleo(pasta)
 	construirCaminhos(pasta)
@@ -732,6 +779,7 @@ function Nexo.construir(): Folder
 	construirAltar(pasta)
 	construirPortais(pasta)
 	construirArena(pasta)
+	construirColisoresKit(pasta)
 	-- Tudo o que tem forma básica é PROVISÓRIO: cada cliente monta por cima o kit 3D
 	-- (src/client/Mundo/Nexo3D) e esconde estas peças, que continuam servindo de colisão.
 	-- Se o kit falhar em algum cliente, elas seguem visíveis (fallback temporário).

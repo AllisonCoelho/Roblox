@@ -1,6 +1,6 @@
 -- GERADO por assets/nexo/source/generate_nexo.py. Não editar à mão.
 -- Montagem da praça: onde cada peça do kit fica (studs do Roblox; giro em graus no eixo Y).
--- colisores = caixas { centro local, tamanho } relativas ao pivô da peça, antes da escala.
+-- A colisão dessas peças fica em src/shared/Dados/NexoColisores.luau (criada pelo servidor).
 return {
 	centroCristal = { 0, 15.5, 0 },
 	pecas = {
@@ -183,10 +183,6 @@ return {
 			giro = 0,
 			escala = 1.25,
 			material = "Slate",
-			colisores = {
-				{ { -12.5, 5.2, 0 }, { 4.6, 10.4, 4.4 } },
-				{ { 12.5, 5.2, 0 }, { 4.6, 10.4, 4.4 } },
-			},
 		},
 		{
 			malha = "arco_energia",
@@ -201,10 +197,6 @@ return {
 			giro = 70,
 			escala = 0.55,
 			material = "Slate",
-			colisores = {
-				{ { -12.5, 5.2, 0 }, { 4.6, 10.4, 4.4 } },
-				{ { 12.5, 5.2, 0 }, { 4.6, 10.4, 4.4 } },
-			},
 		},
 		{
 			malha = "arco_partido",
@@ -212,10 +204,6 @@ return {
 			giro = -70,
 			escala = 0.55,
 			material = "Slate",
-			colisores = {
-				{ { -12.5, 5.2, 0 }, { 4.6, 10.4, 4.4 } },
-				{ { 12.5, 5.2, 0 }, { 4.6, 10.4, 4.4 } },
-			},
 		},
 		{
 			malha = "ruina_pilar_a",
@@ -223,7 +211,6 @@ return {
 			giro = 104.117,
 			escala = 0.983,
 			material = "Slate",
-			colisores = { { { 0, 6.2, 0 }, { 3, 12.4, 3 } } },
 		},
 		{
 			malha = "cristal_fragmento_b",
@@ -240,7 +227,6 @@ return {
 			giro = 85.326,
 			escala = 1.036,
 			material = "Slate",
-			colisores = { { { 0, 6.2, 0 }, { 3, 12.4, 3 } } },
 		},
 		{
 			malha = "cristal_fragmento_b",
@@ -257,7 +243,6 @@ return {
 			giro = 23.11,
 			escala = 1.034,
 			material = "Slate",
-			colisores = { { { 0, 6.2, 0 }, { 3, 12.4, 3 } } },
 		},
 		{
 			malha = "cristal_fragmento_b",
@@ -274,7 +259,6 @@ return {
 			giro = 282.32,
 			escala = 1.016,
 			material = "Slate",
-			colisores = { { { 0, 6.2, 0 }, { 3, 12.4, 3 } } },
 		},
 		{
 			malha = "cristal_fragmento_b",
@@ -291,7 +275,6 @@ return {
 			giro = 208.194,
 			escala = 0.981,
 			material = "Slate",
-			colisores = { { { 0, 6.2, 0 }, { 3, 12.4, 3 } } },
 		},
 		{
 			malha = "cristal_fragmento_b",
@@ -308,7 +291,6 @@ return {
 			giro = 96.125,
 			escala = 0.942,
 			material = "Slate",
-			colisores = { { { 0, 6.2, 0 }, { 3, 12.4, 3 } } },
 		},
 		{
 			malha = "cristal_fragmento_b",
@@ -325,7 +307,6 @@ return {
 			giro = 104.966,
 			escala = 1.074,
 			material = "Slate",
-			colisores = { { { 0, 6.2, 0 }, { 3, 12.4, 3 } } },
 		},
 		{
 			malha = "cristal_fragmento_b",
@@ -342,7 +323,6 @@ return {
 			giro = 186.06,
 			escala = 1.046,
 			material = "Slate",
-			colisores = { { { 0, 6.2, 0 }, { 3, 12.4, 3 } } },
 		},
 		{
 			malha = "cristal_fragmento_b",
@@ -359,7 +339,6 @@ return {
 			giro = 24,
 			escala = 1,
 			material = "Slate",
-			colisores = { { { -1.2, 2.6, 0 }, { 12.8, 5.2, 1.9 } } },
 		},
 		{
 			malha = "ruina_parede_b",
@@ -367,7 +346,6 @@ return {
 			giro = 156,
 			escala = 1,
 			material = "Slate",
-			colisores = { { { -1.2, 2.6, 0 }, { 12.8, 5.2, 1.9 } } },
 		},
 		{
 			malha = "rocha_a",
@@ -797,7 +775,6 @@ return {
 			giro = 101.471,
 			escala = 1,
 			material = "Slate",
-			colisores = { { { 0, 4.5, 0 }, { 1.6, 9, 1.6 } } },
 		},
 		{
 			malha = "arvore_copa",
@@ -813,7 +790,6 @@ return {
 			giro = 73.118,
 			escala = 1,
 			material = "Slate",
-			colisores = { { { 0, 4.5, 0 }, { 1.6, 9, 1.6 } } },
 		},
 		{
 			malha = "arvore_copa",
@@ -829,7 +805,6 @@ return {
 			giro = 239.186,
 			escala = 1,
 			material = "Slate",
-			colisores = { { { 0, 4.5, 0 }, { 1.6, 9, 1.6 } } },
 		},
 		{
 			malha = "arvore_copa",
@@ -845,7 +820,6 @@ return {
 			giro = 70.423,
 			escala = 1,
 			material = "Slate",
-			colisores = { { { 0, 4.5, 0 }, { 1.6, 9, 1.6 } } },
 		},
 		{
 			malha = "arvore_copa",
@@ -861,7 +835,6 @@ return {
 			giro = 298.257,
 			escala = 1,
 			material = "Slate",
-			colisores = { { { 0, 4.5, 0 }, { 1.6, 9, 1.6 } } },
 		},
 		{
 			malha = "arvore_copa",
@@ -941,10 +914,6 @@ return {
 			giro = 20,
 			escala = 0.45,
 			material = "Slate",
-			colisores = {
-				{ { -12.5, 5.2, 0 }, { 4.6, 10.4, 4.4 } },
-				{ { 12.5, 5.2, 0 }, { 4.6, 10.4, 4.4 } },
-			},
 		},
 		{
 			malha = "ruina_pilar_a",
@@ -952,7 +921,6 @@ return {
 			giro = 341.491,
 			escala = 0.75,
 			material = "Slate",
-			colisores = { { { 0, 6.2, 0 }, { 3, 12.4, 3 } } },
 		},
 		{
 			malha = "ruina_pilar_a",
@@ -960,7 +928,6 @@ return {
 			giro = 323.753,
 			escala = 0.6,
 			material = "Slate",
-			colisores = { { { 0, 6.2, 0 }, { 3, 12.4, 3 } } },
 		},
 		{
 			malha = "ruina_parede_b",
@@ -968,7 +935,6 @@ return {
 			giro = 315,
 			escala = 0.7,
 			material = "Slate",
-			colisores = { { { -1.2, 2.6, 0 }, { 12.8, 5.2, 1.9 } } },
 		},
 		{
 			malha = "rocha_a",

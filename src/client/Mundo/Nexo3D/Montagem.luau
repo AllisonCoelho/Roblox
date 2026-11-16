@@ -28,10 +28,6 @@ export type Resultado = {
 local SEM_SOMBRA = { Neon = true, Glass = true }
 
 local function preencher(pasta: Folder, prontas: Malha.Cache): Resultado
-	local colisores = Instance.new("Folder")
-	colisores.Name = "Colisores"
-	colisores.Parent = pasta
-
 	local c = Cena.centroCristal
 	local resultado: Resultado = {
 		pasta = pasta,
@@ -70,20 +66,6 @@ local function preencher(pasta: Folder, prontas: Malha.Cache): Resultado
 			table.insert(resultado.lanternas, peca)
 		elseif dados.grupo == "gira" then
 			table.insert(resultado.giram, peca)
-		end
-
-		for _, caixa in dados.colisores or {} do
-			local centroCaixa, tamanhoCaixa = caixa[1], caixa[2]
-			local colisor = Instance.new("Part")
-			colisor.Name = "Colisor_" .. dados.malha
-			colisor.Anchored = true
-			colisor.Transparency = 1
-			colisor.CanQuery = false
-			colisor.CastShadow = false
-			colisor.Size = Vector3.new(tamanhoCaixa[1], tamanhoCaixa[2], tamanhoCaixa[3]) * escala
-			colisor.CFrame = pivo
-				* CFrame.new(Vector3.new(centroCaixa[1], centroCaixa[2], centroCaixa[3]) * escala)
-			colisor.Parent = colisores
 		end
 
 		-- Criar malhas custa tempo: cede o quadro de vez em quando para não travar a entrada
