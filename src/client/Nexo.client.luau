@@ -14,6 +14,10 @@ local Navegacao = require(UI:WaitForChild("Navegacao"))
 local Avisos = require(UI:WaitForChild("Telas"):WaitForChild("Avisos"))
 local Montagem =
 	require(script.Parent:WaitForChild("Mundo"):WaitForChild("Nexo3D"):WaitForChild("Montagem"))
+local Estado = require(UI:WaitForChild("Estado"))
+local PrimeiroSoberano = require(
+	script.Parent:WaitForChild("Mundo"):WaitForChild("NPCs"):WaitForChild("PrimeiroSoberano")
+)
 
 local K_CIRCULO = 0.5523 -- fator de Bézier para 4 arcos formarem um círculo
 
@@ -212,6 +216,15 @@ RunService.Heartbeat:Connect(function()
 			* CFrame.Angles(0, angulos[i], 0)
 	end
 end)
+
+-- Primeiro Soberano: armadura 3D e repouso (o NPC em si é do servidor)
+Estado.aoMudar(function(estado)
+	PrimeiroSoberano.definir({
+		qualidadeBaixa = estado.configuracoes.qualidadeBaixa == true,
+		movimentoReduzido = estado.configuracoes.movimentoReduzido == true,
+	})
+end)
+task.spawn(PrimeiroSoberano.iniciar)
 
 -- Interações do mapa
 ProximityPromptService.PromptTriggered:Connect(function(prompt, jogador)

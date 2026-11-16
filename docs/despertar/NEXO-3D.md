@@ -168,7 +168,7 @@ mesa dizem isso ("Em preparação", "Duelos por turnos — em desenvolvimento").
   **trono** no fundo (local z ≈ +17 a +21, oposto à entrada), **coroa** flutuante girando sobre ele,
   quatro braseiros com cristal vermelho, fissuras vermelhas que irradiam do trono, divisas douradas e
   dois círculos para os desafiantes (local x = ±7). O centro fica livre.
-- O **Primeiro Soberano** (NPC) não está neste PR: vem em um PR próprio (modelo, rig, idle e conversa).
+- O **Primeiro Soberano** (NPC sentado no trono) está documentado em `assets/npcs/primeiro_soberano/README.md`: o servidor é dono do NPC e cada cliente monta e anima a armadura.
 
 ### Colisão e reserva
 Degraus, trono, colunas do portão, braseiros, pilares do portal, marcos e mesa têm caixas em
