@@ -15,6 +15,8 @@ local Sorteio = {}
 
 -- Folga para atraso de rede: o cliente espera o cooldown inteiro, o servidor aceita um pouco antes
 local TOLERANCIA = 0.1
+-- A partir desta faixa (Raro) o personagem faz a animação de despertar
+local TIER_ANIMACAO = 3
 
 local rng = Random.new()
 local ultimoGiro: { [Player]: number } = {}
@@ -45,9 +47,9 @@ local function despertar(player: Player): (boolean, string?)
 		return true
 	end)
 
-	if aura.chance >= Auras.ANUNCIO_MINIMO then
-		Remotos.evento("Aviso"):FireAllClients({
-			tipo = "anuncio",
+	-- Raro ou melhor: todos os clientes animam o personagem; a partir de Épico também anunciam
+	if aura.tier >= TIER_ANIMACAO then
+		Remotos.evento("Despertou"):FireAllClients({
 			jogador = player.DisplayName,
 			userId = player.UserId,
 			aura = aura.id,

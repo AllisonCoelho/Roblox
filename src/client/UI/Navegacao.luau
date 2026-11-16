@@ -58,7 +58,7 @@ function Navegacao.criarPainel(
 
 	-- Fundo do cabeçalho: ClipsDescendants não recorta cantos arredondados, então o fundo
 	-- tem cantos próprios em cima e um complemento reto embaixo (com o mesmo degradê)
-	local cores = Tema.Botoes[op.cor] or Tema.Botoes.rosa
+	local cores = Tema.Botoes[op.cor] or Tema.Botoes.selo
 	local ALTURA, RETO = 76, 30
 	local fundoCabecalho = C.novo("Frame", {
 		Name = "FundoCabecalho",

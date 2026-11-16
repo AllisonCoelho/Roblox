@@ -14,7 +14,7 @@ local Estado = require(script.Parent.Parent.Estado)
 local Cores = Tema.Cores
 local Indice = {}
 
-local SILHUETA = Color3.fromHex("3A2E52")
+local SILHUETA = Color3.fromHex("221E2C")
 
 type Cartao = {
 	botao: TextButton,
@@ -28,7 +28,7 @@ type Cartao = {
 function Indice.montar(aoAviso: (string) -> ())
 	local painel = Navegacao.criarPainel(
 		"Indice",
-		{ titulo = "Índice de Auras", icone = "📖", cor = "roxo" }
+		{ titulo = "Índice de Auras", icone = "📖", cor = "selo" }
 	)
 	local contador = C.texto({
 		Name = "Contador",
@@ -49,7 +49,7 @@ function Indice.montar(aoAviso: (string) -> ())
 		Size = UDim2.new(1, -24, 1, -16),
 		Position = UDim2.fromOffset(12, 8),
 		ScrollBarThickness = 10,
-		ScrollBarImageColor3 = Cores.UvaClaro,
+		ScrollBarImageColor3 = Cores.Papel,
 		AutomaticCanvasSize = Enum.AutomaticSize.Y,
 		CanvasSize = UDim2.new(),
 		Parent = painel.conteudo,

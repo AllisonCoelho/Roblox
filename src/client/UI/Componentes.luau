@@ -89,7 +89,7 @@ end
 function C.texto(props: { [string]: any }): TextLabel
 	local label = C.novo("TextLabel", {
 		BackgroundTransparency = 1,
-		Font = Tema.Fonte,
+		FontFace = Tema.FonteNegrito,
 		TextColor3 = Cores.Branco,
 		TextSize = 24,
 		Text = "",

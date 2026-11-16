@@ -4,9 +4,7 @@ Roblox com **Luau + Rojo**, estética anime original. Repositório `AllisonCoelh
 
 ## Estado
 
-**Base técnica limpa.** A V1 ainda não está implementada: no Studio, uma tela temporária apenas confirma o carregamento do perfil. O futuro loop será: **Despertar → sorteio no servidor → índice → equipar aura → repetir**.
-
-V1 planejada: cerca de 30 auras (1 em 2 até 1 em 1.000.000), cooldown de aproximadamente 1 segundo, partículas e luzes, índice, anúncios de raros, `leaderstats`, persistência e giro automático. Sem nomes, marcas ou técnicas de animes existentes.
+**V1 jogável.** Loop: **Despertar → sorteio no servidor → animação/revelação → índice → equipar aura → repetir**. 30 auras originais (1 em 2 até 1 em 1.000.000), intervalo de 1 s validado no servidor, giro automático, índice, anúncios de raros, `leaderstats` (Giros/Melhor), persistência e animação de despertar no personagem visível para todos. Visual "Tinta e Selo" (ver `docs/despertar/README.md`).
 
 ## Comandos PowerShell
 
@@ -20,11 +18,14 @@ Conecte o plugin Rojo em `localhost:34873`. Build local: `rojo build default.pro
 
 ## Estrutura e deploy
 
-- `src/shared/Dados/Perfil.luau`: novo perfil da experiência, sem lógica RNG ainda.
+- `src/shared/Dados/Auras.luau`: catálogo de auras e sorteio (lógica pura, testada).
+- `src/shared/Dados/Perfil.luau`: dados salvos do jogador.
+- `src/server/Servicos/Sorteio.luau`: Despertar/Equipar/Configurar, validados no servidor.
+- `src/server/Servicos/AuraVisual.luau` e `Ranking.luau`: aura equipada no personagem e leaderstats.
 - `src/server/Servicos/Dados.luau`: DataStore **`Despertar_v1`** com trava de sessão.
-- `src/server/Servicos/Sessao.luau`: lógica pura da trava.
 - `src/server/Servicos/Acoes.luau` e `src/shared/Remotos.luau`: remotes autoritativos e rate limit.
-- `src/client/UI`: infraestrutura genérica de interface, a ser redesenhada.
+- `src/client/Mundo/Despertar.luau`: animação de despertar (pose por código, efeitos), em todos os clientes.
+- `src/client/UI`: HUD, revelação, índice e avisos (`Kit.luau` tem as peças do visual).
 - `docs/despertar/README.md`: especificação do MVP.
 
 Merges revisados na `main` publicam na **experiência privada de testes**: Universe `10771776655`, Place `112360499723635`. O workflow `.github/workflows/validate.yml` e a chave `ROBLOX_API_KEY` permanecem intactos. A experiência pública não está configurada.

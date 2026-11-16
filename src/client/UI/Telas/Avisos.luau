@@ -7,9 +7,11 @@ local Shared = ReplicatedStorage.Shared
 local Auras = require(Shared.Dados.Auras)
 local Formato = require(Shared.Formato)
 local Remotos = require(Shared.Remotos)
-local C = require(script.Parent.Parent.Componentes)
+local Tema = require(Shared.Tema)
+local Kit = require(script.Parent.Parent.Kit)
 local Estado = require(script.Parent.Parent.Estado)
 
+local Cores = Tema.Cores
 local Avisos = {}
 
 local toast: Frame
@@ -35,27 +37,30 @@ function Avisos.toast(texto: string)
 	end)
 end
 
-local function anunciar(dados: { [string]: any })
-	local aura = Auras.porId[dados.aura]
-	if not aura or type(dados.jogador) ~= "string" then
+-- Anúncio de aura rara (dados vindos do remote "Despertou")
+function Avisos.anunciar(nomeJogador: string, userId: number, aura: Auras.Aura)
+	if aura.chance < Auras.ANUNCIO_MINIMO then
 		return
 	end
-	local proprio = dados.userId == Players.LocalPlayer.UserId
+	local proprio = userId == Players.LocalPlayer.UserId
 	local estado = Estado.atual
 	if not proprio and estado and estado.configuracoes.anuncios == false then
 		return
 	end
 	local tier = Auras.Tiers[aura.tier]
-	local texto = string.format(
-		'⚡ <b>%s</b> despertou <font color="#%s"><b>%s</b></font> (1 em %s)!',
-		escapar(dados.jogador),
-		tier.cor,
-		aura.nome,
-		Formato.inteiro(aura.chance)
+	local nome = escapar(string.upper(nomeJogador))
+	local chance = Formato.inteiro(aura.chance)
+	-- No banner (fundo papel) a cor da raridade é escurecida para dar contraste
+	local corBanner = Color3.fromHex(tier.cor):Lerp(Cores.Tinta, 0.35):ToHex()
+	bannerTexto.Text = string.format(
+		'<b>%s</b> DESPERTOU <font color="#%s"><b>%s</b></font> · 1 EM %s',
+		nome,
+		corBanner,
+		string.upper(aura.nome),
+		chance
 	)
 	bannerToken += 1
 	local meu = bannerToken
-	bannerTexto.Text = texto
 	banner.Visible = true
 	task.delay(5, function()
 		if bannerToken == meu then
@@ -67,55 +72,66 @@ local function anunciar(dados: { [string]: any })
 		local canais = TextChatService:FindFirstChild("TextChannels")
 		local geral = canais and canais:FindFirstChild("RBXGeneral")
 		if geral and geral:IsA("TextChannel") then
-			geral:DisplaySystemMessage(texto)
+			geral:DisplaySystemMessage(
+				string.format(
+					'<b>%s</b> despertou <font color="#%s"><b>%s</b></font> (1 em %s)!',
+					escapar(nomeJogador),
+					tier.cor,
+					aura.nome,
+					chance
+				)
+			)
 		end
 	end)
 end
 
 function Avisos.montar(raiz: Frame)
-	banner = C.cartaoEscuro({
-		Name = "Anuncio",
-		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 20),
-		Size = UDim2.fromOffset(820, 70),
-		Visible = false,
-		ZIndex = 15,
-		Parent = raiz,
+	local placaBanner = Kit.placa({
+		largura = 900,
+		altura = 56,
+		fundo = Cores.Papel,
+		sombra = Cores.Selo,
+		posicao = UDim2.new(0.5, 0, 0, 22),
+		ancora = Vector2.new(0.5, 0),
+		z = 20,
+		pai = raiz,
 	})
-	bannerTexto = C.texto({
+	banner = placaBanner.quadro
+	banner.Visible = false
+	bannerTexto = Kit.texto({
+		fonte = "media",
 		RichText = true,
-		TextSize = 26,
-		TextWrapped = true,
-		Size = UDim2.new(1, -24, 1, 0),
-		Position = UDim2.fromOffset(12, 0),
-		ZIndex = 15,
-		Parent = banner,
+		TextSize = 24,
+		TextColor3 = Cores.Tinta,
+		Size = UDim2.new(1, -40, 1, 0),
+		Position = UDim2.fromOffset(20, 0),
+		Parent = placaBanner.conteudo,
 	})
-	toast = C.cartaoEscuro({
-		Name = "Toast",
-		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, -160),
-		Size = UDim2.fromOffset(560, 54),
-		Visible = false,
-		ZIndex = 15,
-		Parent = raiz,
+
+	local placaToast = Kit.placa({
+		largura = 560,
+		altura = 50,
+		fundo = Cores.Tinta,
+		borda = Cores.Papel,
+		espessura = 2,
+		posicao = UDim2.new(0.5, 0, 1, -290),
+		ancora = Vector2.new(0.5, 1),
+		z = 20,
+		pai = raiz,
 	})
-	toastTexto = C.texto({
+	toast = placaToast.quadro
+	toast.Visible = false
+	toastTexto = Kit.texto({
+		fonte = "media",
 		TextSize = 22,
 		TextWrapped = true,
-		Size = UDim2.new(1, -20, 1, 0),
-		Position = UDim2.fromOffset(10, 0),
-		ZIndex = 15,
-		Parent = toast,
+		Size = UDim2.new(1, -30, 1, 0),
+		Position = UDim2.fromOffset(15, 0),
+		Parent = placaToast.conteudo,
 	})
 
 	Remotos.evento("Aviso").OnClientEvent:Connect(function(dados: any)
-		if type(dados) ~= "table" then
-			return
-		end
-		if dados.tipo == "anuncio" then
-			anunciar(dados)
-		elseif type(dados.texto) == "string" then
+		if type(dados) == "table" and type(dados.texto) == "string" then
 			Avisos.toast(dados.texto)
 		end
 	end)
