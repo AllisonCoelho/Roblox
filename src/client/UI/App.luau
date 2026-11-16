@@ -44,7 +44,9 @@ end
 
 local function podeGirar(): boolean
 	local agora = os.clock()
-	return not girando
+	return Estado.atual ~= nil
+		and Navegacao.aberto() == nil
+		and not girando
 		and not Revelacao.ativa()
 		and agora >= proximoGiro
 		and agora >= ocupadoAte
@@ -84,7 +86,7 @@ local function apresentar(aura: Auras.Aura, dados: { [string]: any })
 	-- Animações desligadas: nada de ritual nem câmera; o resultado (e o cartão) vem na hora
 	if not prefs.animacoes then
 		if comCartao then
-			Revelacao.cena(false)
+			Revelacao.cena(false, 0)
 		end
 		revelar()
 		return
@@ -92,7 +94,10 @@ local function apresentar(aura: Auras.Aura, dados: { [string]: any })
 
 	ocupadoAte = os.clock() + Apresentacao.tempoAteRevelacao(cat)
 	if comCartao then
-		Revelacao.cena(cat.camera and not prefs.movimentoReduzido)
+		Revelacao.cena(
+			cat.camera and not prefs.movimentoReduzido,
+			if prefs.movimentoReduzido then 0.16 else 0.22
+		)
 	end
 	Despertar.proprio(aura, cat, prefs, revelar)
 end
@@ -118,6 +123,9 @@ end
 -- Botão DESPERTAR / tecla E: se há um ritual em andamento, o toque PULA a animação;
 -- senão, gira. O giro automático nunca pula.
 local function aoApertar()
+	if Navegacao.aberto() then
+		return
+	end
 	-- ocupadoAte só vale enquanto o ritual corre: revelar() o zera antes de abrir o cartão.
 	-- Por isso a condição não olha Revelacao.ativa(): nas cenas raras a tela já está reservada
 	-- desde o início, e era isso que impedia o pulo pela tecla.
@@ -185,7 +193,7 @@ function App.iniciar()
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "Despertar"
 	gui.ResetOnSpawn = false
-	gui.IgnoreGuiInset = true
+	gui.ScreenInsets = Enum.ScreenInsets.CoreUISafeInsets
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	gui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
 
@@ -240,10 +248,19 @@ function App.iniciar()
 		Revelacao.fechar()
 	end)
 
-	-- Anel do selo: enche durante o intervalo entre giros
+	-- A mesma espera que bloqueia o giro controla o aro e a indicação de recarga.
 	RunService.RenderStepped:Connect(function()
-		local falta = math.max(0, math.max(proximoGiro, ocupadoAte) - os.clock())
-		hud.definirCarga(1 - math.min(falta / INTERVALO, 1))
+		local agora = os.clock()
+		local falta = math.max(0, proximoGiro - agora, Revelacao.fimEm + 0.4 - agora)
+		local estado: HUD.EstadoGiro = if not Estado.atual then "perfil"
+			elseif girando then "pedido"
+			elseif agora < ocupadoAte then "pular"
+			elseif falta > 0 then "recarregando"
+			else "pronto"
+		local fracao = if estado == "perfil" or estado == "pedido"
+			then 0
+			else 1 - math.min(falta / INTERVALO, 1)
+		hud.definirGiro(fracao, falta, estado)
 	end)
 
 	UserInputService.InputBegan:Connect(function(input, processado)

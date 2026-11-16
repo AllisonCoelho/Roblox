@@ -4,7 +4,7 @@ Roblox com **Luau + Rojo**, estética anime original. Repositório `AllisonCoelh
 
 ## Estado
 
-**V1 jogável.** Loop: **Despertar → sorteio no servidor → animação/revelação → índice → equipar aura → repetir**. 30 auras originais (Faísca ≈ 1 em 4,2 até 1 em 1.000.000; a chance exibida é a probabilidade real), intervalo de 1 s validado no servidor, giro automático, índice, anúncios de raros, `leaderstats` (Giros/Melhor), persistência e animação de despertar no personagem visível para todos. Visual "Tinta e Selo" (ver `docs/despertar/README.md`).
+**V1 jogável.** Loop: **Despertar → sorteio no servidor → animação/revelação → índice → equipar aura → repetir**. 30 auras originais (Faísca ≈ 1 em 4,2 até 1 em 1.000.000; a chance exibida é a probabilidade real), intervalo de 1 s validado no servidor, giro automático, índice, anúncios de raros, `leaderstats` (Giros/Melhor), persistência e animação de despertar no personagem visível para todos. Visual "Órbita do Nexo" (ver `docs/despertar/README.md`).
 
 ## Comandos PowerShell
 

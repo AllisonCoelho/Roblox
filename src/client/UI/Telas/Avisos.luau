@@ -1,4 +1,4 @@
--- Avisos na tela: mensagens curtas (toast) e anúncios de auras raras para o servidor inteiro.
+-- Mensagens locais e anúncios de auras raras na área segura da interface.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TextChatService = game:GetService("TextChatService")
 
@@ -6,17 +6,17 @@ local Shared = ReplicatedStorage.Shared
 local Auras = require(Shared.Dados.Auras)
 local Formato = require(Shared.Formato)
 local Remotos = require(Shared.Remotos)
-local Tema = require(Shared.Tema)
+local Cores = require(Shared.Tema).Orbita
 local Kit = require(script.Parent.Parent.Kit)
 local Estado = require(script.Parent.Parent.Estado)
+local Escala = require(script.Parent.Parent.Escala)
 
-local Cores = Tema.Cores
 local Avisos = {}
 
-local toast: Frame
+local toast: Kit.Placa
 local toastTexto: TextLabel
 local toastToken = 0
-local banner: Frame
+local banner: Kit.Placa
 local bannerTexto: TextLabel
 local bannerToken = 0
 
@@ -28,45 +28,44 @@ function Avisos.toast(texto: string)
 	toastToken += 1
 	local meu = toastToken
 	toastTexto.Text = texto
-	toast.Visible = true
+	toast.quadro.Visible = true
 	task.delay(2.5, function()
 		if toastToken == meu then
-			toast.Visible = false
+			toast.quadro.Visible = false
 		end
 	end)
 end
 
--- Anúncio de aura rara: dos outros (remote "Despertou") ou o próprio, na hora da revelação
-function Avisos.anunciar(nomeJogador: string, userId: number, aura: Auras.Aura)
+function Avisos.anunciar(nomeJogador: string, _userId: number, aura: Auras.Aura)
 	if aura.chance < Auras.ANUNCIO_MINIMO then
 		return
 	end
-	-- "Anúncios" desligado vale para todos, inclusive os próprios (o cartão já mostra o resultado)
 	local estado = Estado.atual
 	if estado and estado.configuracoes.anuncios == false then
 		return
 	end
 	local tier = Auras.Tiers[aura.tier]
-	local nome = escapar(string.upper(nomeJogador))
+	local cor = Color3.fromHex(tier.cor)
+	local corLegivel = Kit.corLegivel(cor):ToHex()
+	local nome = escapar(nomeJogador)
+	local auraNome = escapar(aura.nome)
 	local chance = Formato.chance(aura.chance)
-	-- No banner (fundo papel) a cor da raridade é escurecida para dar contraste
-	local corBanner = Color3.fromHex(tier.cor):Lerp(Cores.Tinta, 0.35):ToHex()
 	bannerTexto.Text = string.format(
-		'<b>%s</b> DESPERTOU <font color="#%s"><b>%s</b></font> · 1 EM %s',
+		'<b>%s</b> despertou <font color="#%s"><b>%s</b></font> · 1 em %s',
 		nome,
-		corBanner,
-		string.upper(aura.nome),
+		corLegivel,
+		auraNome,
 		chance
 	)
+	banner.definirCor(Cores.Painel, cor)
 	bannerToken += 1
 	local meu = bannerToken
-	banner.Visible = true
+	banner.quadro.Visible = true
 	task.delay(5, function()
 		if bannerToken == meu then
-			banner.Visible = false
+			banner.quadro.Visible = false
 		end
 	end)
-	-- Também no chat, se o chat novo estiver ativo
 	pcall(function()
 		local canais = TextChatService:FindFirstChild("TextChannels")
 		local geral = canais and canais:FindFirstChild("RBXGeneral")
@@ -74,9 +73,9 @@ function Avisos.anunciar(nomeJogador: string, userId: number, aura: Auras.Aura)
 			geral:DisplaySystemMessage(
 				string.format(
 					'<b>%s</b> despertou <font color="#%s"><b>%s</b></font> (1 em %s)!',
-					escapar(nomeJogador),
+					nome,
 					tier.cor,
-					aura.nome,
+					auraNome,
 					chance
 				)
 			)
@@ -84,51 +83,52 @@ function Avisos.anunciar(nomeJogador: string, userId: number, aura: Auras.Aura)
 	end)
 end
 
-function Avisos.montar(raiz: Frame)
-	local placaBanner = Kit.placa({
-		largura = 900,
-		altura = 56,
-		fundo = Cores.Papel,
-		sombra = Cores.Selo,
-		posicao = UDim2.new(0.5, 0, 0, 22),
-		ancora = Vector2.new(0.5, 0),
-		z = 20,
+local function mensagem(raiz: Frame, titulo: string, cor: Color3): (Kit.Placa, TextLabel)
+	local placa = Kit.placa({
+		tamanho = UDim2.fromOffset(520, 78),
+		borda = cor,
+		z = 40,
 		pai = raiz,
 	})
-	banner = placaBanner.quadro
-	banner.Visible = false
-	bannerTexto = Kit.texto({
-		fonte = "media",
-		RichText = true,
-		TextSize = 24,
-		TextColor3 = Cores.Tinta,
-		Size = UDim2.new(1, -40, 1, 0),
-		Position = UDim2.fromOffset(20, 0),
-		Parent = placaBanner.conteudo,
+	placa.quadro.Visible = false
+	Kit.texto({
+		Text = titulo,
+		TextSize = 14,
+		TextColor3 = cor,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Position = UDim2.fromOffset(14, 5),
+		Size = UDim2.new(1, -28, 0, 24),
+		Parent = placa.conteudo,
 	})
-
-	local placaToast = Kit.placa({
-		largura = 560,
-		altura = 50,
-		fundo = Cores.Tinta,
-		borda = Cores.Papel,
-		espessura = 2,
-		posicao = UDim2.new(0.5, 0, 1, -290),
-		ancora = Vector2.new(0.5, 1),
-		z = 20,
-		pai = raiz,
-	})
-	toast = placaToast.quadro
-	toast.Visible = false
-	toastTexto = Kit.texto({
-		fonte = "media",
-		TextSize = 22,
+	local texto = Kit.texto({
+		TextSize = 18,
 		TextWrapped = true,
-		Size = UDim2.new(1, -30, 1, 0),
-		Position = UDim2.fromOffset(15, 0),
-		Parent = placaToast.conteudo,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextYAlignment = Enum.TextYAlignment.Top,
+		Position = UDim2.fromOffset(14, 31),
+		Size = UDim2.new(1, -28, 1, -36),
+		Parent = placa.conteudo,
 	})
+	return placa, texto
+end
 
+function Avisos.montar(raiz: Frame)
+	banner, bannerTexto = mensagem(raiz, "◆  ANÚNCIO DO SERVIDOR", Cores.Lilas)
+	bannerTexto.RichText = true
+	banner.quadro.AnchorPoint = Vector2.new(0.5, 0)
+	toast, toastTexto = mensagem(raiz, "◆  AVISO", Cores.Aviso)
+	toast.quadro.AnchorPoint = Vector2.new(0.5, 1)
+
+	Escala.aoMudar(function()
+		local largura = Escala.tamanho.X
+		local estreito = largura < 820
+		local altura = if estreito then 96 else 78
+		banner.quadro.Size = UDim2.fromOffset(math.min(550, largura - 30), altura)
+		banner.quadro.Position = UDim2.new(0.5, 0, 0, if estreito then 174 else 12)
+		toast.quadro.Size = UDim2.fromOffset(math.min(480, largura - 30), altura)
+		local margem = if Escala.toque and largura < 710 then 256 elseif Escala.compacto then 156 else 192
+		toast.quadro.Position = UDim2.new(0.5, 0, 1, -margem)
+	end)
 	Remotos.evento("Aviso").OnClientEvent:Connect(function(dados: any)
 		if type(dados) == "table" and type(dados.texto) == "string" then
 			Avisos.toast(dados.texto)

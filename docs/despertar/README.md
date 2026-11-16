@@ -27,8 +27,9 @@ CI e build verde. Sem erros no Output do Studio. Testes com dois jogadores (aura
 
 ## V1 implementada
 
-- **Identidade "Tinta e Selo"**: preto-tinta, papel e vermelho de carimbo; fontes Oswald e Permanent Marker. Mockups aprovados pelo dono.
-- **HUD**: placas de giros e aura equipada, selo DESPERTAR com anel de carga (intervalo de 1 s), AUTO, ÍNDICE e feed "Últimos despertares" (oculto no celular).
+- **Órbita do Nexo** — superfícies de obsidiana, ações lilás, estados ativos em menta e cores de raridade nos detalhes. Oswald nos títulos, Builder Sans nos textos e Roboto Mono nas contagens.
+- **HUD** — giros e histórico à esquerda, aura e Ajustes à direita. Auto e Índice ladeiam o cristal Despertar, cujo aro mostra a recarga. Toque e telas menores usam posições compactas na área segura do Roblox.
+- **Telas** — Índice com grade responsiva e progresso, Ajustes agrupados por uso, revelação com ações de equipar e continuar e avisos no mesmo padrão. O Auto pausa enquanto Índice ou Ajustes está aberto e retoma ao fechar.
 - **Animação de despertar** (`src/client/Mundo/Despertar.luau`), feita por código, sem asset de animação: pose via `Motor6D.C0`, flutuação, anéis, onda de choque e pilar de luz. Roda em todos os clientes pelo remote `Despertou`.
   - Comum/Incomum: sem animação. Raro: só a explosão (0,6 s). Épico/Lendário: 3,5 s. Mítico/Divino: 5 s com céu escurecido.
 - **Cena de quem girou** (`Telas/Revelacao.luau`), Épico+: câmera, barras de cinema, clarão, faixa com o nome e selo da raridade. Toque pula.

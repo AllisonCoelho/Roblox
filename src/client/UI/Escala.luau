@@ -1,6 +1,6 @@
 -- Ajusta o tamanho da interface à tela.
 -- As telas são desenhadas em "pixels de design" (referência 1600x900); um UIScale converte.
--- Em celular deitado (tela baixa e toque) usamos o layout compacto do design 06.
+-- Toque e telas menores usam as posições e dimensões compactas da Órbita do Nexo.
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -10,8 +10,11 @@ local Escala = {}
 
 Escala.escala = 1
 Escala.compacto = false
+Escala.toque = false
+Escala.controle = false
+Escala.teclado = true
 Escala.tamanho = Tema.Referencia -- tamanho da raiz em pixels de design
--- "auto" decide pelo aparelho; "sim"/"nao" forçam (opção em Ajustes, útil para testar no PC)
+-- "auto" decide pela tela e pelo dispositivo de entrada atual.
 Escala.modoCompacto = "auto"
 
 local ouvintes: { () -> () } = {}
@@ -29,16 +32,18 @@ local function recalcular()
 	if real.X <= 0 or real.Y <= 0 then
 		return
 	end
-	local toque = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+	local entrada = UserInputService:GetLastInputType()
+	local controle = string.sub(entrada.Name, 1, 7) == "Gamepad"
+	local toque = UserInputService.TouchEnabled
+		and (entrada == Enum.UserInputType.Touch or (not UserInputService.KeyboardEnabled and not controle))
 	local compacto = if Escala.modoCompacto == "auto"
-		then (toque and real.Y < 560)
+		then toque or real.X < 860 or real.Y < 510
 		else Escala.modoCompacto == "sim"
-	local s
-	if compacto then
-		s = math.clamp(real.Y / 700, 0.45, 1)
-	else
-		s = math.clamp(math.min(real.X / Tema.Referencia.X, real.Y / Tema.Referencia.Y), 0.55, 1.4)
-	end
+	local referencia = if compacto then Vector2.new(1120, 480) else Tema.Referencia
+	local s = math.clamp(math.min(real.X / referencia.X, real.Y / referencia.Y), 0.75, 1.35)
+	Escala.toque = toque
+	Escala.controle = controle
+	Escala.teclado = UserInputService.KeyboardEnabled and not toque and not controle
 	Escala.escala = s
 	Escala.compacto = compacto
 	Escala.tamanho = Vector2.new(real.X / s, real.Y / s)
