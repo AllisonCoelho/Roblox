@@ -14,4 +14,6 @@ return {
 	naruto_8 = true,
 	naruto_9 = true,
 	naruto_seis = true,
+	-- Monarca das Sombras (Mundo/Auras/Monarca.luau)
+	monarca = true,
 } :: { [string]: boolean }
