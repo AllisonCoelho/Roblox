@@ -124,7 +124,7 @@ function Avisos.montar(raiz: Frame)
 		local estreito = largura < 820
 		local altura = if estreito then 96 else 78
 		banner.quadro.Size = UDim2.fromOffset(math.min(550, largura - 30), altura)
-		banner.quadro.Position = UDim2.new(0.5, 0, 0, if estreito then 174 else 12)
+		banner.quadro.Position = UDim2.new(0.5, 0, 0, if estreito then 206 else 12)
 		toast.quadro.Size = UDim2.fromOffset(math.min(480, largura - 30), altura)
 		local margem = if Escala.toque and largura < 710
 			then 256

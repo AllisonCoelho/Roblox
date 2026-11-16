@@ -168,7 +168,7 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 		TextSize = 14,
 		TextColor3 = Cores.TextoSuave,
 		TextXAlignment = Enum.TextXAlignment.Left,
-		TextTruncate = Enum.TextTruncate.AtEnd,
+		TextWrapped = true,
 		Position = UDim2.new(0, 70, 1, -25),
 		Size = UDim2.new(1, -80, 0, 20),
 		Parent = placaAura.conteudo,
@@ -363,6 +363,13 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 		feed.quadro.Size = UDim2.fromOffset(258, 32 + 36 * #recentes)
 	end
 
+	local function ajustarRotuloGiro()
+		local tamanho = if Escala.compacto then 22 else 26
+		local aguardando = estadoGiro == "perfil" or estadoGiro == "pedido"
+		rotuloGiro.TextSize = if aguardando then tamanho - 5 else tamanho
+		etiqueta.quadro.Size = UDim2.new(1, 0, 0, if aguardando then 48 else 40)
+	end
+
 	Escala.aoMudar(function()
 		local compacto = Escala.compacto
 		local estreito = Escala.tamanho.X < 600
@@ -381,7 +388,7 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 		indice.quadro.Size = UDim2.fromOffset(lateral, 68)
 		ajustes.placa.quadro.Position = UDim2.new(1, -14, 0, 10)
 		local larguraAura = if estreito then 202 elseif compacto then 230 else 292
-		placaAura.quadro.Size = UDim2.fromOffset(larguraAura, if compacto then 82 else 96)
+		placaAura.quadro.Size = UDim2.fromOffset(larguraAura, if compacto then 112 else 96)
 		placaAura.quadro.Position = UDim2.new(1, -14, 0, 84)
 		local textoX = if estreito then 46 else 70
 		iconeAura.Size = UDim2.fromOffset(if estreito then 30 else 48, if estreito then 30 else 48)
@@ -389,14 +396,15 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 		tituloAura.Position = UDim2.fromOffset(textoX, 8)
 		tituloAura.Size = UDim2.new(1, -textoX - 8, 0, 20)
 		nomeEquipada.Position = UDim2.fromOffset(textoX, 26)
-		nomeEquipada.Size = UDim2.new(1, -textoX - 8, 1, -51)
+		nomeEquipada.Size = UDim2.new(1, -textoX - 8, 1, if compacto then -70 else -51)
 		nomeEquipada.TextSize = if compacto then 20 else 24
-		raridade.Position = UDim2.new(0, textoX, 1, -24)
-		raridade.Size = UDim2.new(1, -textoX - 8, 0, 20)
+		raridade.Position = UDim2.new(0, textoX, 1, if compacto then -41 else -24)
+		raridade.Size = UDim2.new(1, -textoX - 8, 0, if compacto then 37 else 20)
 		placaGiros.quadro.Size = UDim2.fromOffset(if compacto then 158 else 216, 52)
 		placaGiros.quadro.Position = UDim2.fromOffset(if compacto then 14 else 22, 16)
 		giros.TextSize = if compacto then 18 else 22
-		rotuloGiro.TextSize = if compacto then 22 else 26
+		ajustarRotuloGiro()
+		tecla.quadro.Position = UDim2.new(1, 4, 0, if compacto then 18 else 55)
 		tecla.quadro.Visible = Escala.teclado and (estadoGiro == "pronto" or estadoGiro == "pular")
 		resultado.quadro.Size = UDim2.fromOffset(math.min(largura, 446), 52)
 		atualizarFeed()
@@ -421,6 +429,7 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 				return
 			end
 			estadoGiro = estado
+			ajustarRotuloGiro()
 			local titulo = if estado == "perfil"
 				then "Aguardando perfil"
 				elseif estado == "pedido" then "Despertando…"
