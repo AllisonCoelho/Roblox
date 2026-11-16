@@ -22,6 +22,7 @@ export type Resultado = {
 	nucleo: Peca?,
 	orbitas: { Peca },
 	lanternas: { Peca },
+	giram: { Peca }, -- giram devagar em torno do próprio eixo (anel do Altar, eco do Arquivo)
 }
 
 local SEM_SOMBRA = { Neon = true, Glass = true }
@@ -39,6 +40,7 @@ local function preencher(pasta: Folder, prontas: Malha.Cache): Resultado
 		nucleo = nil,
 		orbitas = {},
 		lanternas = {},
+		giram = {},
 	}
 
 	for indice, dados in Cena.pecas :: { { [string]: any } } do
@@ -66,6 +68,8 @@ local function preencher(pasta: Folder, prontas: Malha.Cache): Resultado
 			table.insert(resultado.orbitas, peca)
 		elseif dados.grupo == "lanterna" then
 			table.insert(resultado.lanternas, peca)
+		elseif dados.grupo == "gira" then
+			table.insert(resultado.giram, peca)
 		end
 
 		for _, caixa in dados.colisores or {} do

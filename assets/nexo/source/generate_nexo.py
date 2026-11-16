@@ -583,6 +583,715 @@ def fazer_piso_energia():
     return bm
 
 
+# ================================================================ locais do Nexo (fase 2)
+# Os seis lugares em volta da praça, os caminhos de transição e o anel de penhascos.
+# Convenção das peças de lugar: pivô no centro do lugar, no chão; a "frente" (lado da praça)
+# é +Y no Blender, que vira -Z local no Roblox.
+
+GRAMA = (0.20, 0.36, 0.30)
+MUSGO = (0.30, 0.46, 0.34)
+VERDE = (0.36, 1.00, 0.55)
+SELO = (0.92, 0.16, 0.24)
+MAGENTA = (0.86, 0.36, 1.00)
+MARMORE = (0.78, 0.76, 0.84)
+ROCHA = (0.27, 0.25, 0.33)
+TRONCO = (0.30, 0.25, 0.30)
+
+
+def misturar(a, b, f):
+    return tuple(a[i] + (b[i] - a[i]) * f for i in range(3))
+
+
+def fita3d(pontos, largura, normal, cor):
+    """Faixa de energia seguindo pontos 3D; `normal` é o lado para onde a faixa olha."""
+    bm = novo_bm()
+    n = Vector(normal).normalized()
+    esq, direita = [], []
+    for i, p in enumerate(pontos):
+        a = Vector(pontos[max(i - 1, 0)])
+        b = Vector(pontos[min(i + 1, len(pontos) - 1)])
+        t = (b - a).normalized()
+        lado = t.cross(n).normalized() * (largura / 2)
+        p = Vector(p)
+        esq.append(bm.verts.new(p + lado))
+        direita.append(bm.verts.new(p - lado))
+    for i in range(len(pontos) - 1):
+        f = bm.faces.new((direita[i], direita[i + 1], esq[i + 1], esq[i]))
+        if f.normal.dot(n) < 0:
+            f.normal_flip()
+    pintar(bm, cor, 1.0, topo_claro=0.0)
+    return bm
+
+
+def losango(cx, cy, z, tam, cor, giro=0.0):
+    """Marca de contenção (losango) plana no chão."""
+    pts = [(tam, 0), (0, tam * 0.6), (-tam, 0), (0, -tam * 0.6), (tam, 0)]
+    c, s = math.cos(giro), math.sin(giro)
+    return fita([(cx + x * c - y * s, cy + x * s + y * c) for x, y in pts], tam * 0.18, z, cor)
+
+
+def tronco_quadrado(b0, b1, z0, z1, rng, cor, chanfro=0.08):
+    """Bloco quadrado afunilado (largura b0 embaixo, b1 em cima)."""
+    pts = []
+    for z, b in ((z0, b0), (z1, b1)):
+        for sx in (-1, 1):
+            for sy in (-1, 1):
+                pts.append((sx * b / 2, sy * b / 2, z))
+    return casco(pts, cor, rng.uniform(0.9, 1.04), chanfro=chanfro)
+
+
+# ---------------------------------------------------------------- Arquivo dos Ecos
+
+
+def fazer_arquivo_base():
+    rng = random.Random(1101)
+    bm = novo_bm()
+    juntar(bm, torno([(21, 0), (21, 0.85), (20.6, 1.0), (0.5, 1.0)], 40, PEDRA, rng, tinta=0.95))
+    for i in range(20):
+        a0, a1 = 2 * math.pi * i / 20, 2 * math.pi * (i + 1) / 20
+        juntar(bm, cunha(13.0, 17.0, a0, a1, 1.0, 2.0, rng, PEDRA, chanfro=0.12, arcos=2))
+    for r0, r1, n in ((3.2, 7.8, 10), (7.8, 13.0, 16)):
+        giro = rng.uniform(0, 1)
+        for i in range(n):
+            a0, a1 = giro + 2 * math.pi * i / n, giro + 2 * math.pi * (i + 1) / n
+            juntar(bm, laje(r0, r1, a0, a1, 2.0, rng, MARMORE, tinta=rng.uniform(0.82, 0.98)))
+    juntar(bm, torno([(3.2, 1.0), (3.2, 2.0), (0.3, 2.0)], 16, MARMORE, rng, tinta=0.9))
+    return bm
+
+
+def fazer_arquivo_coluna():
+    rng = random.Random(1102)
+    bm = novo_bm()
+    juntar(bm, bloco(3.2, 3.2, 0.6, rng, MARMORE, chanfro=0.1, tinta=0.92), Matrix.Translation((0, 0, 0.3)))
+    juntar(bm, torno([(1.6, 0.6), (1.6, 0.9), (1.3, 1.1), (1.3, 12.4), (1.75, 13.1), (1.75, 13.4)], 20, MARMORE, rng, estrela=0.07))
+    juntar(bm, bloco(3.5, 3.5, 0.6, rng, MARMORE, chanfro=0.1, tinta=0.95), Matrix.Translation((0, 0, 13.7)))
+    return bm
+
+
+def fazer_arquivo_estrutura():
+    """Cornija circular sobre as colunas e a cúpula de nervuras, aberta como um observatório."""
+    rng = random.Random(1103)
+    bm = novo_bm()
+    for i in range(20):
+        a0, a1 = 2 * math.pi * i / 20, 2 * math.pi * (i + 1) / 20
+        juntar(bm, cunha(13.2, 16.9, a0, a1, 14.0, 15.8, rng, MARMORE, chanfro=0.12, arcos=2, tinta=rng.uniform(0.86, 0.96)))
+        juntar(bm, cunha(12.9, 17.3, a0, a1, 15.8, 16.5, rng, PEDRA, chanfro=0.1, arcos=2))
+    # Nervuras: quartos de elipse do anel até a coroa
+    n = 8
+    for k in range(n):
+        a = 2 * math.pi * k / n + math.pi / n
+        rot = Matrix.Rotation(a, 4, "Z")
+        segs = 7
+        anterior = None
+        for s in range(segs + 1):
+            t = s / segs
+            r = 3.2 + (15.0 - 3.2) * math.cos(t * math.pi / 2)
+            z = 16.5 + 11.0 * math.sin(t * math.pi / 2)
+            ponto = Vector((r, 0, z))
+            if anterior is not None:
+                meio = (ponto + anterior) / 2
+                d = ponto - anterior
+                inclinacao = math.atan2(d.x, d.z)
+                seg = bloco(0.9, 1.0, d.length + 0.25, rng, METAL, chanfro=0.08, tremor=0.0)
+                juntar(bm, seg, rot @ Matrix.Translation(meio) @ Matrix.Rotation(inclinacao, 4, "Y"))
+            anterior = ponto
+    for i in range(8):
+        a0, a1 = 2 * math.pi * i / 8, 2 * math.pi * (i + 1) / 8
+        juntar(bm, cunha(2.4, 4.0, a0, a1, 27.0, 28.4, rng, METAL, chanfro=0.08))
+    return bm
+
+
+def fazer_arquivo_energia():
+    bm = novo_bm()
+    juntar(bm, fita(arco_pontos(12.6, 0, 2 * math.pi, 48), 0.24, 2.12, CIANO))
+    juntar(bm, fita(arco_pontos(7.6, 0, 2 * math.pi, 36), 0.18, 2.12, CIANO))
+    for i in range(10):
+        a = 2 * math.pi * i / 10
+        c, s = math.cos(a), math.sin(a)
+        juntar(bm, losango(10.2 * c, 10.2 * s, 2.12, 0.8, OURO if i % 2 else CIANO, a))
+    # anel brilhante na base da cúpula e a coroa
+    juntar(bm, fita(arco_pontos(15.4, 0, 2 * math.pi, 48), 0.3, 16.56, CIANO))
+    juntar(bm, fita(arco_pontos(3.3, 0, 2 * math.pi, 20), 0.35, 28.45, OURO))
+    return bm
+
+
+def fazer_arquivo_console():
+    rng = random.Random(1104)
+    bm = novo_bm()
+    juntar(bm, torno([(2.3, 0), (2.3, 0.4), (1.6, 0.6), (1.2, 2.1), (1.9, 2.5), (1.9, 2.75), (0.3, 2.75)], 12, PEDRA, rng))
+    tampo = bloco(3.0, 2.0, 0.3, rng, MARMORE, chanfro=0.06, tinta=0.95)
+    juntar(bm, tampo, Matrix.Translation((0, 0.2, 2.95)) @ Matrix.Rotation(math.radians(18), 4, "X"))
+    return bm
+
+
+def fazer_projecao():
+    """Painel de projeção do Arquivo: lâmina hexagonal fina."""
+    pts = []
+    for i in range(6):
+        a = 2 * math.pi * i / 6 + math.pi / 6
+        for y in (-0.06, 0.06):
+            pts.append((1.3 * math.cos(a), y, 2.0 * math.sin(a) + 2.0))
+    return casco(pts, CIANO, 1.0, gradiente=(0.0, 4.0, VIOLETA, CIANO))
+
+
+# ---------------------------------------------------------------- Obelisco das Lendas
+
+
+def fazer_obelisco_base():
+    rng = random.Random(1201)
+    bm = novo_bm()
+    for i, (lado, z0) in enumerate(((26, 0.0), (20, 1.2), (14, 2.4))):
+        juntar(bm, bloco(lado, lado, 1.2, rng, PEDRA, chanfro=0.14, tinta=0.92 + 0.04 * i), Matrix.Translation((0, 0, z0 + 0.6)))
+        # pedras de canto
+        for sx in (-1, 1):
+            for sy in (-1, 1):
+                juntar(bm, bloco(1.6, 1.6, 1.5, rng, PEDRA, chanfro=0.1), Matrix.Translation((sx * (lado / 2 - 0.6), sy * (lado / 2 - 0.6), z0 + 0.75)))
+    return bm
+
+
+def largura_fuste(z):
+    return 6.0 - (6.0 - 4.2) * (z - 3.6) / 30.0
+
+
+def fazer_obelisco_fuste():
+    rng = random.Random(1202)
+    bm = novo_bm()
+    cortes = [3.6, 9.6, 15.0, 20.0, 24.6, 29.0, 33.6]
+    for i in range(len(cortes) - 1):
+        z0, z1 = cortes[i], cortes[i + 1]
+        juntar(bm, tronco_quadrado(largura_fuste(z0) - 0.05, largura_fuste(z1) - 0.05, z0 + 0.04, z1 - 0.04, rng, ROCHA, chanfro=0.1))
+        if 0 < i:
+            b = largura_fuste(z0) + 0.35
+            juntar(bm, bloco(b, b, 0.35, rng, METAL, chanfro=0.06, tremor=0.0, tinta=0.95), Matrix.Translation((0, 0, z0)))
+    return bm
+
+
+def fazer_obelisco_ponta():
+    return casco([(2.15, 2.15, 0), (-2.15, 2.15, 0), (2.15, -2.15, 0), (-2.15, -2.15, 0), (0, 0, 4.8)], OURO, 0.95, chanfro=0.05)
+
+
+def fazer_obelisco_energia():
+    """Canais dourados que sobem pelas quatro faces do obelisco, mais fortes no alto."""
+    bm = novo_bm()
+    for k in range(4):
+        rot = Matrix.Rotation(math.pi / 2 * k, 4, "Z")
+        pontos = []
+        for i in range(14):
+            z = 4.2 + i * 2.1
+            x = (0.35 if i % 2 else -0.35) * (1 - i / 16)
+            d = largura_fuste(z) / 2 + 0.04
+            pontos.append(rot @ Vector((x, d, z)))
+        normal = rot @ Vector((0, 1, 0))
+        juntar(bm, fita3d(pontos, 0.22, normal, OURO))
+        # selo em cada face, na altura do painel
+        selo = [rot @ Vector((x, largura_fuste(z) / 2 + 0.05, z)) for x, z in ((0, 6.2), (0.9, 7.4), (0, 8.6), (-0.9, 7.4), (0, 6.2))]
+        juntar(bm, fita3d(selo, 0.2, normal, CIANO))
+    return bm
+
+
+def fazer_pilone():
+    rng = random.Random(1203)
+    bm = novo_bm()
+    juntar(bm, bloco(3.4, 3.4, 0.8, rng, PEDRA, chanfro=0.1), Matrix.Translation((0, 0, 0.4)))
+    juntar(bm, tronco_quadrado(2.6, 1.7, 0.8, 8.4, rng, ROCHA))
+    juntar(bm, bloco(2.3, 2.3, 0.4, rng, METAL, chanfro=0.05, tremor=0.0), Matrix.Translation((0, 0, 8.6)))
+    return bm
+
+
+def fazer_moldura_ranking():
+    """Moldura de pedra em volta do painel do ranking (painel 14 x 8 a 17 studs na frente)."""
+    rng = random.Random(1204)
+    bm = novo_bm()
+    y = 17.0
+    for sx in (-1, 1):
+        juntar(bm, bloco(1.6, 1.6, 10.6, rng, PEDRA, chanfro=0.12), Matrix.Translation((sx * 7.9, y, 5.3)))
+    juntar(bm, bloco(18.4, 1.9, 1.3, rng, PEDRA, chanfro=0.14), Matrix.Translation((0, y, 10.95)))
+    juntar(bm, bloco(18.0, 2.4, 1.6, rng, PEDRA, chanfro=0.14), Matrix.Translation((0, y, 0.8)))
+    juntar(bm, bloco(2.0, 0.5, 2.0, rng, OURO, chanfro=0.06, tremor=0.0, tinta=0.9), Matrix.Translation((0, y + 0.95, 11.0)) @ Matrix.Rotation(math.radians(45), 4, "Y"))
+    return bm
+
+
+# ---------------------------------------------------------------- Jardim dos Fragmentos
+
+
+def ruido(x, y, semente):
+    return (
+        math.sin(x * 0.21 + semente) * math.cos(y * 0.17 - semente * 0.7)
+        + 0.5 * math.sin(x * 0.53 - y * 0.41 + semente * 1.3)
+    )
+
+
+def fazer_jardim_chao():
+    """Gramado em montes suaves, com borda de pedras irregulares."""
+    rng = random.Random(1301)
+    bm = novo_bm()
+    aneis = [0, 4, 9, 14, 19, 24, 28, 31]
+    lados = 40
+    grade = []
+    for r in aneis:
+        anel = []
+        for i in range(lados if r > 0 else 1):
+            a = 2 * math.pi * i / lados
+            x, y = r * math.cos(a), r * math.sin(a)
+            borda = 1 - (r / 31) ** 3
+            z = 0.55 + 0.45 * max(ruido(x, y, 2.0), -0.3) * borda
+            anel.append(bm.verts.new((x, y, z)))
+        grade.append(anel)
+    for i in range(lados):
+        j = (i + 1) % lados
+        bm.faces.new((grade[0][0], grade[1][i], grade[1][j]))
+    for k in range(1, len(aneis) - 1):
+        for i in range(lados):
+            j = (i + 1) % lados
+            bm.faces.new((grade[k][i], grade[k + 1][i], grade[k + 1][j], grade[k][j]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    for f in bm.faces:
+        if f.normal.z < 0:
+            f.normal_flip()
+    camada = bm.loops.layers.color["Col"]
+    for f in bm.faces:
+        tom = rng.uniform(0.82, 1.08)
+        cor = misturar(GRAMA, MUSGO, rng.uniform(0, 1))
+        for loop in f.loops:
+            loop[camada] = tuple(min(c * tom, 1) for c in cor) + (1.0,)
+    # Borda de pedras
+    for i in range(30):
+        a0, a1 = 2 * math.pi * i / 30, 2 * math.pi * (i + 0.86) / 30
+        juntar(bm, cunha(30.5, 33.0, a0, a1, 0.0, rng.uniform(0.7, 1.2), rng, PEDRA, chanfro=0.14, tremor=0.08))
+    return bm
+
+
+def fazer_arvore_tronco():
+    """Tronco retorcido de pedra viva que sustenta a copa de cristais."""
+    rng = random.Random(1302)
+    bm = novo_bm()
+    p = Vector((0, 0, 0))
+    direcao = Vector((0.15, 0.05, 1)).normalized()
+    for i in range(7):
+        grosso = 1.3 - i * 0.13
+        comp = 1.4
+        prox = p + direcao * comp
+        meio = (p + prox) / 2
+        seg = bloco(grosso, grosso, comp + 0.2, rng, TRONCO, chanfro=0.1, tremor=0.05)
+        rot = direcao.to_track_quat("Z", "Y").to_matrix().to_4x4()
+        juntar(bm, seg, Matrix.Translation(meio) @ rot)
+        p = prox
+        direcao = (direcao + Vector((rng.uniform(-0.3, 0.3), rng.uniform(-0.3, 0.3), 0.25))).normalized()
+    # raízes
+    for k in range(4):
+        a = math.pi / 2 * k + 0.4
+        raiz = bloco(2.2, 0.6, 0.5, rng, TRONCO, chanfro=0.08)
+        juntar(bm, raiz, Matrix.Rotation(a, 4, "Z") @ Matrix.Translation((1.0, 0, 0.2)) @ Matrix.Rotation(math.radians(-15), 4, "Y"))
+    return bm
+
+
+def fazer_arvore_copa():
+    """Copa de cristais em leque, presa no alto do tronco (z ~ 9.4)."""
+    rng = random.Random(1303)
+    bm = novo_bm()
+    for k in range(7):
+        a = 2 * math.pi * k / 7 + rng.uniform(-0.2, 0.2)
+        inclina = math.radians(rng.uniform(30, 60))
+        comp = rng.uniform(2.6, 4.2)
+        lasca = fazer_fragmento(1400 + k, comp, comp * 0.24)
+        m = Matrix.Translation((0.6, 0.3, 9.4)) @ Matrix.Rotation(a, 4, "Z") @ Matrix.Rotation(inclina, 4, "X") @ Matrix.Translation((0, 0, comp * 0.42))
+        juntar(bm, lasca, m)
+    centro = fazer_fragmento(1410, 3.6, 0.9)
+    juntar(bm, centro, Matrix.Translation((0.6, 0.3, 10.8)))
+    return bm
+
+
+def fazer_aglomerado(semente):
+    rng = random.Random(semente)
+    bm = novo_bm()
+    for k in range(rng.randint(4, 7)):
+        a = rng.uniform(0, 2 * math.pi)
+        comp = rng.uniform(1.4, 3.6)
+        lasca = fazer_fragmento(semente * 10 + k, comp, comp * 0.26)
+        m = Matrix.Rotation(a, 4, "Z") @ Matrix.Translation((rng.uniform(0, 0.8), 0, comp * 0.3)) @ Matrix.Rotation(math.radians(rng.uniform(5, 40)), 4, "Y")
+        juntar(bm, lasca, m)
+    return bm
+
+
+def fazer_passagem():
+    """Pedras de passagem: da entrada (frente, +Y) ao fragmento escondido atrás do muro (-Y)."""
+    rng = random.Random(1305)
+    bm = novo_bm()
+    for i in range(14):
+        y = 30 - i * 3.9
+        x = 3.2 * math.sin(i * 0.7)
+        pts = []
+        for k in range(7):
+            a = 2 * math.pi * k / 7
+            r = rng.uniform(0.9, 1.3)
+            pts.append((x + r * math.cos(a), y + r * math.sin(a) * 0.8, 0.0))
+            pts.append((x + r * 0.85 * math.cos(a), y + r * 0.8 * math.sin(a) * 0.85, 0.32))
+        juntar(bm, casco(pts, PEDRA_CAMINHO, rng.uniform(0.85, 1.0), chanfro=0.06), Matrix.Translation((0, 0, 0.55)))
+    return bm
+
+
+def fazer_jardim_energia():
+    """Fissuras verdes no gramado, irradiando das árvores de cristal."""
+    rng = random.Random(1306)
+    bm = novo_bm()
+    for k in range(9):
+        a = rng.uniform(0, 2 * math.pi)
+        r = rng.uniform(4, 24)
+        x, y = r * math.cos(a), r * math.sin(a)
+        pts = [(x, y)]
+        for _ in range(4):
+            a += rng.uniform(-0.8, 0.8)
+            x += 1.6 * math.cos(a)
+            y += 1.6 * math.sin(a)
+            pts.append((x, y))
+        z = 0.55 + 0.45 * max(ruido(x, y, 2.0), -0.3) + 0.08
+        juntar(bm, fita(pts, 0.16, z + 0.12, VERDE))
+    return bm
+
+
+# ---------------------------------------------------------------- Altar da Ressonância
+
+
+def fazer_altar_base():
+    rng = random.Random(1501)
+    bm = novo_bm()
+    juntar(bm, torno([(16, 0), (16, 1), (12, 1), (12, 2), (8, 2), (8, 3), (0.4, 3)], 36, PEDRA, rng, tinta=0.94))
+    # placas entalhadas nos espelhos dos degraus
+    for i in range(16):
+        a = 2 * math.pi * i / 16
+        rot = Matrix.Rotation(a, 4, "Z")
+        juntar(bm, bloco(0.25, 2.2, 0.6, rng, ROCHA, chanfro=0.04, tremor=0.0), rot @ Matrix.Translation((16.05, 0, 0.5)))
+        if i % 2 == 0:
+            juntar(bm, bloco(0.25, 2.0, 0.6, rng, ROCHA, chanfro=0.04, tremor=0.0), rot @ Matrix.Translation((12.05, 0, 1.5)))
+    return bm
+
+
+def fazer_monolito(semente):
+    rng = random.Random(semente)
+    pts = []
+    for z, s in ((0, 1.0), (4.5, 0.97), (9.5, 0.86), (13.0, 0.66)):
+        for sx in (-1, 1):
+            for sy in (-1, 1):
+                pts.append((sx * 1.35 * s + rng.uniform(-0.15, 0.15), sy * 0.95 * s + rng.uniform(-0.1, 0.1), z + rng.uniform(-0.2, 0.2)))
+    pts.append((rng.uniform(-0.5, 0.5), rng.uniform(-0.3, 0.3), 14.4))
+    return casco(pts, ROCHA, rng.uniform(0.9, 1.05), chanfro=0.07)
+
+
+def fazer_monolito_runa():
+    """Runa vertical na face do monólito que olha para o centro (+Y)."""
+    pontos = [(0, 1.0, z) for z in (2.0, 3.6)] + [(0.45, 1.0, 4.6), (0, 1.0, 5.6), (-0.45, 1.0, 6.6), (0, 1.0, 7.6), (0, 1.0, 9.6)]
+    bm = fita3d(pontos, 0.22, (0, 1, 0), MAGENTA)
+    juntar(bm, fita3d([(-0.5, 0.98, 10.6), (0, 0.95, 11.3), (0.5, 0.98, 10.6), (0, 0.98, 9.9), (-0.5, 0.98, 10.6)], 0.16, (0, 1, 0), MAGENTA))
+    return bm
+
+
+def fazer_altar_mesa():
+    rng = random.Random(1503)
+    return torno([(2.3, 0), (2.3, 0.5), (1.6, 0.7), (1.3, 2.1), (2.1, 2.5), (2.1, 2.85), (1.6, 2.85), (1.2, 2.55), (0.3, 2.5)], 14, PEDRA, rng)
+
+
+def fazer_altar_halo():
+    """Anel de pedra partido que flutua sobre o altar (gira devagar)."""
+    rng = random.Random(1504)
+    bm = novo_bm()
+    for i in range(18):
+        if i in (4, 5, 12):
+            continue
+        a0, a1 = 2 * math.pi * i / 18, 2 * math.pi * (i + 0.9) / 18
+        desloc = Vector((rng.uniform(-0.15, 0.15), rng.uniform(-0.15, 0.15), rng.uniform(-0.3, 0.3)))
+        juntar(bm, cunha(6.2, 7.8, a0, a1, -0.55, 0.55, rng, PEDRA, chanfro=0.1, arcos=2), Matrix.Translation(desloc))
+    return bm
+
+
+def fazer_altar_energia():
+    bm = novo_bm()
+    for r, z in ((15.4, 1.03), (11.4, 2.03), (7.4, 3.03)):
+        juntar(bm, fita(arco_pontos(r, 0, 2 * math.pi, 48), 0.2, z, MAGENTA))
+    for i in range(6):
+        a = 2 * math.pi * i / 6 + math.pi / 6
+        c, s = math.cos(a), math.sin(a)
+        juntar(bm, fita([(2.6 * c, 2.6 * s), (4.6 * c - 0.5 * s, 4.6 * s + 0.5 * c), (6.9 * c, 6.9 * s)], 0.18, 3.03, VIOLETA))
+        juntar(bm, losango(10 * math.cos(a + 0.5), 10 * math.sin(a + 0.5), 2.03, 0.7, MAGENTA, a))
+    return bm
+
+
+# ---------------------------------------------------------------- Portais Fragmentados
+
+
+def fazer_portais_base():
+    rng = random.Random(1601)
+    bm = novo_bm()
+    juntar(bm, torno([(22, 0), (22, 0.7), (21.5, 0.8), (0.4, 0.8)], 40, ROCHA, rng, tinta=0.95))
+    # lajes rachadas, cada vez mais soltas para o fundo (-Y)
+    for r0, r1, n in ((4, 10, 12), (10, 16, 18), (16, 21.5, 24)):
+        for i in range(n):
+            a0, a1 = 2 * math.pi * i / n, 2 * math.pi * (i + 1) / n
+            meio = (a0 + a1) / 2
+            fundo = max(0.0, -math.sin(meio))  # 0 na frente, 1 no fundo
+            l = laje(r0, r1, a0, a1, 0.85 + fundo * rng.uniform(0, 0.35), rng, PEDRA, folga=0.08 + 0.2 * fundo)
+            if fundo > 0.3:
+                ang = math.radians(rng.uniform(-6, 6) * fundo)
+                c = Vector((math.cos(meio) * (r0 + r1) / 2, math.sin(meio) * (r0 + r1) / 2, 0))
+                l_m = Matrix.Translation(c) @ Matrix.Rotation(ang, 4, Vector((math.sin(meio), -math.cos(meio), 0))) @ Matrix.Translation(-c)
+                juntar(bm, l, l_m)
+            else:
+                juntar(bm, l)
+    return bm
+
+
+def pontos_ogiva(raio_extra=0.0):
+    """Arco ogival equilátero sobre o vão (-3,8 a 3,8) a partir de z = 12: lista (x, z), esquerda -> topo -> direita."""
+    R = 7.6 + raio_extra
+    esq = []
+    for k in range(7):
+        ang = math.pi - (math.pi / 3) * k / 6  # 180 -> 120 graus, centro em (+3.8, 12)
+        esq.append((3.8 + R * math.cos(ang), 12 + R * math.sin(ang)))
+    direita = [(-x, z) for x, z in reversed(esq[:-1])]
+    return esq + direita
+
+
+def fazer_portal(quebrado):
+    rng = random.Random(1602 + quebrado)
+    bm = novo_bm()
+    alturas = (12.0, 6.5 if quebrado else 12.0)
+    for lado, alt in zip((-1, 1), alturas):
+        z = 0.0
+        x = lado * 5.0
+        juntar(bm, bloco(3.4, 3.2, 0.8, rng, PEDRA, chanfro=0.12), Matrix.Translation((x, 0, 0.4)))
+        z = 0.8
+        while z < alt - 0.3:
+            h = min(2.2, alt - z)
+            juntar(bm, bloco(2.4 + rng.uniform(-0.1, 0.1), 2.4, h - 0.06, rng, ROCHA, chanfro=0.12), Matrix.Translation((x + rng.uniform(-0.05, 0.05), 0, z + h / 2)))
+            z += h
+    # aduelas do arco ogival (2,2 de espessura)
+    pts = pontos_ogiva(1.1)
+    limite = 4 if quebrado else len(pts) - 1
+    for i in range(limite):
+        a, b = Vector((pts[i][0], 0, pts[i][1])), Vector((pts[i + 1][0], 0, pts[i + 1][1]))
+        meio = (a + b) / 2
+        d = b - a
+        ang = math.atan2(d.x, d.z)
+        juntar(bm, bloco(2.3, 2.4, d.length + 0.1, rng, ROCHA, chanfro=0.12), Matrix.Translation(meio) @ Matrix.Rotation(ang, 4, "Y"))
+    if quebrado:
+        # blocos caídos à frente do pilar partido
+        for k in range(4):
+            juntar(bm, bloco(2.3, 2.4, 2.0, rng, ROCHA, chanfro=0.12), Matrix.Translation((3 + k * 1.6, 2.5 + rng.uniform(-1, 1), 1.0)) @ Matrix.Rotation(rng.uniform(0, 3), 4, "Z") @ Matrix.Rotation(math.radians(rng.uniform(10, 40)), 4, "X"))
+    return bm
+
+
+def fazer_portal_runas(quebrado):
+    bm = novo_bm()
+    pts = [(-3.8, 0.8)] + pontos_ogiva(0.0) + [(3.8, 0.8)]
+    if quebrado:
+        pts = pts[:6]
+    linha = [(x * 0.96, 1.25, z) for x, z in pts]
+    juntar(bm, fita3d(linha, 0.24, (0, 1, 0), VIOLETA))
+    # espinhos de cristal no topo e nos ombros
+    alvos = [(0, 19.1), (-5, 12.6)] if quebrado else [(0, 19.1), (-5, 12.6), (5, 12.6)]
+    for k, (x, z) in enumerate(alvos):
+        lasca = fazer_fragmento(1650 + k, 2.4, 0.5)
+        juntar(bm, lasca, Matrix.Translation((x, 0, z + 0.6)))
+    return bm
+
+
+# ---------------------------------------------------------------- Arena dos Despertos
+
+ARENA_ARCO = (math.radians(-210), math.radians(30))  # 240 graus, aberta para +Y (praça)
+
+
+def fazer_arena_piso():
+    rng = random.Random(1701)
+    bm = novo_bm()
+    juntar(bm, torno([(24, 0), (24, 0.5), (0.4, 0.5)], 40, PEDRA, rng, tinta=0.9))
+    for r0, r1, n in ((3, 9, 10), (9, 16, 16), (16, 23.5, 24)):
+        for i in range(n):
+            a0, a1 = 2 * math.pi * i / n, 2 * math.pi * (i + 1) / n
+            juntar(bm, laje(r0, r1, a0, a1, 0.6, rng, PEDRA_PISO))
+    juntar(bm, torno([(3, 0.4), (3, 0.75), (0.3, 0.75)], 16, ROCHA, rng))
+    return bm
+
+
+def fazer_arena_arquibancada():
+    rng = random.Random(1702)
+    bm = novo_bm()
+    a0, a1 = ARENA_ARCO
+    n = 16
+    for d in range(1, 4):
+        r0, r1 = 24.5 + 3 * (d - 1), 24.5 + 3 * d
+        for i in range(n):
+            b0 = a0 + (a1 - a0) * i / n
+            b1 = a0 + (a1 - a0) * (i + 1) / n
+            juntar(bm, cunha(r0, r1, b0, b1, 0.0, 1.4 * d, rng, PEDRA, chanfro=0.12, arcos=2))
+    return bm
+
+
+def fazer_estandarte():
+    """Estandarte vermelho pendurado numa trave de metal (preso ao topo da coluna, z = 14)."""
+    rng = random.Random(1703)
+    bm = novo_bm()
+    juntar(bm, bloco(0.3, 3.4, 0.3, rng, METAL, chanfro=0.04, tremor=0.0), Matrix.Translation((0, 1.6, 13.0)))
+    pano = novo_bm()
+    pts = []
+    for k in range(7):
+        z = 12.8 - k * 1.2
+        largura = 1.3 if k < 6 else 0.0
+        onda = 0.18 * math.sin(k * 1.1)
+        pts.append((largura, 2.6 + onda, z))
+        pts.append((-largura if k < 6 else 0.0, 2.6 + onda, z))
+    vs = [pano.verts.new(p) for p in pts]
+    for k in range(6):
+        a, b, c, d = vs[2 * k], vs[2 * k + 1], vs[2 * k + 3], vs[2 * k + 2]
+        if k == 5:
+            pano.faces.new((a, b, d))
+        else:
+            pano.faces.new((a, b, c, d))
+    bmesh.ops.recalc_face_normals(pano, faces=pano.faces[:])
+    pintar(pano, SELO, 0.9, topo_claro=0.1)
+    juntar(bm, pano)
+    return bm
+
+
+def fazer_arena_energia():
+    bm = novo_bm()
+    for r in (5.5, 12.5):
+        juntar(bm, fita(arco_pontos(r, 0, 2 * math.pi, 40), 0.26, 0.7, SELO))
+    for i in range(8):
+        a = math.pi / 4 * i
+        c, s = math.cos(a), math.sin(a)
+        juntar(bm, fita([(6 * c, 6 * s), (12 * c, 12 * s)], 0.18, 0.7, OURO))
+        juntar(bm, losango(17.5 * c, 17.5 * s, 0.7, 0.9, SELO, a))
+    return bm
+
+
+# ---------------------------------------------------------------- Penhascos e caminhos
+
+
+def fazer_penhasco(semente, largura, altura, prof):
+    """Paredão de rocha: lâminas verticais lado a lado, topo serrilhado, frente para +Y."""
+    rng = random.Random(semente)
+    bm = novo_bm()
+    x = -largura / 2
+    while x < largura / 2:
+        w = rng.uniform(5, 10)
+        h = altura * rng.uniform(0.72, 1.08)
+        y0 = rng.uniform(-1.5, 1.5)
+        pts = []
+        for xx in (x - 0.6, x + w + 0.6):
+            for yy, zz in ((y0, 0), (y0 - prof, 0), (y0 - h * 0.1, h * rng.uniform(0.5, 0.7)), (y0 - prof * 0.8, h * rng.uniform(0.6, 0.8))):
+                pts.append((xx, yy, zz))
+        pts.append((x + w * rng.uniform(0.3, 0.7), y0 - prof * 0.45 - h * 0.08, h))
+        pts.append((x + w * 0.2, y0 - prof * 0.3, h * rng.uniform(0.82, 0.95)))
+        juntar(bm, casco(pts, ROCHA, rng.uniform(0.8, 1.05), gradiente=(0, altura, misturar(ROCHA, (0.1, 0.09, 0.14), 0.4), misturar(ROCHA, VIOLETA, 0.25))))
+        x += w
+    return bm
+
+
+TEMAS = {
+    # destino: (cor da pedra ao chegar, cor da energia)
+    "arquivo": (MARMORE, CIANO),
+    "obelisco": ((0.30, 0.29, 0.35), OURO),
+    "jardim": (MUSGO, VERDE),
+    "altar": ((0.38, 0.33, 0.48), MAGENTA),
+    "portais": ((0.32, 0.30, 0.40), VIOLETA),
+    "arena": ((0.50, 0.42, 0.44), SELO),
+}
+
+
+def fazer_caminho(tema, comprimento, semente):
+    """Caminho da praça até um lugar, como TRANSIÇÃO: começa na pedra da praça e vai ganhando
+    a cara do destino. Modelado de y = 0 (praça) a y = -comprimento (lugar); largura cresce.
+
+    Devolve (pedra, energia).
+    """
+    rng = random.Random(semente)
+    pedra, energia = novo_bm(), novo_bm()
+    cor_fim, cor_energia = TEMAS[tema]
+    passo = 2.6
+    fileiras = int(comprimento / passo)
+    for k in range(fileiras):
+        f = k / max(fileiras - 1, 1)  # 0 = praça, 1 = destino
+        y0 = -k * passo
+        largura = 10 + 4 * f
+        colunas = 3 if largura < 12 else 4
+        cor = misturar(PEDRA_CAMINHO, cor_fim, f ** 1.3)
+        for c in range(colunas):
+            x0 = -largura / 2 + largura * c / colunas
+            x1 = -largura / 2 + largura * (c + 1) / colunas
+            folga = 0.08
+            pts_base = [(x0 + folga, y0 - folga), (x1 - folga, y0 - folga), (x1 - folga, y0 - passo + folga), (x0 + folga, y0 - passo + folga)]
+            zbase = 0.12
+            tom = rng.uniform(0.85, 1.07)
+            if tema == "portais" and f > 0.25 and rng.random() < 0.35 + 0.6 * f:
+                # chão fraturado: a laje vira lascas inclinadas e levantadas
+                partes = 2 + int(1.5 * f)
+                for p in range(partes):
+                    px = x0 + (x1 - x0) * rng.uniform(0.15, 0.85)
+                    py = y0 - passo * rng.uniform(0.15, 0.85)
+                    tam = (x1 - x0) / partes * rng.uniform(0.7, 1.1)
+                    pts = []
+                    for q in range(5):
+                        ang = 2 * math.pi * q / 5 + rng.uniform(-0.3, 0.3)
+                        pts.append((px + tam * math.cos(ang), py + tam * 0.8 * math.sin(ang), 0))
+                        pts.append((px + tam * 0.9 * math.cos(ang), py + tam * 0.7 * math.sin(ang), 0.3))
+                    lasca = casco(pts, cor, tom)
+                    sobe = 0.12 + f * rng.uniform(0, 0.6)
+                    inclina = Matrix.Rotation(math.radians(rng.uniform(-14, 14) * f), 4, Vector((rng.uniform(-1, 1), rng.uniform(-1, 1), 0)).normalized())
+                    juntar(pedra, lasca, Matrix.Translation((px, py, sobe)) @ inclina @ Matrix.Translation((-px, -py, 0)))
+                # brilho violeta saindo da fresta
+                juntar(energia, fita([(x0 + 0.3, y0 - passo * rng.uniform(0.2, 0.8)), ((x0 + x1) / 2, y0 - passo * rng.uniform(0.2, 0.8)), (x1 - 0.3, y0 - passo * rng.uniform(0.2, 0.8))], 0.14 + 0.1 * f, 0.1, cor_energia))
+                continue
+            if tema == "jardim" and f > 0.3 and rng.random() < 0.5 * f:
+                # a laje some e dá lugar a um tufo de vegetação
+                for q in range(rng.randint(3, 6)):
+                    gx, gy = rng.uniform(x0 + 0.3, x1 - 0.3), rng.uniform(y0 - passo + 0.3, y0 - 0.3)
+                    h = rng.uniform(0.5, 1.3)
+                    juntar(pedra, casco([(gx - 0.15, gy, 0.1), (gx + 0.15, gy, 0.1), (gx, gy + 0.12, 0.1), (gx + rng.uniform(-0.3, 0.3), gy + rng.uniform(-0.3, 0.3), 0.1 + h)], misturar(GRAMA, VERDE, rng.uniform(0, 0.3)), 1.0))
+                continue
+            bm_l = novo_bm()
+            vs_cima = [bm_l.verts.new((x, y, zbase + 0.22 + rng.uniform(-0.03, 0.03))) for x, y in pts_base]
+            vs_baixo = [bm_l.verts.new((x, y, 0.0)) for x, y in pts_base]
+            bm_l.faces.new(vs_cima)
+            for i in range(4):
+                j = (i + 1) % 4
+                bm_l.faces.new((vs_baixo[i], vs_baixo[j], vs_cima[j], vs_cima[i]))
+            bmesh.ops.recalc_face_normals(bm_l, faces=bm_l.faces[:])
+            chanfrar(bm_l, 0.06)
+            pintar(bm_l, cor, tom, topo_claro=0.35)
+            juntar(pedra, bm_l)
+        # Energia do destino, cada vez mais densa
+        z = 0.38
+        if tema == "arquivo" and rng.random() < f * 1.3:
+            for _ in range(1 + int(2 * f)):
+                juntar(energia, losango(rng.uniform(-largura / 2 + 1, largura / 2 - 1), y0 - passo / 2, z, 0.35 + 0.4 * f, cor_energia, rng.uniform(0, math.pi)))
+        elif tema == "jardim" and rng.random() < 0.3 + f:
+            x = rng.uniform(-largura / 2 + 0.5, largura / 2 - 0.5)
+            pts = [(x, y0)]
+            for q in range(3):
+                x += rng.uniform(-0.8, 0.8)
+                pts.append((x, y0 - passo * (q + 1) / 3))
+            juntar(energia, fita(pts, 0.1 + 0.12 * f, z, cor_energia))
+        elif tema == "obelisco" and k % 2 == 0:
+            for lado in (-1, 1):
+                juntar(energia, fita([(lado * (largura / 2 - 0.4), y0), (lado * (largura / 2 - 0.4), y0 - passo)], 0.1 + 0.18 * f, z, cor_energia))
+            if f > 0.4 and k % 4 == 0:
+                juntar(energia, fita([(-largura / 2 + 0.4, y0 - 1), (largura / 2 - 0.4, y0 - 1)], 0.12, z, cor_energia))
+        elif tema == "altar" and rng.random() < f:
+            cx = rng.uniform(-largura / 3, largura / 3)
+            juntar(energia, fita(arco_pontos(0.5 + 0.6 * f, 0, 2 * math.pi, 14), 0.1, z, cor_energia), Matrix.Translation((cx, y0 - passo / 2, 0)))
+        elif tema == "arena" and k % 3 == 0 and f > 0.2:
+            juntar(energia, fita([(-largura / 2 + 0.6, y0 - 1.2), (-1.0, y0 - 1.2)], 0.12 + 0.15 * f, z, cor_energia))
+            juntar(energia, fita([(1.0, y0 - 1.2), (largura / 2 - 0.6, y0 - 1.2)], 0.12 + 0.15 * f, z, cor_energia))
+    # Bordas de pedra baixa nos dois lados (somem no jardim e nos portais perto do destino)
+    for lado in (-1, 1):
+        for k in range(0, fileiras, 2):
+            f = k / max(fileiras - 1, 1)
+            if tema in ("jardim", "portais") and rng.random() < f:
+                continue
+            largura = 10 + 4 * f
+            juntar(pedra, bloco(0.7, passo * 2 - 0.2, 0.55, rng, misturar(PEDRA, TEMAS[tema][0], f), chanfro=0.08), Matrix.Translation((lado * (largura / 2 + 0.4), -k * passo - passo, 0.27)))
+    return pedra, energia
+
+
 # ---------------------------------------------------------------- registro e montagem
 
 PECAS = {}  # nome -> objeto do Blender
@@ -646,12 +1355,91 @@ def construir_kit():
     registrar("praca_piso", fazer_piso(), pedra)
     registrar("praca_energia", fazer_piso_energia(), energia)
 
+    # Locais em volta da praça
+    registrar("arquivo_base", fazer_arquivo_base(), pedra)
+    registrar("arquivo_coluna", fazer_arquivo_coluna(), pedra)
+    registrar("arquivo_estrutura", fazer_arquivo_estrutura(), pedra)
+    registrar("arquivo_energia", fazer_arquivo_energia(), energia)
+    registrar("arquivo_console", fazer_arquivo_console(), pedra)
+    registrar("arquivo_projecao", fazer_projecao(), cristal)
+    registrar("obelisco_base", fazer_obelisco_base(), pedra)
+    registrar("obelisco_fuste", fazer_obelisco_fuste(), pedra)
+    registrar("obelisco_ponta", fazer_obelisco_ponta(), metal)
+    registrar("obelisco_energia", fazer_obelisco_energia(), energia)
+    registrar("obelisco_pilone", fazer_pilone(), pedra)
+    registrar("obelisco_moldura", fazer_moldura_ranking(), pedra)
+    registrar("jardim_chao", fazer_jardim_chao(), pedra)
+    registrar("jardim_energia", fazer_jardim_energia(), energia)
+    registrar("jardim_passagem", fazer_passagem(), pedra)
+    registrar("arvore_tronco", fazer_arvore_tronco(), pedra)
+    registrar("arvore_copa", fazer_arvore_copa(), cristal)
+    registrar("cristal_aglomerado_a", fazer_aglomerado(1311), cristal)
+    registrar("cristal_aglomerado_b", fazer_aglomerado(1312), cristal)
+    registrar("altar_base", fazer_altar_base(), pedra)
+    registrar("altar_energia", fazer_altar_energia(), energia)
+    registrar("altar_mesa", fazer_altar_mesa(), pedra)
+    registrar("altar_halo", fazer_altar_halo(), pedra)
+    registrar("altar_monolito_a", fazer_monolito(1511), pedra)
+    registrar("altar_monolito_b", fazer_monolito(1512), pedra)
+    registrar("altar_monolito_runa", fazer_monolito_runa(), energia)
+    registrar("portais_base", fazer_portais_base(), pedra)
+    registrar("portal_moldura", fazer_portal(False), pedra)
+    registrar("portal_quebrado", fazer_portal(True), pedra)
+    registrar("portal_runas", fazer_portal_runas(False), energia)
+    registrar("portal_runas_quebrado", fazer_portal_runas(True), energia)
+    registrar("arena_piso", fazer_arena_piso(), pedra)
+    registrar("arena_arquibancada", fazer_arena_arquibancada(), pedra)
+    registrar("arena_estandarte", fazer_estandarte(), pedra)
+    registrar("arena_energia", fazer_arena_energia(), energia)
+    registrar("penhasco_a", fazer_penhasco(1801, 30, 82, 16), pedra)
+    registrar("penhasco_b", fazer_penhasco(1802, 30, 90, 16), pedra)
+    registrar("penhasco_c", fazer_penhasco(1803, 44, 125, 22), pedra)
+    for i, (tema, (graus, dist)) in enumerate(sorted(LOCAIS.items())):
+        comprimento = dist - BORDAS[tema] - INICIO_CAMINHO
+        pedra_c, energia_c = fazer_caminho(tema, comprimento, 1900 + i)
+        registrar("caminho_" + tema, pedra_c, pedra)
+        registrar("caminho_" + tema + "_energia", energia_c, energia)
+
 
 # Montagem da praça em coordenadas do ROBLOX (studs; Y para cima; norte = -Z; topo da praça em y = 1).
 # material: nome de Enum.Material. grupo: papel da peça na animação do Núcleo.
 # colisores: caixas simples {centro local, tamanho} em coordenadas do Roblox, relativas ao pivô.
 TOPO = 1.0
 CENTRO_CRISTAL = (0.0, 15.5, 0.0)
+
+# Locais: (ângulo em graus a partir do norte, sentido horário; distância ao centro).
+# ATENÇÃO: src/server/Mundo/Nexo.luau usa os mesmos valores (colisão e partes funcionais).
+LOCAIS = {
+    "obelisco": (0, 150),
+    "altar": (45, 150),
+    "portais": (135, 150),
+    "arena": (180, 156),
+    "jardim": (225, 150),
+    "arquivo": (315, 150),
+}
+BORDAS = {"obelisco": 20, "altar": 22, "portais": 23, "arena": 25, "jardim": 33, "arquivo": 22}
+INICIO_CAMINHO = 47  # onde os caminhos saem da praça
+RAIO_PENHASCO = 244  # anel interno de penhascos; a parede invisível do servidor fica em 238
+
+
+def mundo(graus, dist, lx=0.0, ly=0.0, lz=0.0):
+    """Ponto do espaço LOCAL de um lugar (como o servidor usa: CFrame.lookAt(centro, origem),
+    -Z local apontando para a praça) em coordenadas do mundo do Roblox."""
+    g = math.radians(graus)
+    t = math.radians(180 - graus)
+    cx, cz = dist * math.sin(g), -dist * math.cos(g)
+    return (cx + lx * math.cos(t) + lz * math.sin(t), ly, cz - lx * math.sin(t) + lz * math.cos(t))
+
+
+def giro_de(graus, extra=0.0):
+    """Giro (Y, graus) de uma peça cuja frente (+Y no Blender) olha para a praça."""
+    return (180 - graus + extra) % 360
+
+
+def polar_local(raio, a):
+    """Posição local num círculo, com o ângulo `a` medido a partir da frente (lado da praça)."""
+    r = math.radians(a)
+    return raio * math.sin(r), -raio * math.cos(r)
 
 
 def montar_cena():
@@ -705,7 +1493,135 @@ def montar_cena():
     entulho = [(-20, -27), (-17.5, -29.5), (21, -28), (-36, -30), (36, -29), (-31, -9), (32, -15), (24, -34), (-12, -38), (13, -37)]
     for i, (x, z) in enumerate(entulho):
         por("rocha_a" if i % 2 == 0 else "rocha_b", (x, TOPO, z), giro=rng.uniform(0, 360), escala=rng.uniform(0.8, 1.5))
+
+    montar_locais(por, rng)
     return cena
+
+
+def montar_locais(por, rng):
+    """Os seis lugares, os caminhos de transição, o campo entre eles e o anel de penhascos."""
+
+    def em(local, lx, ly, lz, malha, extra_giro=0.0, **kw):
+        graus, dist = LOCAIS[local]
+        return por(malha, mundo(graus, dist, lx, ly, lz), giro=giro_de(graus, extra_giro), **kw)
+
+    def voltado_ao_centro(local, raio, a, ly, malha, **kw):
+        """Peça num círculo do lugar, com a frente virada para o centro do lugar."""
+        x, z = polar_local(raio, a)
+        return em(local, x, ly, z, malha, extra_giro=180 - a, **kw)
+
+    # Caminhos: um por lugar, saindo da borda da praça
+    for tema, (graus, dist) in LOCAIS.items():
+        g = math.radians(graus)
+        inicio = (INICIO_CAMINHO * math.sin(g), 0.0, -INICIO_CAMINHO * math.cos(g))
+        por("caminho_" + tema, inicio, giro=giro_de(graus))
+        por("caminho_" + tema + "_energia", inicio, giro=giro_de(graus), material="Neon")
+
+    # Arquivo dos Ecos: observatório aberto
+    em("arquivo", 0, 0, 0, "arquivo_base", material="Marble")
+    em("arquivo", 0, 0, 0, "arquivo_estrutura", material="Marble")
+    em("arquivo", 0, 0, 0, "arquivo_energia", material="Neon")
+    em("arquivo", 0, 2, 0, "arquivo_console")
+    em("arquivo", 0, 7.5, 0, "cristal_fragmento_a", material="Neon", grupo="gira", velocidade=0.6)
+    for i in range(1, 10):
+        voltado_ao_centro("arquivo", 15, 36 * i, 2, "arquivo_coluna", material="Marble")
+    for k in range(6):
+        voltado_ao_centro("arquivo", 9.5, 60 * k + 30, 2.4, "arquivo_projecao", material="Neon", transparencia=0.55)
+
+    # Obelisco das Lendas
+    em("obelisco", 0, 0, 0, "obelisco_base")
+    em("obelisco", 0, 0, 0, "obelisco_fuste", material="Basalt")
+    em("obelisco", 0, 33.6, 0, "obelisco_ponta", material="Metal")
+    em("obelisco", 0, 0, 0, "obelisco_energia", material="Neon")
+    em("obelisco", 0, 0, 0, "obelisco_moldura")
+    for sx in (-1, 1):
+        for sz in (-1, 1):
+            em("obelisco", sx * 15.5, 0, sz * 15.5, "obelisco_pilone", material="Basalt")
+            em("obelisco", sx * 15.5, 11.6, sz * 15.5, "cristal_fragmento_c", material="Neon", grupo="lanterna", fase=rng.uniform(0, 360))
+
+    # Jardim dos Fragmentos
+    em("jardim", 0, 0, 0, "jardim_chao", material="Grass")
+    em("jardim", 0, 0, 0, "jardim_energia", material="Neon")
+    em("jardim", 0, 0, 0, "jardim_passagem")
+    colisor_tronco = [((0, 4.5, 0), (1.6, 9.0, 1.6))]
+    for x, z in ((-14, -6), (13, -11), (-17, 11), (18, 8), (9, 16)):
+        giro_arvore = rng.uniform(0, 360)
+        em("jardim", x, 0.4, z, "arvore_tronco", extra_giro=giro_arvore, colisores=colisor_tronco)
+        em("jardim", x, 0.4, z, "arvore_copa", extra_giro=giro_arvore, material="Glass", transparencia=0.1)
+    for x, z in ((-6, -20), (8, -21), (-22, -2), (23, -1), (-11, 20), (16, 21), (-24, 8), (2, -12)):
+        em("jardim", x, 0.4, z, "cristal_aglomerado_a" if x % 2 == 0 else "cristal_aglomerado_b", extra_giro=rng.uniform(0, 360), material="Glass", transparencia=0.08, escala=rng.uniform(0.8, 1.3))
+    colisores_arco = [((-12.5, 5.2, 0), (4.6, 10.4, 4.4)), ((12.5, 5.2, 0), (4.6, 10.4, 4.4))]
+    em("jardim", -10, 0.4, 3, "arco_partido", extra_giro=65, escala=0.45, colisores=colisores_arco)
+    colisor_pilar = [((0, 6.2, 0), (3.0, 12.4, 3.0))]
+    em("jardim", 12, 0.4, 1, "ruina_pilar_a", extra_giro=rng.uniform(0, 360), escala=0.75, colisores=colisor_pilar)
+    em("jardim", -5, 0.4, -13, "ruina_pilar_a", extra_giro=rng.uniform(0, 360), escala=0.6, colisores=colisor_pilar)
+    colisor_muro = [((-1.2, 2.6, 0), (12.8, 5.2, 1.9))]
+    em("jardim", -6, 0.4, 18, "ruina_parede_b", escala=0.7, colisores=colisor_muro)
+    for x, z in ((20, -16), (-21, -15), (3, 26)):
+        em("jardim", x, 0.4, z, "rocha_a", extra_giro=rng.uniform(0, 360), escala=rng.uniform(1.0, 1.6))
+
+    # Altar da Ressonância
+    em("altar", 0, 0, 0, "altar_base")
+    em("altar", 0, 0, 0, "altar_energia", material="Neon")
+    em("altar", 0, 3, 0, "altar_mesa")
+    em("altar", 0, 14, 0, "altar_halo", grupo="gira", velocidade=0.15)
+    em("altar", 0, 10.5, 0, "cristal_fragmento_a", material="Neon", grupo="lanterna", fase=0)
+    for i in range(6):
+        a = 30 + 60 * i
+        malha = "altar_monolito_a" if i % 2 == 0 else "altar_monolito_b"
+        voltado_ao_centro("altar", 19.5, a, 0, malha, material="Basalt")
+        voltado_ao_centro("altar", 19.5, a, 0, "altar_monolito_runa", material="Neon")
+
+    # Portais Fragmentados: três molduras ogivais no fundo do estrado, a da esquerda partida
+    em("portais", 0, 0, 0, "portais_base")
+    for b in (-38, 0, 38):
+        x, z = math.sin(math.radians(b)) * 10, math.cos(math.radians(b)) * 10
+        quebrado = b == -38
+        em("portais", x, 0.8, z, "portal_quebrado" if quebrado else "portal_moldura", extra_giro=b, material="Basalt")
+        em("portais", x, 0.8, z, "portal_runas_quebrado" if quebrado else "portal_runas", extra_giro=b, material="Neon")
+    for k in range(5):
+        em("portais", rng.uniform(-14, 14), rng.uniform(4, 13), rng.uniform(2, 16), "cristal_fragmento_c" if k % 2 else "rocha_b", extra_giro=rng.uniform(0, 360), material="Neon" if k % 2 else "Slate", grupo="lanterna", fase=rng.uniform(0, 360))
+
+    # Arena dos Despertos
+    em("arena", 0, 0, 0, "arena_piso")
+    em("arena", 0, 0, 0, "arena_arquibancada")
+    em("arena", 0, 0, 0, "arena_energia", material="Neon")
+    for k in range(8):
+        a = 67.5 + k * (225 / 7)
+        voltado_ao_centro("arena", 35.5, a, 0, "arquivo_coluna", material="Marble")
+        if k % 2 == 0:
+            voltado_ao_centro("arena", 35.5, a, 0, "arena_estandarte", material="Fabric")
+
+    # Campo entre os lugares: rochas e cristais, fora dos caminhos e longe dos lugares
+    angulos_caminho = [g for g, _ in LOCAIS.values()]
+    centros = [mundo(g, d) for g, d in LOCAIS.values()]
+    colocados = 0
+    tentativas = 0
+    while colocados < 46 and tentativas < 2000:
+        tentativas += 1
+        r = rng.uniform(58, 228)
+        a = rng.uniform(0, 360)
+        x, z = r * math.sin(math.radians(a)), -r * math.cos(math.radians(a))
+        if any(abs((a - g + 180) % 360 - 180) * math.pi / 180 * r < 12 for g in angulos_caminho):
+            continue
+        if any(math.hypot(x - c[0], z - c[2]) < 40 for c in centros):
+            continue
+        cristal = colocados % 4 == 0
+        malha = ("cristal_aglomerado_a" if colocados % 8 == 0 else "cristal_aglomerado_b") if cristal else ("rocha_a" if colocados % 3 else "rocha_b")
+        por(malha, (x, 0.0, z), giro=rng.uniform(0, 360), escala=rng.uniform(1.0, 2.2) if not cristal else rng.uniform(1.0, 1.8), material="Glass" if cristal else "Slate", **({"transparencia": 0.08} if cristal else {}))
+        colocados += 1
+
+    # Anel de penhascos: fecha o mapa e esconde o que há fora
+    n = 56
+    for i in range(n):
+        g = 360 * i / n + rng.uniform(-1.5, 1.5)
+        r = RAIO_PENHASCO + rng.uniform(0, 3)
+        por("penhasco_a" if i % 2 == 0 else "penhasco_b", (r * math.sin(math.radians(g)), -0.5, -r * math.cos(math.radians(g))), giro=giro_de(g, rng.uniform(-6, 6)), escala=rng.uniform(0.95, 1.25), material="Rock")
+    n = 40
+    for i in range(n):
+        g = 360 * (i + 0.5) / n
+        r = RAIO_PENHASCO + 22
+        por("penhasco_c", (r * math.sin(math.radians(g)), -0.5, -r * math.cos(math.radians(g))), giro=giro_de(g, rng.uniform(-8, 8)), escala=rng.uniform(1.0, 1.25), material="Rock")
 
 
 # ---------------------------------------------------------------- exportação
@@ -861,7 +1777,7 @@ def preparar_render():
     fundo.inputs["Strength"].default_value = 1.0
     cena.world = mundo
     # chão escuro além da praça
-    bpy.ops.mesh.primitive_circle_add(vertices=64, radius=150, fill_type="NGON", location=(0, 0, 0.9))
+    bpy.ops.mesh.primitive_circle_add(vertices=96, radius=300, fill_type="NGON", location=(0, 0, 0))
     chao = bpy.context.object
     mat = bpy.data.materials.new("Chao")
     mat.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = (0.02, 0.018, 0.035, 1)
@@ -913,6 +1829,15 @@ def main():
         renderizar("spawn", (0, -47, 7.5), (0, 0, 12.5), lente=24)
         renderizar("nucleo", (17, -21, 9), (0, 0, 11), lente=30)
         renderizar("alto", (38, -52, 34), (0, -4, 6), lente=28)
+        renderizar("mapa", (150, -230, 210), (0, 0, 0), lente=22)
+        renderizar("arquivo", tuple(roblox_para_blender(mundo(315, 150, 0, 9, -38))), tuple(roblox_para_blender(mundo(315, 150, 0, 9, 0))), lente=28)
+        renderizar("obelisco", tuple(roblox_para_blender(mundo(0, 150, 6, 6, -50))), tuple(roblox_para_blender(mundo(0, 150, 0, 17, 0))), lente=26)
+        renderizar("jardim", tuple(roblox_para_blender(mundo(225, 150, 0, 14, -44))), tuple(roblox_para_blender(mundo(225, 150, 0, 3, 0))), lente=26)
+        renderizar("altar", tuple(roblox_para_blender(mundo(45, 150, 8, 12, -44))), tuple(roblox_para_blender(mundo(45, 150, 0, 7, 0))), lente=26)
+        renderizar("portais", tuple(roblox_para_blender(mundo(135, 150, -6, 9, -36))), tuple(roblox_para_blender(mundo(135, 150, 0, 8, 6))), lente=26)
+        renderizar("arena", tuple(roblox_para_blender(mundo(180, 156, 0, 16, -50))), tuple(roblox_para_blender(mundo(180, 156, 0, 3, 0))), lente=24)
+        renderizar("caminho_arquivo", tuple(roblox_para_blender(mundo(315, 72, 0, 4.5, -2))), tuple(roblox_para_blender(mundo(315, 150, 0, 3, 0))), lente=26)
+        renderizar("caminho_portais", tuple(roblox_para_blender(mundo(135, 72, 0, 4.5, -2))), tuple(roblox_para_blender(mundo(135, 150, 0, 3, 0))), lente=26)
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(DIR_SOURCE, "nexo_master.blend"))
 
 

@@ -35,3 +35,16 @@ Marcar cada item no Studio (`rojo serve` + Play) e depois na experiência privad
 - [ ] FPS no PC e em pelo menos um celular, com e sem "qualidade baixa".
 - [ ] Tempo de entrada: travada perceptível na montagem?
 - [ ] Memória no celular (Developer Console → Memory).
+
+
+## Fase 2 — lugares, caminhos e mapa fechado
+- [ ] Os seis lugares aparecem em 3D e o esqueleto cinza some.
+- [ ] Caminhos: a transição de cada um é perceptível (mármore e símbolos azuis no Arquivo, vegetação e verde no Jardim, chão fraturado nos Portais).
+- [ ] Ninguém sai do mapa: andar e pular contra os penhascos em vários pontos.
+- [ ] Do alto do Obelisco ou pulando perto da borda, não se vê o lado de fora.
+- [ ] Painel do ranking legível, dentro da moldura, virado para a praça.
+- [ ] Arquivo: "Abrir índice" no console; colunas e degraus sem prender o personagem.
+- [ ] Jardim: troncos e ruínas bloqueiam; fragmento sussurrante atrás do muro.
+- [ ] Altar e Portais: interações "Em construção"; véus dentro das molduras.
+- [ ] Arena: subir e descer a arquibancada.
+- [ ] Tempo de entrada e FPS no celular com as 313 peças.
