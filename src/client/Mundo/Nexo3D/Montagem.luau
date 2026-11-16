@@ -26,11 +26,7 @@ export type Resultado = {
 
 local SEM_SOMBRA = { Neon = true, Glass = true }
 
--- Constrói tudo dentro de `nexo`. Gera erro se o motor recusar criar as malhas; quem chama
--- usa pcall e mantém o cenário provisório nesse caso.
-function Montagem.construir(nexo: Instance): Resultado
-	local pasta = Instance.new("Folder")
-	pasta.Name = "Kit3D"
+local function preencher(pasta: Folder, prontas: Malha.Cache): Resultado
 	local colisores = Instance.new("Folder")
 	colisores.Name = "Colisores"
 	colisores.Parent = pasta
@@ -46,7 +42,8 @@ function Montagem.construir(nexo: Instance): Resultado
 	}
 
 	for indice, dados in Cena.pecas :: { { [string]: any } } do
-		local parte, centroMalha = Malha.criar(dados.malha)
+		local parte, centroMalha = Malha.criar(dados.malha, prontas)
+		parte.Parent = pasta
 		local escala = dados.escala or 1
 		local pos = dados.posicao
 		local pivo = CFrame.new(pos[1], pos[2], pos[3])
@@ -58,7 +55,6 @@ function Montagem.construir(nexo: Instance): Resultado
 		parte.Material = (Enum.Material :: any)[dados.material] or Enum.Material.Slate
 		parte.Transparency = dados.transparencia or 0
 		parte.CastShadow = not SEM_SOMBRA[dados.material]
-		parte.Parent = pasta
 
 		local peca: Peca =
 			{ parte = parte, pivo = pivo, centro = centro, tamanho = tamanho, dados = dados }
@@ -92,6 +88,22 @@ function Montagem.construir(nexo: Instance): Resultado
 		end
 	end
 
+	return resultado
+end
+
+-- Só coloca a pasta no mundo quando o kit inteiro estiver pronto.
+function Montagem.construir(nexo: Instance): Resultado
+	local pasta = Instance.new("Folder")
+	pasta.Name = "Kit3D"
+	local prontas: Malha.Cache = {}
+	local ok, resultado = pcall(preencher, pasta, prontas)
+	for _, pronta in prontas do
+		pronta.modelo:Destroy()
+	end
+	if not ok then
+		pasta:Destroy()
+		error(resultado, 0)
+	end
 	pasta.Parent = nexo
 	return resultado
 end

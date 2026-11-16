@@ -1,7 +1,7 @@
 -- Transforma as peças do kit 3D (modeladas no Blender, guardadas em Dados/) em MeshParts.
 -- A geometria é criada em tempo de execução com EditableMesh, então o cenário vem inteiro do
 -- repositório: não depende de asset enviado ao Roblox nem de nada colocado à mão no Studio.
--- EditableMesh não replica: por isso a montagem acontece em cada cliente.
+-- Cada cliente converte uma malha editável de cada vez em conteúdo estático.
 local AssetService = game:GetService("AssetService")
 
 local Malha = {}
@@ -14,10 +14,10 @@ export type Dados = {
 	dados: { string },
 }
 
-type Pronta = { editavel: EditableMesh, centro: Vector3 }
+type Pronta = { modelo: MeshPart, centro: Vector3 }
+export type Cache = { [string]: Pronta }
 
 local pasta = script.Parent:WaitForChild("Dados")
-local prontas: { [string]: Pronta } = {}
 
 local ALFABETO = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 local VALOR: { [number]: number } = {}
@@ -48,21 +48,10 @@ local function decodificar(pedacos: { string }, bytes: number): buffer
 	return saida
 end
 
--- Monta (uma vez por peça) o EditableMesh. Os vértices não são compartilhados entre faces,
--- então as normais automáticas dão o sombreado facetado do kit.
-local function preparar(nome: string): Pronta
-	local pronta = prontas[nome]
-	if pronta then
-		return pronta
-	end
-	local d = require(pasta:WaitForChild(nome)) :: Dados
+-- Os vértices separados por face dão o sombreado facetado do kit.
+local function preencher(editavel: EditableMesh, d: Dados, tamanho: Vector3)
 	local nv, nt = d.vertices, d.triangulos
 	local dados = decodificar(d.dados, nv * 9 + nt * 6)
-	local minimo = Vector3.new(d.minimo[1], d.minimo[2], d.minimo[3])
-	local tamanho = Vector3.new(d.tamanho[1], d.tamanho[2], d.tamanho[3])
-	local centro = minimo + tamanho / 2
-
-	local editavel = AssetService:CreateEditableMesh()
 	local vertices = table.create(nv)
 	local cores = table.create(nv)
 	for i = 0, nv - 1 do
@@ -94,16 +83,31 @@ local function preparar(nome: string): Pronta
 		local face = editavel:AddTriangle(vertices[a], vertices[b], vertices[c])
 		editavel:SetFaceColors(face, { cores[a], cores[b], cores[c] })
 	end
-	pronta = { editavel = editavel, centro = centro }
-	prontas[nome] = pronta
-	return pronta
 end
 
--- Cria uma MeshPart da peça. Devolve a parte e o deslocamento do centro da malha em relação
--- ao pivô da peça (a base, como foi modelada). Pode gerar erro: quem chama usa pcall.
-function Malha.criar(nome: string): (MeshPart, Vector3)
-	local pronta = preparar(nome)
-	local parte = AssetService:CreateMeshPartAsync(Content.fromObject(pronta.editavel), {
+local function preparar(nome: string): Pronta
+	local d = require(pasta:WaitForChild(nome)) :: Dados
+	local minimo = Vector3.new(d.minimo[1], d.minimo[2], d.minimo[3])
+	local tamanho = Vector3.new(d.tamanho[1], d.tamanho[2], d.tamanho[3])
+	local editavel = AssetService:CreateEditableMesh()
+	if not editavel then
+		error("Limite de memória de EditableMesh ao criar " .. nome)
+	end
+
+	-- O kit só move e colore MeshParts. A geometria fica estática depois de criada.
+	local ok, conteudo = pcall(function()
+		preencher(editavel, d, tamanho)
+		local status, estatico =
+			AssetService:CreateDataModelContentAsync(Content.fromObject(editavel))
+		assert(status == Enum.CreateContentResult.Success and estatico, tostring(status))
+		return estatico
+	end)
+	editavel:Destroy()
+	if not ok then
+		error("Falha ao converter a malha " .. nome .. ": " .. tostring(conteudo))
+	end
+
+	local parte = AssetService:CreateMeshPartAsync(conteudo, {
 		CollisionFidelity = Enum.CollisionFidelity.Box,
 	})
 	parte.Name = nome
@@ -111,7 +115,17 @@ function Malha.criar(nome: string): (MeshPart, Vector3)
 	parte.CanCollide = false
 	parte.CanQuery = false
 	parte.CanTouch = false
-	return parte, pronta.centro
+	return { modelo = parte, centro = minimo + tamanho / 2 }
+end
+
+-- As peças repetidas compartilham o conteúdo estático de um único modelo.
+function Malha.criar(nome: string, prontas: Cache): (MeshPart, Vector3)
+	local pronta = prontas[nome]
+	if not pronta then
+		pronta = preparar(nome)
+		prontas[nome] = pronta
+	end
+	return pronta.modelo:Clone(), pronta.centro
 end
 
 return Malha
