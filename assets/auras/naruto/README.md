@@ -18,7 +18,10 @@ jogo dobra junta a junta todo quadro (`src/client/Mundo/Auras/Caudas.luau`):
 - andando/correndo o leque fecha e as caudas são puxadas para trás;
 - pulando/caindo elas sobem ou descem;
 - explosão de poder: o leque abre, as caudas esticam e o núcleo brilha mais (faíscas);
-- cada segmento tem casca Neon translúcida + núcleo Neon mais claro.
+- cada segmento é uma **meia-lua** (já vem curvado de fábrica, largo no plano da curva), com
+  **chamas nas duas bordas** varrendo para a ponta;
+- por dentro, uma segunda malha com **veios de fogo desenhados** (núcleo Neon mais claro) que
+  aparece através da casca Neon translúcida.
 
 | Estágio | O que muda |
 |---|---|
@@ -29,8 +32,8 @@ jogo dobra junta a junta todo quadro (`src/client/Mundo/Auras/Caudas.luau`):
 | 6 | mais compridas, onda mais forte |
 | 7 | caudas alternadas (ondas em oposição) |
 | 8 | mais volumosas, leque quase fechando uma criatura |
-| 9 | nove caudas + cabeça espectral da raposa com olhos luminosos (manifestação e explosões) + anel no chão |
-| Seis Caminhos | dourado, caudas de luz finas e lentas, 9 esferas negras girando num halo, manto dourado (Highlight), anel no chão |
+| 9 | nove caudas + cabeça espectral da raposa (orelhas longas, sobrancelhas bravas, juba de chamas, boca aberta com presas, olhos amarelos com pupila em fenda, fogo interno) na manifestação e nas explosões + anel no chão |
+| Seis Caminhos | dourado, caudas de luz finas e lentas, 9 esferas negras girando num halo, anel no chão e **roupa**: manto dourado no tronco com gola, 9 magatamas pretas na gola e o círculo na barriga, mangas e abas com barra em chamas (cada peça veste o membro e segue as animações) |
 
 Todos os números de cada estágio ficam em `CaudasEstagios.luau`, gerado junto com as malhas.
 

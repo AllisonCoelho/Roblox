@@ -21,14 +21,28 @@ local DURACAO_SAIDA = 0.25
 local LOD_DETALHE = 80
 local LOD_OCULTO = 140
 local COR_OLHOS = Color3.fromHex("FFE14A")
+local COR_DENTES = Color3.fromHex("FFF1C9")
+local COR_MARCAS = Color3.fromRGB(12, 10, 8)
 
 type Segmento = {
-	fora: MeshPart,
-	dentro: MeshPart,
-	tamanho: Vector3, -- tamanho original da malha
-	centro: Vector3, -- da junta até o centro da malha
+	fora: MeshPart, -- casca: meia-lua com chamas nas bordas
+	dentro: MeshPart, -- núcleo: veios de fogo desenhados por dentro
+	tamanho: Vector3, -- tamanho original da malha da casca
+	centro: Vector3, -- da junta até o centro da casca
+	tamanhoDentro: Vector3,
+	centroDentro: Vector3,
 	comprimento: number,
 }
+
+-- Cada segmento já vem curvado de fábrica (meia-lua). Da junta até a próxima: anda pelo arco
+-- (em +Y, curvando para -Z) e gira junto — a mesma conta do gerador (avancar).
+local CURVA_MALHA = math.rad(Dados.curvaMalha)
+local function avancar(comprimento: number, largura: number): CFrame
+	local th = CURVA_MALHA * Dados.avanco
+	local r = comprimento / CURVA_MALHA
+	return CFrame.new(0, r * math.sin(th), -r * (1 - math.cos(th)) * largura / comprimento)
+		* CFrame.Angles(-th, 0, 0)
+end
 
 type Cauda = { segmentos: { Segmento }, fase: number, ritmo: number }
 
@@ -78,13 +92,15 @@ local function criar(personagem: Model, opcoes: Gear5.Opcoes, est: Estagio): Gea
 		for _, seg in Dados.segmentos :: { { [string]: any } } do
 			local fora, centro = MalhaNuvem.criar(seg.malha, false)
 			neon(fora, corFora, pasta)
-			local dentro = MalhaNuvem.criar(seg.malha, false)
+			local dentro, centroDentro = MalhaNuvem.criar(seg.nucleo, false)
 			neon(dentro, corDentro, pasta)
 			table.insert(segmentos, {
 				fora = fora,
 				dentro = dentro,
 				tamanho = fora.Size,
 				centro = centro,
+				tamanhoDentro = dentro.Size,
+				centroDentro = centroDentro,
 				comprimento = seg.comprimento,
 			})
 		end
@@ -95,20 +111,29 @@ local function criar(personagem: Model, opcoes: Gear5.Opcoes, est: Estagio): Gea
 		})
 	end
 
-	-- Cabeça espectral da raposa (9 caudas)
-	local raposa: MeshPart? = nil
-	local olhos: MeshPart? = nil
-	local centroRaposa, centroOlhos = Vector3.zero, Vector3.zero
+	-- Cabeça espectral da raposa (9 caudas): casca, fogo interno, dentes, olhos e pupilas em fenda.
+	-- Todas as peças compartilham o mesmo pivô; o centro de cada malha vem do Blender.
+	type PecaRaposa = { parte: BasePart, tamanho: Vector3, centro: Vector3, opacidade: number }
+	local raposa: { PecaRaposa } = {}
 	if est.raposa then
-		local r, cr = MalhaNuvem.criar("naruto_raposa", false)
-		neon(r, corFora, pasta)
-		local o, co = MalhaNuvem.criar("naruto_olhos", false)
-		neon(o, COR_OLHOS, pasta)
-		raposa, olhos = r, o
-		centroRaposa, centroOlhos = cr, co
+		for _, d in
+			{
+				{ "naruto_raposa", corFora, Enum.Material.Neon, 0.5 },
+				{ "naruto_raposa_nucleo", corDentro, Enum.Material.Neon, 0.85 },
+				{ "naruto_dentes", COR_DENTES, Enum.Material.Neon, 1 },
+				{ "naruto_olhos", COR_OLHOS, Enum.Material.Neon, 1 },
+				{ "naruto_pupilas", Color3.fromRGB(10, 0, 0), Enum.Material.SmoothPlastic, 1 },
+			} :: { { any } }
+		do
+			local parte, centro = MalhaNuvem.criar(d[1], false)
+			neon(parte, d[2], pasta)
+			parte.Material = d[3]
+			table.insert(
+				raposa,
+				{ parte = parte, tamanho = parte.Size, centro = centro, opacidade = d[4] }
+			)
+		end
 	end
-	local tamRaposa = if raposa then raposa.Size else Vector3.one
-	local tamOlhos = if olhos then olhos.Size else Vector3.one
 
 	-- Anel no chão (9 caudas e Seis Caminhos) e, nos Seis Caminhos, halo + esferas negras
 	local chao: MeshPart? = nil
@@ -152,6 +177,91 @@ local function criar(personagem: Model, opcoes: Gear5.Opcoes, est: Estagio): Gea
 		destaque = d
 	end
 	local tamAnel = if chao then chao.Size elseif halo then halo.Size else Vector3.one
+
+	-- Roupa dos Seis Caminhos: manto dourado (tronco), marcas pretas (9 magatamas na gola e o
+	-- círculo na barriga), mangas e abas com barra em chamas. Cada peça veste um membro e o
+	-- acompanha nas animações; é reescalada pelo tamanho real da parte (R15 ou R6).
+	type PecaRoupa = {
+		parte: BasePart,
+		osso: BasePart,
+		tamanho: Vector3,
+		centro: Vector3,
+		ref: Vector3,
+		aba: boolean,
+		opacidade: number,
+	}
+	local roupa: { PecaRoupa } = {}
+	if est.seis then
+		local function parte(nomes: { string }): BasePart?
+			for _, n in nomes do
+				local p = personagem:FindFirstChild(n)
+				if p and p:IsA("BasePart") then
+					return p
+				end
+			end
+			return nil
+		end
+		local troncoRef = Vector3.new(Dados.troncoRef[1], Dados.troncoRef[2], Dados.troncoRef[3])
+		local mangaRef = Vector3.new(Dados.mangaRef[1], Dados.mangaRef[2], Dados.mangaRef[3])
+		local tronco = parte({ "UpperTorso", "Torso" })
+		local cintura = parte({ "LowerTorso", "Torso" })
+		local pecas = {
+			{ "naruto_roupa_tronco", tronco, troncoRef, false, corFora, Enum.Material.Neon, 0.9 },
+			{
+				"naruto_roupa_marcas",
+				tronco,
+				troncoRef,
+				false,
+				COR_MARCAS,
+				Enum.Material.SmoothPlastic,
+				1,
+			},
+			{
+				"naruto_roupa_manga",
+				parte({ "RightUpperArm", "Right Arm" }),
+				mangaRef,
+				false,
+				corFora,
+				Enum.Material.Neon,
+				0.9,
+			},
+			{
+				"naruto_roupa_manga",
+				parte({ "LeftUpperArm", "Left Arm" }),
+				mangaRef,
+				false,
+				corFora,
+				Enum.Material.Neon,
+				0.9,
+			},
+			{
+				"naruto_roupa_aba",
+				cintura,
+				Vector3.new(2, 1, 1),
+				true,
+				corFora,
+				Enum.Material.Neon,
+				0.85,
+			},
+		} :: { { any } }
+		for _, d in pecas do
+			local osso = d[2] :: BasePart?
+			if osso then
+				local p, centro = MalhaNuvem.criar(d[1], false)
+				neon(p, d[5], pasta)
+				p.Material = d[6]
+				table.insert(roupa, {
+					parte = p,
+					osso = osso,
+					tamanho = p.Size,
+					centro = centro,
+					ref = d[3],
+					aba = d[4],
+					opacidade = d[7],
+				})
+			end
+		end
+	end
 
 	-- Faíscas de chakra (poucas; nunca a estrutura)
 	local anexo = Instance.new("Attachment")
@@ -353,7 +463,10 @@ local function criar(personagem: Model, opcoes: Gear5.Opcoes, est: Estagio): Gea
 						* 0.6
 						* math.sin(w * 0.7 * tempo - (k - 1) * 0.7 + fase * 1.3)
 					- u * math.rad(12)
-				local dobra = math.rad(est.curva) * (1 - 0.6 * mov) * (1 - 0.5 * fatorBurst)
+				-- a malha já traz curvaMalha; a junta só acrescenta o resto da curva do estágio
+				local dobra = math.rad(est.curva - Dados.curvaMalha)
+						* (1 - 0.6 * mov)
+						* (1 - 0.5 * fatorBurst)
 					+ onda
 					+ math.rad(14) * fatorContracao
 				if k > 1 then
@@ -369,33 +482,31 @@ local function criar(personagem: Model, opcoes: Gear5.Opcoes, est: Estagio): Gea
 				end
 				seg.fora.Transparency = if visivelSeg then transpFora else 1
 				if mostrarNucleo and visivelSeg then
-					local escalaDentro = Vector3.new(g * 0.5, c * 0.96, g * 0.5)
-					seg.dentro.Size = seg.tamanho * escalaDentro
-					seg.dentro.CFrame = cf * CFrame.new(seg.centro * escalaDentro)
+					seg.dentro.Size = seg.tamanhoDentro * escalaFora
+					seg.dentro.CFrame = cf * CFrame.new(seg.centroDentro * escalaFora)
 					seg.dentro.Transparency = transpBase
-						+ (1 - transpBase) * (0.35 - 0.25 * fatorBurst)
+						+ (1 - transpBase) * (0.3 - 0.25 * fatorBurst)
 				else
 					seg.dentro.Transparency = 1
 				end
-				cf = cf
-					* CFrame.new(0, seg.comprimento * esticar * escala * Dados.avanco * crescer, 0)
+				if crescer > 0.02 then
+					cf = cf * avancar(seg.comprimento * c, seg.comprimento * g)
+				end
 			end
 		end
 
 		-- raposa espectral: surge na manifestação e nas explosões de poder
-		if raposa and olhos then
+		if #raposa > 0 then
 			local alvo = if (manifestando or fatorBurst > 0.05) and not baixa then 1 else 0
 			intensidadeRaposa += (alvo - intensidadeRaposa) * math.min(dt * 3, 1)
-			local s = 3 * escala * (0.92 + 0.08 * intensidadeRaposa)
+			local s = 2.6 * escala * (0.92 + 0.08 * intensidadeRaposa)
 			local cfR = base
-				* CFrame.new(0, (3.4 + 0.1 * math.sin(tempo * 1.3)) * escala, 2.6 * escala)
-			-- olhos e cabeça usam o mesmo pivô; o centro de cada malha vem do Blender
-			raposa.Size = tamRaposa * s
-			raposa.CFrame = cfR * CFrame.new(centroRaposa * s)
-			olhos.Size = tamOlhos * s
-			olhos.CFrame = cfR * CFrame.new(centroOlhos * s)
-			raposa.Transparency = 1 - (1 - transpBase) * intensidadeRaposa * 0.55
-			olhos.Transparency = 1 - (1 - transpBase) * intensidadeRaposa
+				* CFrame.new(0, (5.6 + 0.1 * math.sin(tempo * 1.3)) * escala, 1.3 * escala)
+			for _, p in raposa do
+				p.parte.Size = p.tamanho * s
+				p.parte.CFrame = cfR * CFrame.new(p.centro * s)
+				p.parte.Transparency = 1 - (1 - transpBase) * intensidadeRaposa * p.opacidade
+			end
 		end
 
 		if chao then
@@ -423,6 +534,34 @@ local function criar(personagem: Model, opcoes: Gear5.Opcoes, est: Estagio): Gea
 					)
 				esfera.Transparency = if surgir <= 0 then 1 else transpBase
 				esfera.Size = Vector3.one * 0.96 * escala * math.max(surgir, 0.01)
+			end
+			-- roupa: aparece logo depois das caudas começarem a crescer
+			local vestir = if manifestando then math.clamp((manifestando - 0.2) / 0.4, 0, 1) else 1
+			for _, p in roupa do
+				local osso = p.osso
+				if osso.Parent then
+					local fator = Vector3.new(
+						osso.Size.X / p.ref.X,
+						if p.aba then escala else osso.Size.Y / p.ref.Y,
+						osso.Size.Z / p.ref.Z
+					)
+					local cf = osso.CFrame
+					if p.aba then
+						-- pendurada na base da cintura; balança e é puxada para trás ao andar
+						cf = cf
+							* CFrame.new(0, -osso.Size.Y / 2, 0)
+							* CFrame.Angles(
+								0.35 * mov + 0.05 * math.sin(tempo * 2.2),
+								0,
+								0.03 * math.sin(tempo * 1.7)
+							)
+					end
+					p.parte.Size = p.tamanho * fator
+					p.parte.CFrame = cf * CFrame.new(p.centro * fator)
+					p.parte.Transparency = 1 - (1 - transpBase) * vestir * p.opacidade
+				else
+					p.parte.Transparency = 1
+				end
 			end
 			if destaque then
 				destaque.FillTransparency = 0.55 + 0.45 * transpBase
