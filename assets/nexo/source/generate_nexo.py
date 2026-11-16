@@ -1706,17 +1706,53 @@ def escrever_cena(cena):
     linhas = [
         "-- GERADO por assets/nexo/source/generate_nexo.py. Não editar à mão.",
         "-- Montagem da praça: onde cada peça do kit fica (studs do Roblox; giro em graus no eixo Y).",
-        "-- colisores = caixas { centro local, tamanho } relativas ao pivô da peça, antes da escala.",
+        "-- A colisão dessas peças fica em src/shared/Dados/NexoColisores.luau (criada pelo servidor).",
         "return {",
         "\tcentroCristal = %s," % luau_valor(CENTRO_CRISTAL),
         "\tpecas = {",
     ]
     for item in cena:
-        campos = ["%s = %s" % (k, luau_valor(v)) for k, v in item.items()]
+        campos = ["%s = %s" % (k, luau_valor(v)) for k, v in item.items() if k != "colisores"]
         linhas.append("\t\t{ " + ", ".join(campos) + " },")
     linhas += ["\t},", "}", ""]
     with open(os.path.join(DIR_LUAU, "Cena.luau"), "w", encoding="utf-8") as f:
         f.write("\n".join(linhas))
+
+
+def escrever_colisores(cena):
+    """Caixas de colisão das peças do kit, já no espaço do mundo, para o SERVIDOR criar.
+
+    Assim a colisão é a mesma para todos os jogadores, com ou sem o kit 3D carregado.
+    """
+    linhas = [
+        "-- GERADO por assets/nexo/source/generate_nexo.py. Não editar à mão.",
+        "-- Colisão das peças do kit 3D do Nexo, no espaço do mundo (studs do Roblox).",
+        "-- O servidor cria uma caixa por linha: { posicao, giro (graus em Y), tamanho, peça }.",
+        "return {",
+    ]
+    total = 0
+    for item in cena:
+        for centro, tamanho in item.get("colisores", []):
+            e = item["escala"]
+            t = math.radians(item["giro"])
+            cx, cy, cz = (c * e for c in centro)
+            px, py, pz = item["posicao"]
+            mundo_x = px + cx * math.cos(t) + cz * math.sin(t)
+            mundo_z = pz - cx * math.sin(t) + cz * math.cos(t)
+            linhas.append(
+                "\t{ posicao = %s, giro = %s, tamanho = %s, peca = %s },"
+                % (
+                    luau_valor((round(mundo_x, 3), round(py + cy, 3), round(mundo_z, 3))),
+                    luau_valor(round(item["giro"], 3)),
+                    luau_valor(tuple(round(v * e, 3) for v in tamanho)),
+                    luau_valor(item["malha"]),
+                )
+            )
+            total += 1
+    linhas += ["}", ""]
+    with open(os.path.join(RAIZ, "src", "shared", "Dados", "NexoColisores.luau"), "w", encoding="utf-8") as f:
+        f.write("\n".join(linhas))
+    return total
 
 
 def exportar_fbx(nome, obj):
@@ -1821,6 +1857,7 @@ def main():
         print("%-22s %8d %8d %9d" % (nome, v, t, c))
         exportar_fbx(nome, obj)
     escrever_cena(cena)
+    print("colisores no servidor: %d" % escrever_colisores(cena))
     print("total de triangulos no kit: %d | instancias na cena: %d" % (total_tris, len(cena)))
 
     if "--render" in sys.argv:
