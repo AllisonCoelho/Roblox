@@ -23,7 +23,7 @@ local pasta = script.Parent:WaitForChild("Dados")
 local prontas: { [string]: Pronta } = {}
 local ESPESSURA_CONTORNO = 0.035
 
-local function construir(nome: string, contorno: boolean): Pronta
+local function construir(nome: string, contorno: boolean, espessura: number): Pronta
 	local d = require(pasta:WaitForChild(nome)) :: Dados
 	local nv, nt = d.vertices, d.triangulos
 	local bytes = Malha.decodificar(d.dados, nv * 9 + nt * 6)
@@ -61,7 +61,7 @@ local function construir(nome: string, contorno: boolean): Pronta
 	end
 	if contorno then
 		for i = 1, nv do
-			pos[i] += normais[i] * ESPESSURA_CONTORNO
+			pos[i] += normais[i] * espessura
 		end
 	end
 
@@ -131,11 +131,13 @@ end
 
 -- Uma cópia nova da peça (as malhas são convertidas uma vez e compartilhadas entre jogadores).
 -- Pode esperar (yield) na primeira vez.
-function MalhaNuvem.criar(nome: string, contorno: boolean): (MeshPart, Vector3)
-	local chave = nome .. (if contorno then "#c" else "")
+-- espessura (opcional): quanto o contorno fica para fora da malha, em studs.
+function MalhaNuvem.criar(nome: string, contorno: boolean, espessura: number?): (MeshPart, Vector3)
+	local e = espessura or ESPESSURA_CONTORNO
+	local chave = nome .. (if contorno then "#c" .. e else "")
 	local pronta = prontas[chave]
 	if not pronta then
-		pronta = construir(nome, contorno)
+		pronta = construir(nome, contorno, e)
 		prontas[chave] = pronta
 	end
 	return pronta.modelo:Clone(), pronta.centro

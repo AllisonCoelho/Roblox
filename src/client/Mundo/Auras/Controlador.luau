@@ -11,6 +11,7 @@ local AurasVfx =
 	require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Dados"):WaitForChild("AurasVfx"))
 local Caudas = require(script.Parent.Caudas)
 local Gear5 = require(script.Parent.Gear5)
+local Monarca = require(script.Parent.Monarca)
 
 local Controlador = {}
 
@@ -25,6 +26,7 @@ type Ativo = { personagem: Model, id: string, inst: Gear5.Instancia }
 type Modulo = { criar: (Model, Gear5.Opcoes) -> Gear5.Instancia? }
 local MODULOS: { [string]: Modulo } = {
 	gear5 = Gear5,
+	monarca = Monarca,
 }
 for _, id in Caudas.ORDEM do
 	MODULOS[id] = Caudas.estagio(id)
