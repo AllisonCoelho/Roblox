@@ -8,6 +8,11 @@
 2. **Identidade por aura**: hoje a aura equipada varia por estilo (brilho/chama/névoa) e raridade. Falta dar padrão de movimento próprio a cada uma (pétalas, órbitas, cinzas, constelação), reconhecível de longe.
 3. **Polimento**: sons próprios, limite de efeitos simultâneos, ajustes de duração após playtest, checklist mobile.
 
+## Cenários prontos à espera de sistema (nada funcional ainda)
+
+- **Arena do Trono** (ex-Arena dos Despertos): cenário com portão, trono e coroa. Falta o **Primeiro Soberano** (NPC sentado no trono, PR próprio) e, depois, o duelo por turnos e a sucessão do rei por servidor (`NPC_OCUPANTE -> DESAFIO -> JOGADOR_REI -> RETORNO_DO_NPC`). O título de rei não persiste entre servidores. Nada disso está implementado.
+- **Bastião das Incursões**: cenário com o portal-fenda, três marcos de universos (Cinzas, Maré Morta, Crepúsculo Umbral) e a Mesa dos Cartógrafos. Falta tudo o que é sistema: fila/partida, incursão por andares, materiais e recompensas.
+
 ## V2
 
 | Sistema | Ideia | Riscos / cuidados | Esforço |

@@ -4,8 +4,9 @@
 --   Norte     Obelisco das Lendas   (ranking do servidor)            funcional
 --   Noroeste  Arquivo dos Ecos      (abre o índice)                  funcional
 --   Sudoeste  Jardim dos Fragmentos (exploração leve, um eco oculto) funcional simples
---   Nordeste  Altar da Ressonância  | Sudeste Portais Fragmentados | Sul Arena dos Despertos
---             -> só cenário, marcados honestamente como "Em construção"
+--   Nordeste  Altar da Ressonância  | Sudeste Portais Fragmentados | Sul Arena do Trono
+--   Sul-sudeste (157°, 173) Bastião das Incursões, ligado aos Portais por um ramal
+--             -> só cenário, marcados honestamente como "Em construção"/"Em preparação"
 -- O servidor monta colisão e partes funcionais; o visual 3D vem do kit de cada cliente
 -- (src/client/Mundo/Nexo3D). Tudo ancorado. Norte = -Z.
 local Lighting = game:GetService("Lighting")
@@ -717,12 +718,89 @@ local function construirArena(pasta: Instance)
 		local x, z = polar(35.5, 67.5 + k * (225 / 7))
 		cilindroLocal(pasta, olhar, x, 0, z, 1.4, 14, { Name = "ArenaColuna", Color = COR.marmore })
 	end
+	-- Arena do Trono: degraus, trono, portão e braseiros têm a colisão em NexoColisores (gerada
+	-- junto com os modelos). Aqui ficam só as luzes baixas dos braseiros e a placa.
+	for _, a in { 48, 132, 228, 312 } do
+		local x, z = polar(21.2, a)
+		local ancora = peca(pasta, {
+			Name = "LuzBraseiro",
+			Transparency = 1,
+			CanCollide = false,
+			CanQuery = false,
+			Size = Vector3.new(1, 1, 1),
+			CFrame = olhar * CFrame.new(x, 5, z),
+		})
+		luz(ancora, COR.selo, 18, 1.4)
+	end
+	local trono = peca(pasta, {
+		Name = "LuzTrono",
+		Transparency = 1,
+		CanCollide = false,
+		CanQuery = false,
+		Size = Vector3.new(1, 1, 1),
+		CFrame = olhar * CFrame.new(0, 9, 15),
+	})
+	luz(trono, COR.selo, 26, 1.2)
 	placa(
 		pasta,
-		(olhar * CFrame.new(0, 16, 0)).Position,
-		"Arena dos Despertos",
-		"Em construção",
+		(olhar * CFrame.new(0, 26, 19)).Position,
+		"Arena do Trono",
+		"Duelos por turnos — em desenvolvimento",
 		COR.selo
+	)
+end
+
+-- Bastião das Incursões: base de preparação para expedições a universos destruídos, entre os
+-- Portais e a Arena. Mesmos valores de BASTIAO em assets/nexo/source/generate_nexo.py.
+-- Só cenário: nada de teleporte, fila ou recompensa.
+local BASTIAO = { graus = 157, dist = 173 }
+
+local function construirBastiao(pasta: Instance)
+	local centro = direcao(BASTIAO.graus) * BASTIAO.dist
+	local olhar = CFrame.lookAt(centro, Vector3.zero)
+	cilindroLocal(pasta, olhar, 0, 0, 0, 20.5, 0.8, { Name = "BastiaoBase", Color = COR.pedra })
+	-- ramal que sai da borda dos Portais (reserva visual; o chão já é plano)
+	local portais = direcao(LOCAIS.portais.graus) * LOCAIS.portais.dist
+	local rumo = (centro - portais).Unit
+	local meio = centro - rumo * (21.3 + 11)
+	peca(pasta, {
+		Name = "Caminho",
+		Color = COR.caminho,
+		Material = Enum.Material.Cobblestone,
+		Size = Vector3.new(10, 0.4, 22),
+		CFrame = CFrame.lookAt(meio + Vector3.new(0, 0.1, 0), centro + Vector3.new(0, 0.1, 0)),
+	})
+	-- luz fria da fenda
+	local fenda = peca(pasta, {
+		Name = "LuzFenda",
+		Transparency = 1,
+		CanCollide = false,
+		CanQuery = false,
+		Size = Vector3.new(1, 1, 1),
+		CFrame = olhar * CFrame.new(0, 9, 8),
+	})
+	luz(fenda, COR.energia, 30, 1.6)
+	-- Mesa dos Cartógrafos: só informa o que vem (o texto não promete recompensa nem data)
+	local mesa = peca(pasta, {
+		Name = "MesaCartografos",
+		Transparency = 1,
+		CanCollide = false,
+		Size = Vector3.new(2, 2, 2),
+		CFrame = olhar * CFrame.new(0, 3.2, -3),
+	})
+	interacao(
+		mesa,
+		"em_construcao",
+		"Ler o mapa",
+		"Mesa dos Cartógrafos",
+		"Incursões — em preparação. Daqui partirão as expedições a universos em ruína."
+	)
+	placa(
+		pasta,
+		(olhar * CFrame.new(0, 29, 11)).Position,
+		"Bastião das Incursões",
+		"Em preparação",
+		COR.energia
 	)
 end
 
@@ -797,6 +875,7 @@ function Nexo.construir(): Folder
 	construirAltar(pasta)
 	construirPortais(pasta)
 	construirArena(pasta)
+	construirBastiao(pasta)
 	construirColisoresKit(pasta)
 	-- Tudo o que tem forma básica é PROVISÓRIO: cada cliente monta por cima o kit 3D
 	-- (src/client/Mundo/Nexo3D) e esconde estas peças, que continuam servindo de colisão.

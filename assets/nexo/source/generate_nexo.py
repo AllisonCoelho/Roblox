@@ -1353,6 +1353,427 @@ def fazer_brotos_canteiro():
     return bm
 
 
+# ---------------------------------------------------------------- Bastião das Incursões
+# Base de preparação para expedições a universos destruídos, entre os Portais e a Arena.
+# Pedra cinza com veios CIANO (os Portais são violeta). O portal é uma ferida na realidade:
+# arco assimétrico e rachado, vazio escuro no meio e ruínas distantes lá dentro.
+
+BASTIAO = (157, 173)  # (graus, distância) — o servidor usa os mesmos valores
+BASTIAO_PEDRA = (0.36, 0.38, 0.44)
+BASTIAO_ESCURA = (0.25, 0.27, 0.32)
+VAZIO = (0.02, 0.03, 0.06)
+
+
+def zigue(a, b, n, desvio, rng):
+    """Linha rachada de a até b (pontos 2D), com n trechos."""
+    a, b = Vector(a), Vector(b)
+    d = b - a
+    lado = Vector((-d.y, d.x)).normalized()
+    return [tuple(a + d * (i / n) + lado * (rng.uniform(-desvio, desvio) if 0 < i < n else 0)) for i in range(n + 1)]
+
+
+def chapa(pontos, cor, tinta=1.0, dupla=False):
+    """Polígono plano (leque a partir do centro) com os pontos 3D dados."""
+    bm = novo_bm()
+    c = sum((Vector(q) for q in pontos), Vector()) / len(pontos)
+    vc = bm.verts.new(c)
+    vs = [bm.verts.new(q) for q in pontos]
+    for i in range(len(vs)):
+        bm.faces.new((vc, vs[i], vs[(i + 1) % len(vs)]))
+    if dupla:
+        vc2 = bm.verts.new(c)
+        vs2 = [bm.verts.new(q) for q in pontos]
+        for i in range(len(vs2)):
+            bm.faces.new((vc2, vs2[(i + 1) % len(vs2)], vs2[i]))
+    pintar(bm, cor, tinta, topo_claro=0.0)
+    return bm
+
+
+def espinho(base, ponta, largura, cor, tinta=1.0, chanfro=0.0):
+    """Lâmina/pirâmide de 4 lados da base até a ponta."""
+    b, t = Vector(base), Vector(ponta)
+    eixo = (t - b).normalized()
+    u = eixo.orthogonal().normalized()
+    v = eixo.cross(u)
+    pts = [tuple(b + (u * sx + v * sy) * largura / 2) for sx, sy in ((1, 1), (1, -1), (-1, -1), (-1, 1))] + [tuple(t)]
+    return casco(pts, cor, tinta, chanfro=chanfro)
+
+
+def fazer_incursao_base():
+    rng = random.Random(2101)
+    bm = novo_bm()
+    juntar(bm, torno([(21.5, 0), (20.2, 0.8), (0.4, 0.8)], 40, BASTIAO_ESCURA, rng, tinta=0.95))
+    for r0, r1, n in ((3.6, 9, 11), (9, 15, 17), (15, 19.8, 23)):
+        for i in range(n):
+            a0, a1 = 2 * math.pi * i / n, 2 * math.pi * (i + 1) / n
+            borda = r1 > 19
+            if borda and rng.random() < 0.18:
+                continue  # placa que falta: a borda está fraturada
+            sobe = rng.uniform(0.0, 0.28) if borda else rng.uniform(0, 0.06)
+            juntar(bm, laje(r0, r1, a0, a1, 0.86 + sobe, rng, BASTIAO_PEDRA, folga=0.09 + (0.12 if borda else 0)))
+    # estrado do portal, no fundo (-Y)
+    juntar(bm, bloco(17, 5.2, 0.6, rng, BASTIAO_ESCURA, chanfro=0.14), Matrix.Translation((0, -11, 1.1)))
+    juntar(bm, bloco(12, 1.4, 0.3, rng, BASTIAO_PEDRA, chanfro=0.1), Matrix.Translation((0, -8.0, 0.95)))  # degrau baixo
+    return bm
+
+
+def fazer_incursao_energia():
+    """Fissuras ciano no piso: irradiam do portal e cercam a mesa."""
+    rng = random.Random(2102)
+    bm = novo_bm()
+    for k, a in enumerate((-150, -115, -80, -40, 0, 35, 75, 110, 150)):
+        r = math.radians(a + 90)
+        fim = (19.2 * math.cos(r), 19.2 * math.sin(r))
+        juntar(bm, fita(zigue((0, -7.6), fim, 7, 0.9, rng), 0.2 if k % 2 else 0.3, 0.93, CIANO))
+    juntar(bm, fita(arco_pontos(4.3, 0, 2 * math.pi, 28), 0.22, 0.93, CIANO))
+    return bm
+
+
+def contorno_fenda():
+    """Contorno irregular do rasgo (x, z), no sentido anti-horário visto de frente."""
+    rng = random.Random(2103)
+    pts = []
+    n = 26
+    for i in range(n):
+        a = 2 * math.pi * i / n
+        rx, rz = 5.0, 7.2
+        j = rng.uniform(0.72, 1.08) if i % 2 else rng.uniform(0.95, 1.18)
+        pts.append((rx * math.cos(a) * j + 0.5 * math.sin(a * 2), 8.4 + rz * math.sin(a) * j))
+    return pts
+
+
+def fazer_incursao_portal():
+    """Arco assimétrico e rachado: pilar esquerdo inteiro, direito partido e inclinado, aduelas
+    desalinhadas com vãos (as peças soltas que boiam são instâncias à parte na cena)."""
+    rng = random.Random(2104)
+    bm = novo_bm()
+    # pilar esquerdo: alto, quase inteiro
+    z = 0.0
+    while z < 15.0:
+        h = rng.uniform(1.9, 2.6)
+        f = z / 15.0
+        juntar(bm, bloco(3.9 - 0.9 * f, 3.6 - 0.6 * f, h - 0.07, rng, BASTIAO_PEDRA, chanfro=0.14), Matrix.Translation((-7.2 + 0.5 * f + rng.uniform(-0.08, 0.08), 0, z + h / 2)))
+        z += h
+    # pilar direito: partido aos 9,5 e inclinado para fora
+    z = 0.0
+    while z < 9.5:
+        h = rng.uniform(1.9, 2.5)
+        f = z / 9.5
+        m = Matrix.Translation((7.2 + 0.9 * f * f, 0, z + h / 2)) @ Matrix.Rotation(math.radians(-7 * f), 4, "Y")
+        juntar(bm, bloco(3.8 - 0.6 * f, 3.6 - 0.5 * f, h - 0.07, rng, BASTIAO_PEDRA, chanfro=0.14), m)
+        z += h
+    # aduelas: saem do topo do pilar esquerdo e se perdem antes de fechar o arco
+    arco = [(-6.6, 16.2, 12), (-5.2, 18.1, 30), (-3.0, 19.5, 52), (-0.4, 20.2, 76), (2.6, 19.9, 104)]
+    for i, (x, zc, giro) in enumerate(arco):
+        solto = i * 0.07
+        m = Matrix.Translation((x + rng.uniform(-solto, solto) * 3, rng.uniform(-solto, solto) * 4, zc + rng.uniform(-solto, solto) * 2)) @ Matrix.Rotation(math.radians(giro + rng.uniform(-6, 6) * i), 4, "Y")
+        juntar(bm, bloco(2.3 - 0.12 * i, 3.0 - 0.2 * i, 2.5, rng, BASTIAO_PEDRA, chanfro=0.14), m)
+    # garras de pedra nos pés (contrafortes quebrados)
+    for lado in (-1, 1):
+        juntar(bm, bloco(2.6, 2.2, 1.4, rng, BASTIAO_ESCURA, chanfro=0.14), Matrix.Translation((lado * 9.6, 0.6, 0.7)) @ Matrix.Rotation(math.radians(lado * 12), 4, "Z"))
+    return bm
+
+
+def fazer_incursao_vazio():
+    """O vazio dentro do rasgo (recuado): quase preto, com as duas faces."""
+    return chapa([(x, -1.25, z) for x, z in contorno_fenda()], VAZIO, dupla=True)
+
+
+def fazer_incursao_fenda():
+    """Bordas luminosas do rasgo e rachaduras que escapam dele."""
+    rng = random.Random(2105)
+    bm = novo_bm()
+    pts = contorno_fenda()
+    juntar(bm, fita3d([(x, 0.0, z) for x, z in pts + pts[:1]], 0.34, (0, 1, 0), CIANO))
+    for i in (1, 4, 8, 11, 15, 18, 22):
+        x, z = pts[i]
+        fora = Vector((x, z - 8.4)).normalized()
+        fim = (x + fora.x * rng.uniform(1.6, 3.2), z + fora.y * rng.uniform(1.6, 3.2))
+        juntar(bm, fita3d([(q[0], 0.0, q[1]) for q in zigue((x, z), fim, 4, 0.35, rng)], 0.16, (0, 1, 0), CIANO))
+    return bm
+
+
+def fazer_incursao_ruinas():
+    """Um mundo em ruína visto pelo rasgo: silhuetas em duas profundidades (paralaxe)."""
+    rng = random.Random(2106)
+    bm = novo_bm()
+    for y, cor, torres in ((-0.95, (0.06, 0.10, 0.17), 6), (-0.45, (0.11, 0.19, 0.30), 4)):
+        for k in range(torres):
+            x = -3.6 + 7.2 * (k + rng.uniform(0.2, 0.8)) / torres
+            larg = rng.uniform(0.7, 1.3)
+            alt = rng.uniform(3.5, 8.5)
+            inclina = rng.uniform(-0.9, 0.9)
+            base = 2.4 + rng.uniform(0, 1.2)
+            topo = base + alt
+            pts = [(x - larg / 2, y, base), (x + larg / 2, y, base), (x + larg / 2 + inclina, y, topo - rng.uniform(0.3, 1.4)), (x + inclina, y, topo), (x - larg / 2 + inclina, y, topo - rng.uniform(0.6, 2.0))]
+            juntar(bm, chapa(pts, cor))
+        # destroços soltos no ar
+        for k in range(5):
+            cx, cz = rng.uniform(-3.5, 3.5), rng.uniform(6, 13.5)
+            t = rng.uniform(0.25, 0.6)
+            g = rng.uniform(0, 3)
+            juntar(bm, chapa([(cx + t * math.cos(g + q), y + 0.02, cz + t * math.sin(g + q)) for q in (0, 1.7, 3.3, 4.9)], cor, 1.15))
+    return bm
+
+
+def fazer_marco():
+    """Moldura de pedra de um marco de universo: dois montantes, verga torta e soleira."""
+    rng = random.Random(2107)
+    bm = novo_bm()
+    juntar(bm, bloco(4.6, 1.7, 0.5, rng, BASTIAO_ESCURA, chanfro=0.1), Matrix.Translation((0, 0, 0.25)))
+    for lado in (-1, 1):
+        juntar(bm, bloco(0.75, 0.9, 5.0, rng, BASTIAO_PEDRA, chanfro=0.1), Matrix.Translation((lado * 1.7, 0, 3.0)))
+    juntar(bm, bloco(4.4, 1.0, 0.7, rng, BASTIAO_PEDRA, chanfro=0.1), Matrix.Translation((0.1, 0, 5.8)) @ Matrix.Rotation(math.radians(4), 4, "Y"))
+    return bm
+
+
+def fazer_marco_painel(tema):
+    """Janela de prévia de um universo futuro (só imagem: nada de teleporte)."""
+    rng = random.Random(2110 + len(tema))
+    bm = novo_bm()
+    cor = {"cinzas": (1.0, 0.30, 0.12), "mare": (0.25, 0.60, 1.0), "umbral": (0.55, 0.22, 0.95)}[tema]
+    escura = tuple(c * 0.16 for c in cor)
+    juntar(bm, chapa([(-1.3, 0.0, 0.55), (1.3, 0.0, 0.55), (1.3, 0.0, 5.4), (-1.3, 0.0, 5.4)], escura, dupla=True))
+    y = 0.06
+    if tema == "cinzas":  # ruínas avermelhadas e brasas
+        for k in range(4):
+            x = -1.0 + 0.65 * k
+            h = rng.uniform(1.2, 2.8)
+            juntar(bm, chapa([(x - 0.25, y, 0.6), (x + 0.3, y, 0.6), (x + 0.3, y, 0.6 + h * 0.8), (x, y, 0.6 + h), (x - 0.25, y, 0.6 + h * 0.6)], cor, 0.55))
+        for k in range(9):
+            cx, cz, t = rng.uniform(-1.1, 1.1), rng.uniform(2.6, 5.1), rng.uniform(0.05, 0.11)
+            juntar(bm, chapa([(cx - t, y, cz), (cx, y, cz - t), (cx + t, y, cz), (cx, y, cz + t)], cor))
+    elif tema == "mare":  # pilares submersos e reflexos frios
+        for k in range(3):
+            x = -0.85 + 0.85 * k
+            h = rng.uniform(2.0, 3.6)
+            juntar(bm, chapa([(x - 0.22, y, 0.6), (x + 0.22, y, 0.6), (x + 0.22, y, 0.6 + h), (x - 0.22, y, 0.6 + h - 0.4)], cor, 0.5))
+        for k in range(5):
+            z = 1.0 + 0.55 * k
+            juntar(bm, fita3d([(-1.2 + 0.3 * i, y + 0.02, z + 0.07 * math.sin(i * 1.4 + k)) for i in range(9)], 0.07, (0, 1, 0), cor))
+    else:  # umbral: fragmentos roxos e formas de sombra
+        for k in range(5):
+            x = -1.0 + 0.5 * k
+            h = rng.uniform(1.5, 4.2)
+            juntar(bm, chapa([(x - 0.3, y, 0.6), (x + 0.3, y, 0.6), (x + rng.uniform(-0.3, 0.3), y, 0.6 + h)], cor, 0.45))
+        for k in range(2):
+            cx, cz = -0.45 + 0.9 * k, 4.3
+            juntar(bm, chapa([(cx - 0.22, y, cz), (cx, y, cz - 0.07), (cx + 0.22, y, cz + 0.05), (cx, y, cz + 0.1)], cor))
+    return bm
+
+
+def fazer_incursao_mesa():
+    """Mesa dos Cartógrafos: pedestal e tampo com um mapa rachado."""
+    rng = random.Random(2108)
+    bm = novo_bm()
+    juntar(bm, torno([(2.4, 0), (1.7, 0.45), (1.3, 2.0), (3.2, 2.35), (3.2, 2.7), (0.3, 2.7)], 12, BASTIAO_ESCURA, rng))
+    for i in range(6):
+        a0, a1 = 2 * math.pi * i / 6, 2 * math.pi * (i + 1) / 6
+        juntar(bm, laje(0.25, 3.0, a0, a1, 2.82 + rng.uniform(0, 0.08), rng, BASTIAO_PEDRA, folga=0.1, saia=0.1))
+    return bm
+
+
+def fazer_incursao_mesa_energia():
+    rng = random.Random(2109)
+    bm = novo_bm()
+    z = 2.96
+    juntar(bm, fita(arco_pontos(2.55, 0, 2 * math.pi, 24), 0.12, z, CIANO))
+    alvos = [(-1.6, 0.9), (1.4, 1.3), (0.5, -1.8)]
+    for x, y in alvos:
+        juntar(bm, fita(zigue((0, 0), (x, y), 4, 0.25, rng), 0.09, z, CIANO))
+        juntar(bm, losango(x, y, z, 0.32, OURO, rng.uniform(0, 3)))
+    # ponteiros de metal
+    juntar(bm, espinho((0, 0, 2.9), (0.9, -0.4, 3.9), 0.22, OURO, 0.9))
+    juntar(bm, espinho((0, 0, 2.9), (-0.6, 0.5, 3.6), 0.18, OURO, 0.9))
+    return bm
+
+
+RAMAL_COMPRIMENTO = 22.0
+
+
+def fazer_ramal():
+    """Ramal curto Portais -> Bastião (ao longo de +Y): a pedra violeta dá lugar à cinza com veios
+    azuis, e as lajes vão ficando mais soltas."""
+    rng = random.Random(2111)
+    pedra, energia = novo_bm(), novo_bm()
+    n = 8
+    passo = RAMAL_COMPRIMENTO / n
+    violeta_pedra = misturar(ROCHA, VIOLETA, 0.22)
+    for i in range(n):
+        f = i / (n - 1)
+        cor = misturar(violeta_pedra, BASTIAO_PEDRA, f)
+        for lado in (-1, 1):
+            m = Matrix.Translation((lado * 2.45 + rng.uniform(-0.25, 0.25) * f, (i + 0.5) * passo, 0.2 + rng.uniform(0, 0.1) * f)) @ Matrix.Rotation(math.radians(rng.uniform(-7, 7) * f), 4, "Z")
+            juntar(pedra, bloco(4.6, passo - 0.25, 0.4, rng, cor, chanfro=0.09), m)
+    meio = RAMAL_COMPRIMENTO / 2
+    juntar(energia, fita(zigue((0, 0.4), (0, meio), 5, 0.45, rng), 0.2, 0.44, VIOLETA))
+    juntar(energia, fita(zigue((0, meio), (0, RAMAL_COMPRIMENTO - 0.4), 5, 0.6, rng), 0.22, 0.44, CIANO))
+    return pedra, energia
+
+
+# ---------------------------------------------------------------- Arena do Trono
+# A arena existente ganha um eixo: portão -> campo de batalha -> trono. Basalto, metal envelhecido,
+# vermelho profundo e ouro antigo. Formas originais (nenhum símbolo de franquia).
+
+BASALTO = (0.17, 0.16, 0.21)
+BASALTO_CLARO = (0.26, 0.24, 0.31)
+ACO = (0.30, 0.27, 0.31)
+RUBRO = (0.74, 0.13, 0.17)
+OURO_ANTIGO = (0.77, 0.64, 0.43)
+
+
+def fazer_trono_plataforma():
+    """Três degraus baixos no fundo da arena (o trono fica em cima)."""
+    rng = random.Random(2201)
+    bm = novo_bm()
+    for k, (sx, sy, dy) in enumerate(((16, 10, 0.0), (13, 8, -0.7), (10, 6, -1.4))):
+        juntar(bm, bloco(sx, sy, 0.5, rng, BASALTO_CLARO if k < 2 else BASALTO, chanfro=0.12), Matrix.Translation((0, dy, 0.25 + 0.5 * k)))
+    for lado in (-1, 1):  # blocos-guarda nos cantos
+        juntar(bm, bloco(1.6, 1.6, 1.9, rng, BASALTO, chanfro=0.14), Matrix.Translation((lado * 7.0, -3.6, 0.95)))
+    return bm
+
+
+LAMINAS_TRONO = [(-2.3, 2.6), (-1.45, 4.6), (-0.55, 6.6), (0.5, 5.4), (1.4, 3.8), (2.3, 1.9)]  # (x, altura): assimétricas
+
+
+def fazer_trono():
+    """Trono do Primeiro Soberano: assento largo, braços, encosto alto com seis lâminas de pedra."""
+    rng = random.Random(2202)
+    bm = novo_bm()
+    juntar(bm, bloco(5.0, 3.8, 1.7, rng, BASALTO, chanfro=0.14), Matrix.Translation((0, 0.2, 0.85)))
+    for lado in (-1, 1):
+        juntar(bm, bloco(1.1, 4.0, 2.9, rng, BASALTO, chanfro=0.14), Matrix.Translation((lado * 3.0, 0.2, 1.45)))
+        juntar(bm, bloco(1.3, 1.2, 0.5, rng, BASALTO_CLARO, chanfro=0.1), Matrix.Translation((lado * 3.0, 1.9, 3.1)))
+        # aletas laterais do encosto
+        juntar(bm, bloco(1.0, 1.0, 6.5, rng, BASALTO, chanfro=0.14), Matrix.Translation((lado * 3.3, -1.9, 4.6)) @ Matrix.Rotation(math.radians(-lado * 9), 4, "Y"))
+    juntar(bm, tronco_quadrado(5.8, 5.0, 0.0, 9.2, rng, BASALTO, chanfro=0.14), Matrix.Translation((0, -1.9, 0)) @ Matrix.Scale(0.24, 4, (0, 1, 0)))
+    for x, alt in LAMINAS_TRONO:
+        juntar(bm, espinho((x, -1.9, 8.8), (x + 0.12 * x, -2.1, 9.2 + alt), 0.95, BASALTO, rng.uniform(0.9, 1.1), chanfro=0.05))
+    return bm
+
+
+def fazer_trono_metal():
+    """Espinha de metal envelhecido no encosto, cintas e ponteiras dos braços."""
+    rng = random.Random(2203)
+    bm = novo_bm()
+    for k in range(9):
+        z = 2.4 + k * 0.78
+        juntar(bm, bloco(1.0 - 0.05 * k, 0.5, 0.55, rng, ACO, chanfro=0.07, tremor=0.01), Matrix.Translation((0, -1.2, z)))
+        if k % 2 == 0:
+            for lado in (-1, 1):
+                juntar(bm, espinho((lado * 0.45, -1.2, z), (lado * (1.5 + 0.1 * k), -1.25, z + 0.35), 0.3, ACO, 1.0))
+    for z in (0.3, 1.6):
+        juntar(bm, bloco(5.2, 0.25, 0.3, rng, ACO, chanfro=0.05, tremor=0.01), Matrix.Translation((0, 2.15, z)))
+    for lado in (-1, 1):
+        juntar(bm, espinho((lado * 3.0, 2.3, 3.2), (lado * 3.0, 3.3, 3.6), 0.6, ACO, 1.0))
+    return bm
+
+
+def fazer_trono_energia():
+    """Fendas vermelhas discretas no encosto e nos degraus."""
+    rng = random.Random(2204)
+    bm = novo_bm()
+    y = -1.18
+    for lado in (-1, 1):
+        for z0, z1, x1 in ((3.0, 4.6, 2.3), (5.2, 7.4, 2.0), (7.0, 8.9, 1.2)):
+            linha = zigue((lado * 0.75, z0), (lado * x1, z1), 4, 0.22, rng)
+            juntar(bm, fita3d([(q[0], y, q[1]) for q in linha], 0.13, (0, 1, 0), RUBRO))
+    for x, alt in LAMINAS_TRONO[1:5]:
+        juntar(bm, fita3d([(x * 1.02, -1.42, 9.0), (x * 1.08, -1.5, 9.0 + alt * 0.55)], 0.1, (0, 1, 0), RUBRO))
+    return bm
+
+
+def fazer_trono_coroa():
+    """Coroa flutuante sobre o trono: aro com seis pontas irregulares (forma própria)."""
+    rng = random.Random(2205)
+    bm = novo_bm()
+    juntar(bm, torno([(1.75, 0), (1.9, 0.25), (1.75, 0.6), (1.5, 0.6), (1.4, 0.25), (1.5, 0)], 18, OURO_ANTIGO, rng))
+    for k, alt in enumerate((2.4, 1.3, 1.9, 1.1, 2.1, 1.5)):
+        a = 2 * math.pi * k / 6 + math.pi / 2
+        c, s_ = math.cos(a), math.sin(a)
+        juntar(bm, espinho((1.65 * c, 1.65 * s_, 0.5), (1.9 * c, 1.9 * s_, 0.5 + alt), 0.7, OURO_ANTIGO, rng.uniform(0.85, 1.05)))
+    return bm
+
+
+def fazer_arena_trono_energia():
+    """Piso: fissuras que irradiam do trono, divisas apontando para o centro e os dois círculos
+    dos desafiantes."""
+    rng = random.Random(2206)
+    bm = novo_bm()
+    z = 0.74
+    origem = (0, -12.6)  # pé da plataforma do trono (fundo = -Y)
+    for a in (-62, -38, -14, 10, 34, 58):
+        r = math.radians(a + 90)
+        comp = rng.uniform(13, 21)
+        fim = (origem[0] + comp * math.cos(r), origem[1] + comp * math.sin(r))
+        juntar(bm, fita(zigue(origem, fim, 7, 0.55, rng), 0.2, z, RUBRO))
+    for k in range(6):  # divisas (chevrons) num anel
+        a = 2 * math.pi * k / 6 + math.pi / 6
+        c, s_ = math.cos(a), math.sin(a)
+        p0 = (20.5 * c - 1.3 * s_, 20.5 * s_ + 1.3 * c)
+        p1 = (19.0 * c, 19.0 * s_)
+        p2 = (20.5 * c + 1.3 * s_, 20.5 * s_ - 1.3 * c)
+        juntar(bm, fita([p0, p1, p2], 0.22, z, OURO_ANTIGO))
+    for lado in (-1, 1):  # onde cada desafiante se posiciona
+        pts = [(lado * 7 + 1.9 * math.cos(q), 1.9 * math.sin(q)) for q in (2 * math.pi * i / 20 for i in range(21))]
+        juntar(bm, fita(pts, 0.16, z + 0.32, OURO_ANTIGO))
+    return bm
+
+
+def fazer_arena_pedestal():
+    rng = random.Random(2207)
+    return torno([(2.4, 0), (2.1, 0.3), (0.3, 0.3)], 10, BASALTO_CLARO, rng)
+
+
+def fazer_arena_portao():
+    """Portão de entrada: duas colunas monumentais curvas para dentro, com garra no topo e uma
+    placa de pedra pendurada em corrente."""
+    rng = random.Random(2208)
+    bm = novo_bm()
+    for lado in (-1, 1):
+        z = 0.0
+        juntar(bm, bloco(4.2, 4.2, 1.0, rng, BASALTO_CLARO, chanfro=0.14), Matrix.Translation((lado * 8.6, 0, 0.5)))
+        z = 1.0
+        while z < 16.5:
+            h = rng.uniform(2.0, 2.6)
+            f = z / 16.5
+            dentro = 2.6 * f * f  # curva para o vão
+            m = Matrix.Translation((lado * (8.6 - dentro), 0, z + h / 2)) @ Matrix.Rotation(math.radians(lado * 14 * f), 4, "Y")
+            juntar(bm, bloco(3.2 - 1.1 * f, 3.2 - 1.0 * f, h - 0.07, rng, BASALTO, chanfro=0.14), m)
+            z += h
+        juntar(bm, espinho((lado * 6.0, 0, 16.6), (lado * 3.6, 0, 19.4), 1.5, BASALTO, 1.0, chanfro=0.06))  # garra
+        juntar(bm, espinho((lado * 8.9, 0, 9.0), (lado * 11.2, 0, 11.0), 1.2, BASALTO, 1.0, chanfro=0.06))  # esporão
+        for k in range(5):  # corrente
+            juntar(bm, bloco(0.3, 0.3, 0.55, rng, ACO, chanfro=0.05, tremor=0.0), Matrix.Translation((lado * 5.0, 0, 15.6 - 0.62 * k)))
+        juntar(bm, bloco(1.9, 0.35, 2.6, rng, BASALTO_CLARO, chanfro=0.08), Matrix.Translation((lado * 5.0, 0, 11.3)))
+    return bm
+
+
+def fazer_arena_portao_energia():
+    rng = random.Random(2209)
+    bm = novo_bm()
+    for lado in (-1, 1):
+        for y in (2.14, -2.14):
+            n = (0, 1, 0) if y > 0 else (0, -1, 0)
+            juntar(bm, fita3d([(lado * 7.0, y, 0.55), (lado * 10.2, y, 0.55)], 0.2, n, RUBRO))
+            juntar(bm, fita3d([(q[0], y * 0.105, q[1]) for q in zigue((lado * 5.0, 10.4), (lado * 5.0, 12.2), 3, 0.3, rng)], 0.14, n, RUBRO))
+    return bm
+
+
+def fazer_braseiro():
+    rng = random.Random(2210)
+    return torno([(1.3, 0), (0.85, 0.35), (0.6, 2.2), (1.55, 2.8), (1.55, 3.05), (1.1, 3.05), (0.9, 2.8)], 8, BASALTO, rng, estrela=0.08)
+
+
+def fazer_braseiro_chama():
+    """Cristal espiritual vermelho no lugar do fogo (luz baixa, sem lavar a tela)."""
+    rng = random.Random(2211)
+    bm = novo_bm()
+    for k, (dx, dy, alt, larg) in enumerate(((0, 0, 2.3, 0.8), (0.4, 0.2, 1.4, 0.55), (-0.35, 0.3, 1.6, 0.5), (0.05, -0.45, 1.2, 0.5))):
+        juntar(bm, espinho((dx, dy, 0.0), (dx * 1.6, dy * 1.6, alt), larg, RUBRO, rng.uniform(0.85, 1.1)))
+    return bm
+
+
 PECAS = {}  # nome -> objeto do Blender
 ESTILHACOS = []  # (nome, direcao em coordenadas do Roblox)
 
@@ -1456,6 +1877,33 @@ def construir_kit():
     registrar("arena_arquibancada", fazer_arena_arquibancada(), pedra)
     registrar("arena_estandarte", fazer_estandarte(), pedra)
     registrar("arena_energia", fazer_arena_energia(), energia)
+    # Arena do Trono
+    registrar("trono_plataforma", fazer_trono_plataforma(), pedra)
+    registrar("trono_assento", fazer_trono(), pedra)
+    registrar("trono_metal", fazer_trono_metal(), metal)
+    registrar("trono_energia", fazer_trono_energia(), energia)
+    registrar("trono_coroa", fazer_trono_coroa(), energia)
+    registrar("arena_trono_energia", fazer_arena_trono_energia(), energia)
+    registrar("arena_pedestal", fazer_arena_pedestal(), pedra)
+    registrar("arena_portao", fazer_arena_portao(), pedra)
+    registrar("arena_portao_energia", fazer_arena_portao_energia(), energia)
+    registrar("arena_braseiro", fazer_braseiro(), pedra)
+    registrar("arena_braseiro_chama", fazer_braseiro_chama(), energia)
+    # Bastião das Incursões
+    registrar("incursao_base", fazer_incursao_base(), pedra)
+    registrar("incursao_energia", fazer_incursao_energia(), energia)
+    registrar("incursao_portal", fazer_incursao_portal(), pedra)
+    registrar("incursao_vazio", fazer_incursao_vazio(), energia)
+    registrar("incursao_fenda", fazer_incursao_fenda(), energia)
+    registrar("incursao_ruinas", fazer_incursao_ruinas(), energia)
+    registrar("incursao_marco", fazer_marco(), pedra)
+    for tema in ("cinzas", "mare", "umbral"):
+        registrar("incursao_marco_" + tema, fazer_marco_painel(tema), energia)
+    registrar("incursao_mesa", fazer_incursao_mesa(), pedra)
+    registrar("incursao_mesa_energia", fazer_incursao_mesa_energia(), energia)
+    pedra_r, energia_r = fazer_ramal()
+    registrar("caminho_ramal", pedra_r, pedra)
+    registrar("caminho_ramal_energia", energia_r, energia)
     registrar("penhasco_a", fazer_penhasco(1801, 30, 82, 16), pedra)
     registrar("penhasco_b", fazer_penhasco(1802, 30, 90, 16), pedra)
     registrar("penhasco_c", fazer_penhasco(1803, 44, 125, 22), pedra)
@@ -1561,7 +2009,97 @@ def montar_cena():
 
     montar_locais(por, rng)
     montar_decoracao(por)
+    montar_expansao(cena, por)
     return cena
+
+
+def ramal_pontos():
+    """Início (borda dos Portais) e direção do ramal até o Bastião, no mundo (x, z)."""
+    p = mundo(*LOCAIS["portais"])
+    b = mundo(*BASTIAO)
+    d = Vector((b[0] - p[0], b[2] - p[2]))
+    dist = d.length
+    d.normalize()
+    inicio = Vector((p[0], p[2])) + d * (dist - 21.3 - RAMAL_COMPRIMENTO)
+    return inicio, d
+
+
+def montar_expansao(cena, por):
+    """Bastião das Incursões + Arena do Trono. Vem por último e tem o próprio sorteio, para não
+    mexer em nada do que já estava no mapa."""
+    rng = random.Random(2300)
+    centro = mundo(*BASTIAO)
+    inicio, d = ramal_pontos()
+
+    # limpa o campo (rochas, cristais, canteiros) onde o Bastião e o ramal vão ficar
+    campo = {"rocha_a", "rocha_b", "cristal_aglomerado_a", "cristal_aglomerado_b", "campo_canteiro", "campo_brotos", "arco_partido", "ruina_parede_b"}
+
+    def ocupado(pos):
+        q = Vector((pos[0], pos[2]))
+        if (q - Vector((centro[0], centro[2]))).length < 31:
+            return True
+        t = min(max((q - inicio).dot(d), 0), RAMAL_COMPRIMENTO)
+        return (q - (inicio + d * t)).length < 9
+
+    cena[:] = [it for it in cena if not (it["malha"] in campo and ocupado(it["posicao"]))]
+
+    def emb(lx, ly, lz, malha, extra_giro=0.0, **kw):
+        return por(malha, mundo(BASTIAO[0], BASTIAO[1], lx, ly, lz), giro=giro_de(BASTIAO[0], extra_giro), **kw)
+
+    # ---- Bastião
+    emb(0, 0, 0, "incursao_base", colisores=[((0, 1.1, 11), (17, 0.6, 5.2))])
+    emb(0, 0, 0, "incursao_energia", material="Neon")
+    yp = 1.4
+    emb(0, yp, 11, "incursao_portal", material="Basalt", colisores=[((-7, 7.5, 0), (4, 15, 3.6)), ((7.6, 4.8, 0), (4, 9.6, 3.6)), ((0, 7.5, 1.2), (10.5, 15, 0.6))])
+    emb(0, yp, 11, "incursao_vazio", material="Neon")
+    emb(0, yp, 11, "incursao_ruinas", material="Neon")
+    emb(0, yp, 11, "incursao_fenda", material="Neon")
+    # pedaços do arco que se soltaram e boiam, desalinhados
+    for lx, ly, escala, malha in ((4.6, 19.5, 1.5, "rocha_b"), (7.4, 15.8, 1.9, "rocha_a"), (8.6, 12.6, 1.2, "rocha_b"), (-2.0, 22.6, 1.0, "rocha_b"), (10.6, 9.0, 0.9, "rocha_a"), (-9.8, 17.5, 0.8, "rocha_b")):
+        emb(lx, yp + ly, 11 + rng.uniform(-0.8, 0.8), malha, extra_giro=rng.uniform(0, 360), escala=escala, material="Basalt", grupo="lanterna", fase=rng.uniform(0, 360))
+    for lx, ly in ((-4.5, 5.0), (3.6, 9.5), (0.5, 16.0)):
+        emb(lx, yp + ly, 9.6, "cristal_fragmento_c", extra_giro=rng.uniform(0, 360), material="Neon", grupo="lanterna", fase=rng.uniform(0, 360))
+    # três marcos de universos futuros (a entrada, vinda dos Portais, fica em ~59 graus)
+    colisor_marco = [((0, 3.0, 0), (4.6, 6.0, 1.7))]
+    for a, tema in ((-100, "cinzas"), (-48, "mare"), (118, "umbral")):
+        x, z = polar_local(15.5, a)
+        emb(x, 0.85, z, "incursao_marco", extra_giro=180 - a, material="Basalt", colisores=colisor_marco)
+        emb(x, 0.85, z, "incursao_marco_" + tema, extra_giro=180 - a, material="Neon")
+    # Mesa dos Cartógrafos
+    emb(0, 0.85, -3, "incursao_mesa", colisores=[((0, 1.4, 0), (5.0, 2.8, 5.0))])
+    emb(0, 0.85, -3, "incursao_mesa_energia", material="Neon")
+    for k in range(3):
+        a = math.radians(120 * k + 20)
+        emb(1.5 * math.cos(a), 0.85 + 4.6 + 0.5 * k, -3 + 1.5 * math.sin(a), "cristal_fragmento_c", extra_giro=120 * k, escala=0.5, material="Neon", grupo="lanterna", fase=120 * k)
+    for lx, lz in ((-17.5, 6), (16.5, -9), (-12, -15.5), (13.5, 15)):
+        emb(lx, 0.4, lz, "rocha_a", extra_giro=rng.uniform(0, 360), escala=rng.uniform(1.2, 1.8))
+    # ramal Portais -> Bastião (a frente da peça, +Y, aponta para o Bastião)
+    giro_ramal = math.degrees(math.atan2(-d.x, -d.y)) % 360
+    por("caminho_ramal", (inicio.x, 0.0, inicio.y), giro=giro_ramal)
+    por("caminho_ramal_energia", (inicio.x, 0.0, inicio.y), giro=giro_ramal, material="Neon")
+
+    # ---- Arena do Trono (o trono fica no fundo: +Z local, oposto à entrada)
+    def ema(lx, ly, lz, malha, extra_giro=0.0, **kw):
+        g, dist = LOCAIS["arena"]
+        return por(malha, mundo(g, dist, lx, ly, lz), giro=giro_de(g, extra_giro), **kw)
+
+    piso = 0.6
+    ema(0, piso, 17.4, "trono_plataforma", material="Basalt", colisores=[((0, 0.25, 0), (16, 0.5, 10)), ((0, 0.75, 0.7), (13, 0.5, 8)), ((0, 1.25, 1.4), (10, 0.5, 6))])
+    yt = piso + 1.5
+    colisor_trono = [((0, 1.45, -0.2), (7.2, 2.9, 4.0)), ((0, 5.0, 1.9), (6.6, 10.0, 1.6))]
+    ema(0, yt, 19.4, "trono_assento", material="Basalt", colisores=colisor_trono)
+    ema(0, yt, 19.4, "trono_metal", material="Metal")
+    ema(0, yt, 19.4, "trono_energia", material="Neon")
+    ema(0, yt + 18.5, 20.8, "trono_coroa", material="Neon", grupo="gira", velocidade=0.25)
+    ema(0, 0, 0, "arena_trono_energia", material="Neon")
+    for lado in (-1, 1):
+        ema(lado * 7, piso, 0, "arena_pedestal", material="Basalt")
+    ema(0, 0, -29, "arena_portao", material="Basalt", colisores=[((-8.3, 8, 0), (3.6, 16, 3.6)), ((8.3, 8, 0), (3.6, 16, 3.6))])
+    ema(0, 0, -29, "arena_portao_energia", material="Neon")
+    for a in (48, 132, 228, 312):
+        x, z = polar_local(21.2, a)
+        ema(x, piso, z, "arena_braseiro", material="Basalt", colisores=[((0, 1.5, 0), (2.6, 3.0, 2.6))])
+        ema(x, piso + 3.0, z, "arena_braseiro_chama", material="Neon", grupo="lanterna", fase=a)
 
 
 def montar_decoracao(por):
@@ -1690,12 +2228,12 @@ def montar_locais(por, rng):
         em("portais", rng.uniform(-14, 14), rng.uniform(4, 13), rng.uniform(2, 16), "cristal_fragmento_c" if k % 2 else "rocha_b", extra_giro=rng.uniform(0, 360), material="Neon" if k % 2 else "Slate", grupo="lanterna", fase=rng.uniform(0, 360))
 
     # Arena dos Despertos
-    em("arena", 0, 0, 0, "arena_piso")
-    em("arena", 0, 0, 0, "arena_arquibancada")
+    em("arena", 0, 0, 0, "arena_piso", material="Basalt")
+    em("arena", 0, 0, 0, "arena_arquibancada", material="Basalt")
     em("arena", 0, 0, 0, "arena_energia", material="Neon")
     for k in range(8):
         a = 67.5 + k * (225 / 7)
-        voltado_ao_centro("arena", 35.5, a, 0, "arquivo_coluna", material="Marble")
+        voltado_ao_centro("arena", 35.5, a, 0, "arquivo_coluna", material="Basalt")
         if k % 2 == 0:
             voltado_ao_centro("arena", 35.5, a, 0, "arena_estandarte", material="Fabric")
 
@@ -1984,6 +2522,14 @@ def main():
         renderizar("altar", tuple(roblox_para_blender(mundo(45, 150, 8, 12, -44))), tuple(roblox_para_blender(mundo(45, 150, 0, 7, 0))), lente=26)
         renderizar("portais", tuple(roblox_para_blender(mundo(135, 150, -6, 9, -36))), tuple(roblox_para_blender(mundo(135, 150, 0, 8, 6))), lente=26)
         renderizar("arena", tuple(roblox_para_blender(mundo(180, 156, 0, 16, -50))), tuple(roblox_para_blender(mundo(180, 156, 0, 3, 0))), lente=24)
+        renderizar("arena_trono_entrada", tuple(roblox_para_blender(mundo(180, 156, 0, 6.5, -44))), tuple(roblox_para_blender(mundo(180, 156, 0, 7, 18))), lente=30)
+        renderizar("arena_trono_centro", tuple(roblox_para_blender(mundo(180, 156, 0, 5.5, -4))), tuple(roblox_para_blender(mundo(180, 156, 0, 8, 19))), lente=28)
+        renderizar("arena_trono_45", tuple(roblox_para_blender(mundo(180, 156, 30, 26, -34))), tuple(roblox_para_blender(mundo(180, 156, 0, 4, 6))), lente=26)
+        renderizar("arena_trono_lateral", tuple(roblox_para_blender(mundo(180, 156, 15, 7, 12))), tuple(roblox_para_blender(mundo(180, 156, 0, 7, 19.5))), lente=30)
+        renderizar("incursoes", tuple(roblox_para_blender(mundo(BASTIAO[0], BASTIAO[1], 4, 8, -36))), tuple(roblox_para_blender(mundo(BASTIAO[0], BASTIAO[1], 0, 9, 9))), lente=26)
+        renderizar("incursoes_portal", tuple(roblox_para_blender(mundo(BASTIAO[0], BASTIAO[1], -5, 6, -9))), tuple(roblox_para_blender(mundo(BASTIAO[0], BASTIAO[1], 0, 10.5, 11))), lente=24)
+        renderizar("incursoes_ramal", tuple(roblox_para_blender(mundo(135, 150, 6, 7, 14))), tuple(roblox_para_blender(mundo(BASTIAO[0], BASTIAO[1], 0, 8, 6))), lente=26)
+        renderizar("incursoes_alto", tuple(roblox_para_blender(mundo(BASTIAO[0], BASTIAO[1], 30, 45, -50))), tuple(roblox_para_blender(mundo(BASTIAO[0], BASTIAO[1], 0, 3, 0))), lente=26)
         renderizar("caminho_arquivo", tuple(roblox_para_blender(mundo(315, 72, 0, 4.5, -2))), tuple(roblox_para_blender(mundo(315, 150, 0, 3, 0))), lente=26)
         renderizar("caminho_portais", tuple(roblox_para_blender(mundo(135, 72, 0, 4.5, -2))), tuple(roblox_para_blender(mundo(135, 150, 0, 3, 0))), lente=26)
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(DIR_SOURCE, "nexo_master.blend"), compress=True)
