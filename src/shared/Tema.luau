@@ -1,4 +1,4 @@
--- Paleta, fontes e medidas da interface (ver docs/design/01-identidade.png)
+-- Paleta, fontes e medidas da interface do Despertar (tema noturno, neon)
 local Tema = {}
 
 Tema.Cores = {
@@ -22,7 +22,7 @@ Tema.Cores = {
 	VermelhoClaro = Color3.fromHex("FF8A8A"),
 	Cinza = Color3.fromHex("9A8FAB"),
 	CinzaClaro = Color3.fromHex("CFC6DA"),
-	Creme = Color3.fromHex("FFF7EC"),
+	Creme = Color3.fromHex("221833"), -- fundo dos painéis
 	Lilas = Color3.fromHex("F3EBF8"),
 	LilasTexto = Color3.fromHex("D9C9F2"),
 	TextoSuave = Color3.fromHex("7A6A8C"),
