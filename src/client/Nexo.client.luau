@@ -88,7 +88,8 @@ Remotos.evento("Despertou").OnClientEvent:Connect(function(dados: any)
 	local aura = if type(dados) == "table" and type(dados.aura) == "string"
 		then Auras.porId[dados.aura]
 		else nil
-	if aura then
+	-- Mesmo limiar do anúncio, independentemente de quando o servidor dispara o evento
+	if aura and aura.chance >= Auras.ANUNCIO_MINIMO then
 		agitadoAte = os.clock() + 4
 		corAgitada = Color3.fromHex(Auras.Tiers[aura.tier].cor)
 	end
