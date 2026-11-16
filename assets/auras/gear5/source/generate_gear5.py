@@ -16,10 +16,9 @@ Escala: 1 unidade = 1 stud. Avatar R15 padrão: chão em z=0, centro do Humanoid
 O avatar olha para +Y (frente); "atrás" é -Y. Conversão para o Roblox, relativa ao
 HumanoidRootPart: (x, y, z) Blender -> (x, z - 3, -y).
 
-Segue a imagem de referência do dono: faixa grossa em S por cima da cabeça terminando num caracol,
-nuvens fofas nos ombros, tentáculos finos abraçando a cintura, pontas de chama afiadas e gotinhas.
-Volumes com metaballs; chamas, caracóis e tentáculos como tubos afinados. Cada peça é presa a um
-membro. As cores por vértice já trazem o sombreado lavanda.
+A forma vem de curvas Catmull-Rom (nada de círculos): um arco ABERTO e assimétrico atrás e acima
+da cabeça, lobos grandes, pontas que terminam em caracol, bancos na cintura e cachos desenhados
+(espirais em relevo) na superfície. As cores por vértice já trazem o sombreado lavanda.
 Sementes fixas: rodar de novo gera os mesmos arquivos.
 """
 
@@ -41,12 +40,11 @@ DIR_BASE = os.path.join(RAIZ, "assets", "auras", "gear5")
 DIR_LUAU = os.path.join(RAIZ, "src", "client", "Mundo", "Auras")
 DIR_DADOS = os.path.join(DIR_LUAU, "Dados")
 ALTURA_RAIZ = 3.0  # centro do HumanoidRootPart acima do chão
-CABECA_R15 = 1.5  # cabeça acima do HumanoidRootPart num R15 padrão (referência de escala)
 
 # Paleta (sRGB 0..1) — tabela 2.3 do briefing
 NUCLEO = (1.0, 0.992, 0.988)  # FFFDFC
 BORDA = (0.961, 0.949, 1.0)  # F5F2FF
-SOMBRA = (0.74, 0.73, 0.9)  # BDBAE6 (sombra azul-lilás suave)
+SOMBRA = (0.796, 0.776, 0.914)  # CBC6E9
 DOBRA = (0.686, 0.663, 0.839)  # AFA9D6
 LUZ = Vector((0.35, 0.75, 0.62)).normalized()  # luz-chave de frente e de cima
 
@@ -184,223 +182,152 @@ def lingua(vol, base, direcao, lado, comp, grossura):
 
 
 # ---------------------------------------------------------------- peças
-#
-# Segue a referência do dono (4 vistas): uma faixa grossa em "S" que sobe por trás do ombro
-# esquerdo, passa por cima da cabeça e termina num caracol grande no alto à direita; nuvens
-# fofas (couve-flor) nos ombros; tentáculos finos que abraçam a cintura pela frente; e muitas
-# pontas de chama afiadas e curvas saindo da borda, além de gotinhas soltas.
-
-OSSOS = {
-    "raiz": Vector((0, 0, 3.0)),  # HumanoidRootPart
-    "tronco": Vector((0, 0, 3.55)),  # UpperTorso (R6: Torso)
-    "cabeca": Vector((0, 0, 4.9)),  # Head
-    "braco_dir": Vector((1.5, 0, 2.75)),  # RightLowerArm (R6: Right Arm)
-    "braco_esq": Vector((-1.5, 0, 2.75)),  # LeftLowerArm (R6: Left Arm)
-}
 
 
-def tubo_liso(bm, pts, raios, lados=12):
-    """Tubo com referencial transportado (não torce) e ponta fechada: chamas e tentáculos."""
-    pts = [Vector(p) for p in pts]
-    n = len(pts)
-    tang = [(pts[min(i + 1, n - 1)] - pts[max(i - 1, 0)]).normalized() for i in range(n)]
-    normal = tang[0].orthogonal().normalized()
-    aneis = []
-    for i in range(n):
-        t = tang[i]
-        normal = (normal - t * normal.dot(t)).normalized()
-        bi = t.cross(normal)
-        r = raios[i]
-        aneis.append([bm.verts.new(pts[i] + (normal * math.cos(a) + bi * math.sin(a)) * r) for a in (2 * math.pi * j / lados for j in range(lados))])
-    for i in range(n - 1):
-        a0, a1 = aneis[i], aneis[i + 1]
-        for j in range(lados):
-            bm.faces.new((a0[j], a0[(j + 1) % lados], a1[(j + 1) % lados], a1[j]))
-    inicio = bm.verts.new(pts[0] - tang[0] * raios[0] * 0.5)
-    fim = bm.verts.new(pts[-1] + tang[-1] * max(raios[-1], 0.01))
-    for j in range(lados):
-        bm.faces.new((inicio, aneis[0][(j + 1) % lados], aneis[0][j]))
-        bm.faces.new((aneis[-1][j], aneis[-1][(j + 1) % lados], fim))
+ARCO_GUIA = [
+    (1.25, -0.3, 3.55),  # nasce atrás do ombro direito e desce largo (lado "varrido")
+    (2.15, -0.55, 4.45),
+    (2.4, -0.95, 5.6),
+    (1.7, -1.25, 6.7),
+    (0.35, -1.4, 7.25),
+    (-1.0, -1.3, 7.0),
+    (-1.95, -1.0, 6.25),
+    (-2.2, -0.6, 5.35),
+    (-1.75, -0.3, 4.7),  # do lado esquerdo termina mais alto, perto do ombro
+]
+CENTRO_ARCO = Vector((-0.1, -1.0, 5.1))
+
+# Lobos (bolhas grandes) ao longo do arco: posição na curva, raio e quanto saem para fora.
+# Tamanhos e espaçamentos desiguais de propósito: não é colar de contas.
+LOBOS_ARCO = [(0.14, 0.5, 0.15), (0.27, 0.72, 0.3), (0.41, 0.62, 0.2), (0.5, 0.9, 0.42), (0.6, 0.66, 0.25), (0.71, 0.85, 0.38), (0.86, 0.55, 0.18)]
+# Línguas da borda externa: (posição, comprimento, para que lado do arco enrolam)
+LINGUAS_ARCO = [(0.2, 0.7, -1), (0.36, 0.75, -1), (0.56, 0.7, 1), (0.7, 0.65, 1)]
+CACHOS_ARCO = [(0.24, 0.34), (0.37, 0.42), (0.5, 0.48), (0.64, 0.44), (0.77, 0.38)]
 
 
-def chama(bm, base, direcao, curva, comp, grossura, gancho=0.35, n=26):
-    """Ponta de chama: sai grossa, afina até virar uma ponta AFIADA e curva para um lado."""
-    d = Vector(direcao).normalized()
-    c = Vector(curva).normalized()
-    pts, raios = [], []
-    for i in range(n):
-        f = i / (n - 1)
-        p = Vector(base) + d * comp * f + c * comp * gancho * f * f
-        pts.append(p)
-        raios.append(grossura * (1 - f) ** 1.1 * (1 + 0.35 * math.sin(math.pi * f * 0.8)) + 0.004)
-    tubo_liso(bm, pts, raios, lados=10)
+def fora_do_arco(p):
+    f = p - CENTRO_ARCO
+    f.y = 0
+    return f.normalized()
 
 
-def caracol_tubo(bm, centro, u, v, r0, voltas, grossura, n=50, encolher=0.08):
-    """Espiral (o "@" das nuvens) como tubo afinando para dentro."""
-    pts = espiral(Vector(centro), Vector(u).normalized(), Vector(v).normalized(), r0, voltas, n=n, encolher=encolher)
-    raios = [grossura * (1 - 0.85 * i / (n - 1)) + 0.01 for i in range(n)]
-    tubo_liso(bm, pts, raios, lados=10)
+def fazer_arco(rng):
+    vol = Volume("arco")
+    guia = catmull(ARCO_GUIA, 70)
+    ultimo = len(guia) - 1
 
+    def em(f):
+        i = int(round(f * ultimo))
+        tang = (guia[min(i + 1, ultimo)] - guia[max(i - 1, 0)]).normalized()
+        return guia[i], tang, fora_do_arco(guia[i])
 
-def tentaculo(bm, pts_guia, r0, r1=0.0, n=40):
-    """Faixa fina que abraça o corpo e termina em ponta (catmull pelos pontos)."""
-    pts = catmull(pts_guia, n)
-    raios = [r0 + (r1 - r0) * (i / (n - 1)) ** 0.8 + 0.006 for i in range(n)]
-    # bojo no começo: parece sair de dentro da nuvem
-    raios = [r * (1 + 0.4 * math.exp(-((i / (n - 1)) / 0.15) ** 2)) for i, r in enumerate(raios)]
-    tubo_liso(bm, pts, raios, lados=10)
-
-
-def gotas(bm, rng, centro, raio, qtd):
-    """Gotinhas soltas em forma de vírgula em volta da nuvem."""
-    for _ in range(qtd):
-        a = rng.uniform(0, 2 * math.pi)
-        z = rng.uniform(-raio * 0.5, raio * 0.5)
-        p = Vector(centro) + Vector((math.cos(a) * raio, math.sin(a) * raio * 0.4 - 0.3, z))
-        d = Vector((rng.uniform(-1, 1), rng.uniform(-0.3, 0.3), rng.uniform(0.2, 1)))
-        chama(bm, p, d, Vector((math.cos(a + 1.5), 0, math.sin(a))), rng.uniform(0.25, 0.4), rng.uniform(0.08, 0.11), gancho=0.6, n=14)
-
-
-def corrente(vol, tubos, rng, guia_pts, r_max, fim="ponta", lado_fim=1.0, chamas=(), n=56, achatar=0.85, raiz=0.8):
-    """Uma corrente de fumaça: nasce grossa no corpo, ondula, afina e termina em ponta comprida
-    ou em espiral. O arco sobre a cabeça aparece da SOMA de várias correntes, não de uma peça.
-
-    Volumes grandes e sobrepostos (elipsoides), sem bolhinhas: lisa, não parece espuma."""
-    guia = catmull(guia_pts, n)
-    ult = len(guia) - 1
-    corte = 0.8  # daqui em diante a ponta é um tubo afiado
-    fase = rng.uniform(0, 6.28)
-
-    def raio(f):
-        perfil = raiz + (1 - raiz) * suave(0.0, 0.25, f)  # sai do corpo e incha
-        perfil *= 1 - 0.62 * suave(0.35, corte, f)  # afina para a ponta
-        return r_max * perfil * (1 + 0.12 * math.sin(f * 7 + fase))  # ondulação lenta, irregular
-
-    def tang(i):
-        return (guia[min(i + 1, ult)] - guia[max(i - 1, 0)]).normalized()
-
+    # miolo contínuo e achatado em profundidade (a faixa é larga de frente, fina de lado)
     for i, p in enumerate(guia):
-        f = i / ult
-        if f > corte:
-            break
-        r = raio(f)
-        vol.bola(p, r, achatar=(1.0, achatar, 1.0))
-        if i % 3 == 1 and f < corte - 0.08:  # um volume a mais, deslocado: a faixa não é um cano
-            t = tang(i)
-            lado = t.cross(Vector((0, 1, 0))).normalized()
-            vol.bola(p + lado * r * rng.uniform(-0.5, 0.5) + Vector((0, rng.uniform(-0.45, 0.1) * r, 0)), r * rng.uniform(0.72, 0.9), achatar=(1.0, achatar, 1.0))
-    i0 = int(corte * ult)
-    p0, t0, r0 = guia[i0], tang(i0), raio(corte)
-    if fim == "espiral":
-        # espiral que continua a direção da corrente e enrola para dentro
-        u = -t0
-        v = t0.cross(Vector((0, 1, 0))).normalized() * lado_fim
-        centro = p0 + t0 * r0 * 0.4 - v * (r0 * 2.2)
-        pts = [p0 - t0 * r0 * 0.6]
-        pts += espiral(centro, v, t0, r0 * 2.2, 1.6, n=56, encolher=0.1)
-        m = len(pts)
-        raios = [r0 * 0.95 * (1 - 0.9 * (j / (m - 1)) ** 0.85) + 0.012 for j in range(m)]
-        tubo_liso(tubos, pts, raios, lados=12)
+        f = i / ultimo
+        if f < 0.07 or f > 0.94:
+            continue  # as pontas são peças próprias
+        r = 0.5 + 0.16 * math.sin(f * 7.3 + 1.1) + 0.1 * rng.uniform(-1, 1)
+        vol.bola(p, r, achatar=(1.0, 0.95, 1.0))
+        if i % 3 == 1:  # volume para trás: de perfil a faixa tem espessura
+            vol.bola(p + Vector((0, -r * 0.7, 0)), r * 0.75)
+        if i % 2 == 0:  # dobras internas (lado do avatar), menores
+            vol.bola(p - fora_do_arco(p) * r * 0.5 + Vector((0, -0.15, 0)), r * 0.6)
+    for f, r, saida in LOBOS_ARCO:
+        p, tang, fora = em(f)
+        r *= rng.uniform(0.92, 1.08)
+        vol.bola(p + fora * saida + Vector((0, rng.uniform(-0.35, 0.25), 0)), r, achatar=(1.0, 0.9, 1.0))
+        # bolhas menores na borda do lobo: contorno recortado
+        for k in range(3):
+            ang = rng.uniform(-1.2, 1.2)
+            d = (fora * math.cos(ang) + tang * math.sin(ang)).normalized()
+            vol.bola(p + fora * saida + d * r * rng.uniform(0.7, 0.95), r * rng.uniform(0.35, 0.5))
+    for f, comp, sentido in LINGUAS_ARCO:
+        p, tang, fora = em(f)
+        lingua(vol, p + fora * 0.5, fora + tang * 0.45 * sentido, tang * sentido, comp, 0.46)
+    for f, tam in CACHOS_ARCO:
+        p, tang, fora = em(f)
+        normal = (fora * 0.35 + Vector((0, 1, 0))).normalized()  # cacho olhando para a frente
+        cacho(vol, p + normal * 0.42 + fora * 0.15, normal, tam, rng)
+    return vol.malha(), Vector((0, -0.8, 4.3))
+
+
+def fazer_lobo(rng, lado):
+    """Massa grande que incha para fora do arco, no alto de um dos lados."""
+    vol = Volume("lobo")
+    if lado > 0:
+        c = Vector((2.85, -0.8, 4.85))
+        bolas = [((0, 0, 0), 0.62), ((0.38, 0.05, 0.38), 0.46), ((0.22, -0.1, -0.45), 0.5), ((0.62, 0.0, -0.08), 0.4), ((-0.25, -0.1, 0.5), 0.42)]
     else:
-        # ponta alongada: segue a curva e afina até ficar afiada, com um gancho leve
-        resto = guia[i0:]
-        comp = sum((resto[j + 1] - resto[j]).length for j in range(len(resto) - 1)) + r0 * 2.5
-        lado = t0.cross(Vector((0, 1, 0))).normalized() * lado_fim
-        pts, raios = [], []
-        m = 30
-        for j in range(m):
-            f = j / (m - 1)
-            pts.append(p0 - t0 * r0 * 0.5 + t0 * comp * f + lado * comp * 0.3 * f * f)
-            raios.append(r0 * (1 - f) ** 1.25 + 0.004)
-        tubo_liso(tubos, pts, raios, lados=12)
-    for f, comp, sentido, g in chamas:  # pontas laterais saindo da borda
-        i = int(f * ult)
-        t = tang(i)
-        fora = t.cross(Vector((0, 1, 0))).normalized() * sentido
-        chama(tubos, guia[i] + fora * raio(f) * 0.45, fora * 0.8 + t * 0.6, t - fora * 0.3, comp * 1.15, g, gancho=1.15)
-    return guia
+        c = Vector((-2.55, -0.75, 6.35))
+        bolas = [((0, 0, 0), 0.68), ((-0.42, 0.05, 0.32), 0.5), ((-0.2, -0.15, -0.48), 0.52), ((-0.66, 0.0, -0.12), 0.4), ((0.22, 0.05, 0.55), 0.45), ((-0.38, 0.05, 0.72), 0.34)]
+    for d, r in bolas:
+        vol.bola(c + Vector(d), r * rng.uniform(0.92, 1.08), achatar=(1.0, 0.8, 1.0))
+    normal = Vector((lado * 0.5, 1, 0.15)).normalized()
+    cacho(vol, c + Vector((lado * 0.1, 0.5, 0.1)), normal, 0.36, rng)
+    lingua(vol, c + Vector((lado * 0.55, 0, 0.35)), Vector((lado, 0, 0.7)), Vector((0, 0, 1)), 1.0, 0.3)
+    lingua(vol, c + Vector((lado * 0.5, 0, -0.45)), Vector((lado, 0, -0.4)), Vector((0, 0, -1)), 0.75, 0.24)
+    return vol.malha(), c - Vector((lado * 0.55, 0, 0))
 
 
-def fazer_ombros(rng):
-    """De onde a energia nasce: volumes grandes e sobrepostos nos ombros e no alto das costas."""
-    vol = Volume("ombros")
-    tubos = bmesh.new()
-    for c, r, ach in (
-        ((0.0, -0.8, 4.3), 0.75, (1.3, 0.7, 0.9)),
-        ((1.2, -0.6, 4.55), 0.68, (1.2, 0.75, 0.9)),
-        ((-1.25, -0.6, 4.6), 0.72, (1.2, 0.75, 0.9)),
-        ((2.0, -0.4, 4.35), 0.55, (1.0, 0.85, 0.95)),
-        ((-2.05, -0.4, 4.45), 0.6, (1.0, 0.85, 0.95)),
-        ((0.65, -0.85, 5.05), 0.52, (1.1, 0.8, 1.0)),
-        ((-0.7, -0.85, 5.1), 0.56, (1.1, 0.8, 1.0)),
-        ((2.3, -0.3, 3.7), 0.45, (1.0, 0.85, 1.0)),
-        ((-2.35, -0.3, 3.8), 0.48, (1.0, 0.85, 1.0)),
-    ):
-        vol.bola(c, r * rng.uniform(0.94, 1.06), achatar=ach)
-    chama(tubos, (2.3, -0.3, 4.6), (0.7, 0, 1), (1, 0, -0.3), 0.75, 0.24, gancho=1.1)
-    chama(tubos, (-2.4, -0.3, 4.7), (-0.7, 0, 1), (-1, 0, -0.3), 0.8, 0.26, gancho=1.1)
-    return vol.malha(), tubos, Vector((0, -0.5, 4.2))
+def fazer_ponta(rng, lado):
+    """Ponta do arco: afunila e termina num caracol grande, enrolado para dentro."""
+    vol = Volume("ponta")
+    if lado > 0:
+        base = Vector(ARCO_GUIA[0]) + Vector((0.15, 0, 0.0))
+        centro = base + Vector((0.75, 0.1, -0.6))
+    else:
+        base = Vector(ARCO_GUIA[-1]) + Vector((-0.05, 0, 0.05))
+        centro = base + Vector((-0.6, 0.1, -0.5))
+    u = Vector((-lado, 0, 0))
+    v = Vector((0, 0.3, 1)).normalized()
+    vol.bola(base, 0.45)
+    vol.bola(base + Vector((lado * 0.3, -0.1, -0.15)), 0.38)
+    n = 30
+    grande = 0.85 if lado > 0 else 0.55  # o caracol do lado varrido é o maior
+    for i, p in enumerate(espiral(centro, u, v, grande, 1.4, n=n, encolher=0.18)):
+        f = i / (n - 1)
+        vol.bola(p, max(grande * 0.52 * (1 - 0.78 * f ** 0.8), 0.09))
+    return vol.malha(), base
 
 
-def fazer_corrente_a(rng):
-    """A maior: sobe do ombro esquerdo, cruza por cima da cabeça e enrola no alto à direita."""
-    vol, tubos = Volume("corrente_a"), bmesh.new()
-    corrente(vol, tubos, rng, [(-1.2, -0.65, 4.4), (-2.0, -0.9, 5.15), (-1.85, -1.0, 6.05), (-0.85, -1.05, 6.65), (0.45, -1.0, 6.95), (1.55, -0.9, 6.85), (2.1, -0.8, 6.4)],
-             1.05, fim="espiral", lado_fim=1.0, chamas=((0.4, 0.9, 1, 0.3), (0.62, 0.8, 1, 0.26)))
-    return vol.malha(), tubos, Vector((-1.2, -0.65, 4.4))
+def fazer_banco(rng, lado):
+    """Banco denso atrás do quadril e da cintura, com borda recortada; os pés ficam à mostra."""
+    vol = Volume("banco")
+    guia = catmull(
+        [(lado * 0.3, -0.85, 3.05), (lado * 1.1, -0.95, 2.8), (lado * 1.7, -0.85, 2.35), (lado * 1.95, -0.65, 1.9), (lado * 1.8, -0.45, 1.6)],
+        22,
+    )
+    for i, p in enumerate(guia):
+        f = i / (len(guia) - 1)
+        r = (0.55 - 0.22 * f) * rng.uniform(0.85, 1.12) * (1.0 if lado < 0 else 0.85)
+        vol.bola(p, r, achatar=(1.0, 0.8, 0.9))
+        if i % 3 == 0:
+            vol.bola(p + Vector((lado * 0.3, -0.15, rng.uniform(-0.2, 0.3))), r * 0.62)
+    cacho(vol, guia[7] + Vector((lado * 0.05, 0.42, 0.1)), Vector((lado * 0.3, 1, 0.1)), 0.32, rng)
+    cacho(vol, guia[15] + Vector((lado * 0.15, 0.36, 0)), Vector((lado * 0.5, 1, 0)), 0.24, rng)
+    lingua(vol, guia[-1], Vector((lado * 0.6, 0.3, -0.3)), Vector((lado, 0, 0.8)), 0.75, 0.26)
+    lingua(vol, guia[4] + Vector((0, 0, 0.3)), Vector((lado * 0.4, 0, 1)), Vector((lado, 0, 0)), 0.7, 0.24)
+    return vol.malha(), Vector((lado * 0.4, -0.6, 2.9))
 
 
-def fazer_corrente_b(rng):
-    """Sobe do ombro direito, passa por trás da A e termina numa ponta comprida no alto à esquerda."""
-    vol, tubos = Volume("corrente_b"), bmesh.new()
-    corrente(vol, tubos, rng, [(1.15, -0.65, 4.4), (1.95, -0.95, 5.15), (1.8, -1.15, 6.0), (0.9, -1.25, 6.5), (-0.3, -1.3, 6.85), (-1.2, -1.3, 7.45)],
-             0.8, fim="ponta", lado_fim=-1.0, chamas=((0.45, 0.75, 1, 0.24),))
-    return vol.malha(), tubos, Vector((1.15, -0.65, 4.4))
-
-
-def fazer_corrente_c(rng):
-    """Do meio das costas, sobe colada atrás da cabeça e solta uma espiral pequena."""
-    vol, tubos = Volume("corrente_c"), bmesh.new()
-    corrente(vol, tubos, rng, [(0.1, -0.85, 4.5), (0.35, -1.15, 5.4), (-0.15, -1.35, 6.15), (-0.75, -1.4, 6.6)],
-             0.66, fim="espiral", lado_fim=-1.0)
-    return vol.malha(), tubos, Vector((0.1, -0.85, 4.5))
-
-
-def fazer_lateral_esq(rng):
-    """Do ombro esquerdo para fora e para baixo, terminando em espiral (massa lateral)."""
-    vol, tubos = Volume("lateral_esq"), bmesh.new()
-    corrente(vol, tubos, rng, [(-1.6, -0.45, 4.3), (-2.35, -0.5, 4.0), (-2.7, -0.35, 3.3), (-2.55, -0.15, 2.7)],
-             0.68, fim="espiral", lado_fim=1.0, chamas=((0.4, 0.65, -1, 0.22),))
-    return vol.malha(), tubos, Vector((-1.6, -0.45, 4.3))
-
-
-def fazer_lateral_dir(rng):
-    """Do ombro direito para fora, terminando numa ponta alongada para baixo."""
-    vol, tubos = Volume("lateral_dir"), bmesh.new()
-    corrente(vol, tubos, rng, [(1.6, -0.45, 4.25), (2.4, -0.5, 4.05), (2.85, -0.4, 3.45), (3.05, -0.25, 2.65)],
-             0.64, fim="ponta", lado_fim=1.0, chamas=((0.4, 0.6, 1, 0.2),))
-    return vol.malha(), tubos, Vector((1.6, -0.45, 4.25))
-
-
-def fazer_cintura(rng):
-    """Correntes finas que saem da parte de baixo das costas e abraçam a cintura pela frente."""
-    vol, tubos = Volume("cintura"), bmesh.new()
-    vol.bola((0.0, -0.75, 2.45), 0.48, achatar=(1.4, 0.75, 0.9))
-    corrente(vol, tubos, rng, [(0.2, -0.8, 2.45), (1.6, -0.5, 2.25), (1.85, 0.5, 2.0), (0.6, 1.05, 1.75), (-0.8, 1.0, 1.55), (-1.8, 0.4, 1.35)],
-             0.3, fim="ponta", lado_fim=-1.0, raiz=1.0)
-    corrente(vol, tubos, rng, [(-0.2, -0.8, 2.4), (-1.6, -0.45, 2.1), (-1.95, 0.4, 1.95), (-1.6, 0.6, 2.4)],
-             0.34, fim="espiral", lado_fim=1.0, raiz=1.0)
-    return vol.malha(), tubos, Vector((0, 0, 2.3))
+def fazer_rolo(rng, lado):
+    """Rolo lateral pequeno perto do ombro, ligado visualmente ao arco."""
+    vol = Volume("rolo")
+    c = Vector((lado * 1.7, -0.3, 4.05))
+    for d, r in (((0, 0, 0), 0.36), ((lado * 0.28, -0.1, 0.22), 0.3), ((lado * 0.1, 0.05, -0.28), 0.28)):
+        vol.bola(c + Vector(d), r)
+    cacho(vol, c + Vector((lado * 0.15, 0.3, 0)), Vector((lado * 0.5, 1, 0)), 0.22, rng)
+    lingua(vol, c + Vector((lado * 0.3, 0, -0.2)), Vector((lado, 0, -0.5)), Vector((0, 0, -1)), 0.6, 0.2)
+    return vol.malha(), c - Vector((lado * 0.35, -0.25, 0))
 
 
 def fazer_mecha(rng):
-    """Gotinha/mecha que se solta e evapora (reaproveitada pelo jogo)."""
+    """Mecha pequena que se solta no rastro e evapora (reaproveitada pelo jogo)."""
     vol = Volume("mecha")
-    vol.bola((0, 0, 0), 0.16)
-    tubos = bmesh.new()
-    chama(tubos, (0, 0, 0), (0.3, 0, 1), (1, 0, 0), 0.45, 0.14, gancho=0.6, n=16)
-    return vol.malha(), tubos, Vector((0, 0, 0))
+    n = 18
+    for i, p in enumerate(espiral(Vector((0, 0, 0)), Vector((1, 0, 0)), Vector((0, 0, 1)), 0.34, 1.2, n=n, encolher=0.2)):
+        vol.bola(p, max(0.2 * (1 - 0.6 * i / (n - 1)), 0.09))
+    return vol.malha(), Vector((0, 0, 0))
 
 
 def junta(destino, origem):
@@ -453,7 +380,7 @@ def colorir(bm):
     for v in bm.verts:
         n = v.normal
         lambert = n.dot(LUZ)
-        f = suave(-0.35, 0.75, lambert)
+        f = suave(-0.05, 0.6, lambert)
         cor = [SOMBRA[i] + (NUCLEO[i] - SOMBRA[i]) * f for i in range(3)]
         # borda (silhueta vista de frente) puxa para o branco-frio
         borda = 1 - abs(n.y)
@@ -524,50 +451,36 @@ def objeto(nome, bm, cores):
     return obj
 
 
-# Como cada peça se move (o jogo lê isto em Gear5Pecas.luau):
-#   osso:    membro que ela segue (raiz, tronco, cabeca, braco_dir, braco_esq)
-#   rigidez: mola que segue o membro (alto = firme; baixo = atrasa mais)
-#   atraso:  quanto pode ficar para trás ao andar (studs)
+# grupo: como a peça se move (o jogo lê isto em Gear5Pecas.luau)
+#   rigidez: mola que segue o corpo (alto = acompanha firme; baixo = atrasa mais)
+#   atraso:  quanto a peça pode ficar para trás ao andar (studs)
 #   ordem:   quando surge na manifestação (0..1)
-#   orbita:  graus que a peça vai e volta em volta do eixo do membro (o redemoinho "gira")
-#   volta:   giro contínuo em volta do eixo do membro (rad/s; os punhos)
 PECAS = [
-    ("ombros", fazer_ombros, 3000, dict(osso="tronco", rigidez=120, atraso=0.15, ordem=0.0, respira=0.04, giro=3, orbita=0, volta=0, baixo=False)),
-    ("lateral_esq", fazer_lateral_esq, 1500, dict(osso="tronco", rigidez=60, atraso=0.5, ordem=0.18, respira=0.05, giro=9, orbita=0, volta=0, baixo=False)),
-    ("lateral_dir", fazer_lateral_dir, 1500, dict(osso="tronco", rigidez=62, atraso=0.5, ordem=0.22, respira=0.05, giro=9, orbita=0, volta=0, baixo=False)),
-    ("corrente_c", fazer_corrente_c, 2000, dict(osso="tronco", rigidez=70, atraso=0.45, ordem=0.3, respira=0.05, giro=7, orbita=0, volta=0, baixo=False)),
-    ("corrente_b", fazer_corrente_b, 3500, dict(osso="tronco", rigidez=50, atraso=0.65, ordem=0.38, respira=0.04, giro=6, orbita=0, volta=0, baixo=False)),
-    ("corrente_a", fazer_corrente_a, 5000, dict(osso="tronco", rigidez=45, atraso=0.75, ordem=0.45, respira=0.04, giro=6, orbita=0, volta=0, baixo=False)),
-    ("cintura", fazer_cintura, 2000, dict(osso="raiz", rigidez=45, atraso=0.7, ordem=0.6, respira=0.04, giro=3, orbita=10, volta=0, baixo=True)),
+    ("arco", lambda r: fazer_arco(r), 12000, dict(rigidez=90, atraso=0.35, ordem=0.15, respira=0.03, giro=4, baixo=False)),
+    ("lobo_dir", lambda r: fazer_lobo(r, 1), 3000, dict(rigidez=55, atraso=0.6, ordem=0.42, respira=0.05, giro=8, baixo=False)),
+    ("lobo_esq", lambda r: fazer_lobo(r, -1), 3200, dict(rigidez=50, atraso=0.65, ordem=0.48, respira=0.05, giro=8, baixo=False)),
+    ("ponta_dir", lambda r: fazer_ponta(r, 1), 2400, dict(rigidez=38, atraso=0.9, ordem=0.55, respira=0.04, giro=16, baixo=False)),
+    ("ponta_esq", lambda r: fazer_ponta(r, -1), 2400, dict(rigidez=34, atraso=0.95, ordem=0.6, respira=0.04, giro=16, baixo=False)),
+    ("rolo_dir", lambda r: fazer_rolo(r, 1), 900, dict(rigidez=45, atraso=0.7, ordem=0.66, respira=0.05, giro=12, baixo=False)),
+    ("rolo_esq", lambda r: fazer_rolo(r, -1), 900, dict(rigidez=45, atraso=0.7, ordem=0.7, respira=0.05, giro=12, baixo=False)),
+    ("banco_dir", lambda r: fazer_banco(r, 1), 3400, dict(rigidez=30, atraso=1.1, ordem=0.72, respira=0.04, giro=6, baixo=True)),
+    ("banco_esq", lambda r: fazer_banco(r, -1), 3400, dict(rigidez=28, atraso=1.15, ordem=0.78, respira=0.04, giro=6, baixo=True)),
 ]
 
 
 def escrever_pecas(lista):
     linhas = [
         "-- GERADO por assets/auras/gear5/source/generate_gear5.py. Não editar à mão.",
-        "-- Peças da Gear 5 (studs, relativo ao HumanoidRootPart de um R15 padrão; o jogo reescala pela",
-        "-- altura real). pivo = ponto por onde a peça se prende e gira; osso = membro que ela segue.",
+        "-- Peças da Gear 5 em volta do personagem (studs, relativo ao HumanoidRootPart de um R15",
+        "-- padrão; o jogo reescala pela altura real). pivo = ponto por onde a peça se prende e gira.",
         "return {",
-        # escala: cabeça de um R15 padrão real fica ~1,5 stud acima da raiz. As peças são presas
-        # ao CENTRO do membro (relOsso), então a diferença de proporção do avatar de blocos das
-        # prévias não muda onde elas ficam.
-        "\tcabecaPadrao = %.3f," % CABECA_R15,
-        "\tossos = {",
     ]
-    for nome, c in OSSOS.items():
-        linhas.append("\t\t%s = { %.3f, %.3f, %.3f }," % ((nome,) + para_roblox(c)))
-    linhas += ["\t},", "\tpecas = {"]
     for nome, pivo, cfg in lista:
         campos = ['nome = "%s"' % nome, "pivo = { %.3f, %.3f, %.3f }" % pivo]
         for k, v in cfg.items():
-            if isinstance(v, bool):
-                campos.append("%s = %s" % (k, "true" if v else "false"))
-            elif isinstance(v, str):
-                campos.append('%s = "%s"' % (k, v))
-            else:
-                campos.append("%s = %g" % (k, v))
-        linhas.append("\t\t{ " + ", ".join(campos) + " },")
-    linhas += ["\t},", "}", ""]
+            campos.append("%s = %s" % (k, ("true" if v else "false") if isinstance(v, bool) else ("%g" % v)))
+        linhas.append("\t{ " + ", ".join(campos) + " },")
+    linhas += ["}", ""]
     with open(os.path.join(DIR_LUAU, "Gear5Pecas.luau"), "w", encoding="utf-8") as f:
         f.write("\n".join(linhas))
 
@@ -587,13 +500,10 @@ def gerar():
     os.makedirs(os.path.join(DIR_BASE, "exports"), exist_ok=True)
     lista = []
     objs = []
-    for i, (nome, fn, alvo, cfg) in enumerate(PECAS + [("mecha", fazer_mecha, 200, None)]):
+    for i, (nome, fn, alvo, cfg) in enumerate(PECAS + [("mecha", lambda r: fazer_mecha(r), 500, None)]):
         rng = random.Random(500 + i)
-        bm, tubos, pivo = fn(rng)
+        bm, pivo = fn(rng)
         bm = preparar(bm, alvo)
-        junta(bm, tubos)  # tubos (chamas, caracóis, tentáculos) já são leves: não passam pela redução
-        tubos.free()
-        bmesh.ops.triangulate(bm, faces=bm.faces)
         cores = colorir(bm)
         nv, nt = escrever_luau(nome, bm, cores)
         print("%-10s %5d vértices %5d triângulos" % (nome, nv, nt))
@@ -629,7 +539,7 @@ def material_nuvem():
     attr.attribute_name = "Col"
     nt.links.new(attr.outputs["Color"], bsdf.inputs["Base Color"])
     nt.links.new(attr.outputs["Color"], bsdf.inputs["Emission Color"])
-    bsdf.inputs["Emission Strength"].default_value = 0.45  # aproxima o brilho leve do jogo
+    bsdf.inputs["Emission Strength"].default_value = 0.6  # aproxima o brilho leve do jogo
     bsdf.inputs["Roughness"].default_value = 0.9
     return m
 
@@ -681,14 +591,14 @@ def caixa(nome, centro, tam, mat):
 
 
 def avatar():
-    """Avatar genérico (blocos com as proporções de um R15 padrão), só para escala nas prévias."""
+    """Avatar genérico (blocos de um R15 padrão), só para escala nas prévias."""
     m = material_cor("avatar", (0.13, 0.13, 0.17))
     caixa("perna_e", (-0.5, 0, 1.0), (0.9, 0.9, 2.0), m)
     caixa("perna_d", (0.5, 0, 1.0), (0.9, 0.9, 2.0), m)
-    caixa("tronco", (0, 0, 3.15), (2.0, 1.0, 2.3), m)
-    caixa("braco_e", (-1.5, 0, 3.2), (0.95, 0.95, 2.2), m)
-    caixa("braco_d", (1.5, 0, 3.2), (0.95, 0.95, 2.2), m)
-    caixa("cabeca", (0, 0, 4.9), (1.2, 1.2, 1.2), m)
+    caixa("tronco", (0, 0, 3.0), (2.0, 1.0, 2.0), m)
+    caixa("braco_e", (-1.5, 0, 3.0), (0.95, 0.95, 2.0), m)
+    caixa("braco_d", (1.5, 0, 3.0), (0.95, 0.95, 2.0), m)
+    caixa("cabeca", (0, 0, 4.6), (1.2, 1.2, 1.2), m)
 
 
 def renderizar(objs):
@@ -714,7 +624,7 @@ def renderizar(objs):
             continue
         # contorno de anime: casca invertida (o mesmo truque que o jogo usa)
         mod = obj.modifiers.new("contorno", "SOLIDIFY")
-        mod.thickness = 0.045
+        mod.thickness = 0.035
         mod.offset = 1
         mod.use_flip_normals = True
         mod.use_rim = False
@@ -724,7 +634,7 @@ def renderizar(objs):
     chao = material_cor("chao", (0.05, 0.05, 0.08))
     caixa("chao", (0, 0, -0.05), (30, 30, 0.1), chao)
     luz = bpy.data.lights.new("chave", "SUN")
-    luz.energy = 4.0
+    luz.energy = 3.0
     luz.angle = 0.3
     ol = bpy.data.objects.new("chave", luz)
     ol.rotation_euler = (math.radians(50), 0, math.radians(200))
@@ -742,7 +652,7 @@ def renderizar(objs):
     oc = bpy.data.objects.new("cam", cam)
     cena.collection.objects.link(oc)
     cena.camera = oc
-    alvo = Vector((0, 0, 3.6))
+    alvo = Vector((0, 0, 3.9))
     for nome, graus in (("front", 0), ("three_quarter", 45), ("side", 90), ("back", 180)):
         a = math.radians(graus)
         oc.location = alvo + Vector((math.sin(a) * 15.5, math.cos(a) * 15.5, 0.6))

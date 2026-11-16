@@ -21,7 +21,7 @@ export type Pronta = { modelo: MeshPart, centro: Vector3 }
 
 local pasta = script.Parent:WaitForChild("Dados")
 local prontas: { [string]: Pronta } = {}
-local ESPESSURA_CONTORNO = 0.045
+local ESPESSURA_CONTORNO = 0.035
 
 local function construir(nome: string, contorno: boolean): Pronta
 	local d = require(pasta:WaitForChild(nome)) :: Dados
