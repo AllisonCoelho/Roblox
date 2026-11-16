@@ -18,7 +18,7 @@ return {
 			tremor = 0.08,
 			giro = 7,
 			volta = 0,
-			pontas = 1,
+			pontas = 0,
 		},
 		{
 			nome = "chama_costas_d",
@@ -30,7 +30,7 @@ return {
 			tremor = 0.08,
 			giro = 7,
 			volta = 0,
-			pontas = 1,
+			pontas = 0,
 		},
 		{
 			nome = "chama_meio",
@@ -42,7 +42,7 @@ return {
 			tremor = 0.08,
 			giro = 7,
 			volta = 0,
-			pontas = 1,
+			pontas = 0,
 		},
 		{
 			nome = "chama_lado_e",
@@ -54,7 +54,7 @@ return {
 			tremor = 0.08,
 			giro = 10,
 			volta = 0,
-			pontas = 1,
+			pontas = 0,
 		},
 		{
 			nome = "chama_lado_d",
@@ -66,7 +66,7 @@ return {
 			tremor = 0.08,
 			giro = 10,
 			volta = 0,
-			pontas = 1,
+			pontas = 0,
 		},
 		{
 			nome = "chama_baixo_e",
@@ -78,7 +78,7 @@ return {
 			tremor = 0.08,
 			giro = 10,
 			volta = 0,
-			pontas = 1,
+			pontas = 0,
 		},
 		{
 			nome = "chama_baixo_d",
@@ -90,7 +90,7 @@ return {
 			tremor = 0.08,
 			giro = 10,
 			volta = 0,
-			pontas = 1,
+			pontas = 0,
 		},
 		{
 			nome = "chama_frente_e",
@@ -102,7 +102,7 @@ return {
 			tremor = 0.08,
 			giro = 10,
 			volta = 0,
-			pontas = 1,
+			pontas = 0,
 		},
 		{
 			nome = "chama_frente_d",
@@ -114,7 +114,7 @@ return {
 			tremor = 0.08,
 			giro = 10,
 			volta = 0,
-			pontas = 1,
+			pontas = 0,
 		},
 		{
 			nome = "corte_a",

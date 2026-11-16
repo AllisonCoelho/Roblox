@@ -370,10 +370,10 @@ def soldado_formiga(rng):
 
 # tipo: malha, escala no jogo, altura (para emergir), flutua (studs), balanço (graus)
 SOLDADOS = [
-    ("cavaleiro", soldado_cavaleiro, 4200, dict(escala=1.2, altura=6.6, flutua=0, balanco=0)),
-    ("gigante", soldado_gigante, 4200, dict(escala=1.05, altura=8.0, flutua=0, balanco=1)),
-    ("mago", soldado_mago, 3600, dict(escala=1.0, altura=7.8, flutua=0.35, balanco=2)),
-    ("formiga", soldado_formiga, 4200, dict(escala=1.0, altura=7.2, flutua=0, balanco=4)),
+    ("cavaleiro", soldado_cavaleiro, 4500, dict(escala=1.2, altura=6.6, flutua=0, balanco=0)),
+    ("gigante", soldado_gigante, 4500, dict(escala=1.05, altura=8.0, flutua=0, balanco=1)),
+    ("mago", soldado_mago, 4000, dict(escala=1.0, altura=7.8, flutua=0.35, balanco=2)),
+    ("formiga", soldado_formiga, 5000, dict(escala=1.0, altura=7.2, flutua=0, balanco=4)),
 ]
 
 
@@ -469,7 +469,7 @@ def reduzir(bm, alvo):
     return bm2
 
 
-def escrever_luau(nome, bm, no_corpo):
+def escrever_luau(nome, bm, no_corpo, cores=None):
     bm.verts.ensure_lookup_table()
     dz = ALTURA_RAIZ if no_corpo else 0.0
     pos = [(v.co.x, v.co.z - dz, -v.co.y) for v in bm.verts]
@@ -481,8 +481,9 @@ def escrever_luau(nome, bm, no_corpo):
     dados = bytearray()
     for p in pos:
         dados += struct.pack("<3H", *(int(round((p[i] - minimo[i]) / tamanho[i] * 65535)) for i in range(3)))
-    for _ in pos:  # cor por vértice branca: a cor vem da parte
-        dados += struct.pack("<3B", 255, 255, 255)
+    for i in range(len(pos)):  # cor por vértice (multiplica a cor da parte); branca se não houver
+        c = cores[i] if cores else (1.0, 1.0, 1.0)
+        dados += struct.pack("<3B", *(int(round(min(max(x, 0), 1) * 255)) for x in c))
     for t in tris:
         dados += struct.pack("<3H", *t)
     texto = base64.b64encode(bytes(dados)).decode("ascii")
@@ -577,9 +578,25 @@ def escrever_pecas(lista, soldados):
         f.write("\n".join(linhas))
 
 
-def objeto(nome, bm):
+def degrade(bm, pivo):
+    """Degradê contínuo pintado nos vértices: escuro na raiz da chama, roxo vivo nas pontas.
+    No jogo a cor do vértice multiplica a cor (roxo vivo) da parte."""
+    bm.verts.ensure_lookup_table()
+    longe = max((v.co - pivo).length for v in bm.verts)
+    escuro = (0.2, 0.17, 0.3)
+    cores = []
+    for v in bm.verts:
+        f = suave(0.12, 0.95, (v.co - pivo).length / longe) ** 1.4
+        cores.append(tuple(escuro[i] + (1 - escuro[i]) * f for i in range(3)))
+    return cores
+
+
+def objeto(nome, bm, cores=None):
     me = bpy.data.meshes.new(nome)
     bm.to_mesh(me)
+    camada = me.color_attributes.new("Col", "BYTE_COLOR", "POINT")
+    for i in range(len(me.vertices)):
+        camada.data[i].color_srgb = (*(cores[i] if cores else (1, 1, 1)), 1.0)
     for p in me.polygons:
         p.use_smooth = True
     obj = bpy.data.objects.new("monarca_" + nome, me)
@@ -603,22 +620,20 @@ def gerar():
     for i, (nome, fn, alvo, cfg) in enumerate(CORPO):
         corpo, tubos, pivo = fn(random.Random(1300 + i))
         cfg = dict(cfg)
+        cfg["pontas"] = 0
         if corpo is None:  # cortes: só a lâmina
             bm = tubos
-            bmesh.ops.triangulate(bm, faces=bm.faces)
-            cfg["pontas"] = 0
         else:
-            # corpo (escuro) e pontas (roxo vivo) são malhas separadas: o degradê da chama
             bmesh.ops.remove_doubles(corpo, verts=corpo.verts, dist=0.004)
             suavizar(corpo, 2)
             bm = reduzir(corpo, alvo)
-            bmesh.ops.triangulate(tubos, faces=tubos.faces)
-            escrever_luau(nome + "_pontas", tubos, True)
-            objs[nome + "_pontas"] = objeto(nome + "_pontas", tubos)
-            cfg["pontas"] = 1
-        nv, nt = escrever_luau(nome, bm, True)
+            junta(bm, tubos)
+            tubos.free()
+        bmesh.ops.triangulate(bm, faces=bm.faces)
+        cores = degrade(bm, pivo)
+        nv, nt = escrever_luau(nome, bm, True, cores)
         print("%-16s %5d vértices %5d triângulos" % (nome, nv, nt))
-        objs[nome] = objeto(nome, bm)
+        objs[nome] = objeto(nome, bm, cores)
         lista.append((nome, pivo, cfg))
     soldados = []
     for i, (nome, fn, alvo, cfg) in enumerate(SOLDADOS):
@@ -629,7 +644,7 @@ def gerar():
         bm = reduzir(bm, alvo)
         junta(bm, tubos)
         tubos.free()
-        bmesh.ops.triangulate(bm, faces=bm.faces)
+        bm = reduzir(bm, alvo)  # corta também os tubos: o soldado inteiro cabe no orçamento
         nv, nt = escrever_luau("soldado_" + nome, bm, False)
         print("%-16s %5d vértices %5d triângulos" % ("soldado_" + nome, nv, nt))
         objs["soldado_" + nome] = objeto("soldado_" + nome, bm)
@@ -663,6 +678,27 @@ def emissao(nome, cor, forca):
     out = nt.nodes.new("ShaderNodeOutputMaterial")
     em = nt.nodes.new("ShaderNodeEmission")
     em.inputs["Color"].default_value = (*cor, 1)
+    em.inputs["Strength"].default_value = forca
+    nt.links.new(em.outputs[0], out.inputs["Surface"])
+    return m
+
+
+def chama_mat(cor, forca):
+    """Emissão = cor x cor do vértice (o degradê)."""
+    m = bpy.data.materials.new("chama")
+    m.use_nodes = True
+    nt = m.node_tree
+    nt.nodes.clear()
+    out = nt.nodes.new("ShaderNodeOutputMaterial")
+    em = nt.nodes.new("ShaderNodeEmission")
+    attr = nt.nodes.new("ShaderNodeAttribute")
+    attr.attribute_name = "Col"
+    mix = nt.nodes.new("ShaderNodeMixRGB")
+    mix.blend_type = "MULTIPLY"
+    mix.inputs[0].default_value = 1.0
+    mix.inputs[2].default_value = (*cor, 1)
+    nt.links.new(attr.outputs["Color"], mix.inputs[1])
+    nt.links.new(mix.outputs[0], em.inputs["Color"])
     em.inputs["Strength"].default_value = forca
     nt.links.new(em.outputs[0], out.inputs["Surface"])
     return m
@@ -749,10 +785,9 @@ def renderizar(objs):
         caixa(c, t, avatar)
     caixa((0, 0, -0.06), (60, 60, 0.1), fosco((0.03, 0.025, 0.045)))
     vivo = emissao("vivo", (0.22, 0.04, 0.75), 2.2)
+    fogo = chama_mat((0.2, 0.035, 0.7), 2.2)
     for nome, _, _, _ in CORPO:
-        copia(objs[nome], (0, 0, 0), 1, 0, [escuro, roxo])
-        if nome + "_pontas" in objs:
-            copia(objs[nome + "_pontas"], (0, 0, 0), 1, 0, [vivo])
+        copia(objs[nome], (0, 0, 0), 1, 0, [fogo, roxo])
     rp = random.Random(3)
     for k in range(14):  # labaredas pequenas em volta (inclusive na frente, abaixo dos ombros)
         a = 2 * math.pi * k / 14 + rp.uniform(-0.2, 0.2)

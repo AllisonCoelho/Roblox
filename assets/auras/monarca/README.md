@@ -18,8 +18,8 @@ Play e **Alt+M** liga/desliga. Para ver tudo:
 ## Como é feito (`src/client/Mundo/Auras/Monarca.luau`)
 
 - **Chamas**: 9 labaredas (duas na frente, baixas) + 2 cortes em meia-lua, modelados no Blender.
-  Três camadas dão o degradê: corpo Neon roxo quase preto, **pontas e garras em roxo vivo**
-  (malha própria, pulsando) e **borda roxa brilhante** (casca invertida gerada no cliente).
+  **Degradê contínuo** pintado nos vértices (raiz roxo quase preto -> pontas em roxo vivo),
+  mais a **borda roxa brilhante** (casca invertida gerada no cliente). Soldados: 4 a 5 mil triângulos cada.
   Cada chama segue o tronco/raiz por mola própria, treme como fogo e balança.
 - **Labaredas pequenas**: 12 chamas menores nascem em volta do corpo (inclusive na frente, abaixo
   dos ombros), sobem, afinam e somem, cada uma no seu ciclo.

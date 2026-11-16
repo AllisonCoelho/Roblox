@@ -16,7 +16,7 @@ local Monarca = {}
 
 local COR_SOMBRA = Color3.fromRGB(30, 10, 62) -- corpo das chamas (Neon escuro: roxo quase preto)
 local COR_BORDA = Color3.fromHex("8B3DFF") -- borda brilhante
-local COR_PONTA = Color3.fromRGB(96, 38, 205) -- pontas das chamas: roxo vivo (o degradê)
+local COR_PONTA = Color3.fromRGB(120, 50, 235) -- roxo vivo das pontas das chamas
 local COR_OLHOS = Color3.fromHex("C9A6FF")
 local COR_POCA = Color3.fromRGB(8, 3, 16)
 local BORDA_CHAMA = 0.06 -- espessura da borda roxa (studs)
@@ -164,8 +164,9 @@ function Monarca.criar(personagem: Model, opcoes: Gear5.Opcoes): Gear5.Instancia
 		local pivo = Vector3.new(cfg.pivo[1], cfg.pivo[2], cfg.pivo[3])
 		local osso = acharOsso(cfg.osso)
 		local co = Pecas.ossos[if osso then cfg.osso else "raiz"]
+		-- o degradê (raiz escura -> ponta roxo vivo) vem pintado nos vértices e multiplica esta cor
 		local corpo, centro = MalhaNuvem.criar("monarca_" .. cfg.nome, false)
-		neon(corpo, COR_SOMBRA)
+		neon(corpo, COR_PONTA)
 		local borda, centroB = MalhaNuvem.criar("monarca_" .. cfg.nome, true, BORDA_CHAMA)
 		neon(borda, COR_BORDA)
 		table.insert(partesCorpo, corpo)
