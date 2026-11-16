@@ -258,7 +258,7 @@ local function construirPraca(pasta: Instance)
 				Position = base + Vector3.new(0, 7.8, 0),
 			})
 		)
-		luz(globo, COR.energia, 26, 1.2)
+		luz(globo, COR.energia, 34, 1.8)
 	end
 end
 
@@ -286,7 +286,7 @@ local function construirNucleo(pasta: Instance)
 			Position = centro,
 		})
 	)
-	luz(coracao, COR.energia, 60, 2.5)
+	luz(coracao, COR.energia, 70, 3)
 	peca(nucleo, {
 		Name = "Casca",
 		Shape = Enum.PartType.Ball,
@@ -587,7 +587,7 @@ local function construirJardim(pasta: Instance)
 				* CFrame.Angles(math.rad(45), 0, math.rad(45)),
 		})
 	)
-	luz(fragmento, COR.ouro, 12, 1.5)
+	luz(fragmento, COR.ouro, 16, 2)
 	local rng = Random.new(23)
 	interacao(fragmento, "eco", "Ouvir", "Fragmento sussurrante", ECOS[rng:NextInteger(1, #ECOS)])
 	placa(pasta, (olhar * CFrame.new(0, 18, 0)).Position, "Jardim dos Fragmentos", nil, COR.jade)
@@ -666,7 +666,7 @@ local function construirPortais(pasta: Instance)
 			Size = Vector3.new(7.4, if quebrado then 12 else 17.4, 0.3),
 			CFrame = portal * CFrame.new(0, if quebrado then 6 else 8.7, 0),
 		})
-		luz(veu, cores[i], 16, 1.2)
+		luz(veu, cores[i], 22, 1.8)
 		if b == 0 then
 			interacao(
 				veu,
@@ -727,14 +727,25 @@ local function construirArena(pasta: Instance)
 end
 
 local function configurarCeu()
+	-- Noite estilizada, mas clara: ambiente mais alto e exposição levantada para que o mapa
+	-- seja legível sem depender de muitas PointLights (custo baixo no celular)
 	Lighting.ClockTime = 0
-	Lighting.Brightness = 1.6
-	Lighting.Ambient = Color3.fromHex("3A3350")
-	Lighting.OutdoorAmbient = Color3.fromHex("4A4470")
-	Lighting.ColorShift_Top = Color3.fromHex("8B7BD8")
+	Lighting.Brightness = 2.4
+	Lighting.ExposureCompensation = 0.35
+	Lighting.Ambient = Color3.fromHex("5E5584")
+	Lighting.OutdoorAmbient = Color3.fromHex("7C74B4")
+	Lighting.ColorShift_Top = Color3.fromHex("A898F0")
+	Lighting.ColorShift_Bottom = Color3.fromHex("3A3060")
+	Lighting.EnvironmentDiffuseScale = 0.6
+	Lighting.EnvironmentSpecularScale = 0.5
 	Lighting.FogEnd = 100000
 	for _, filho in Lighting:GetChildren() do
-		if filho:IsA("Sky") or filho:IsA("Atmosphere") or filho.Name == "NexoBloom" then
+		if
+			filho:IsA("Sky")
+			or filho:IsA("Atmosphere")
+			or filho.Name == "NexoBloom"
+			or filho.Name == "NexoCor"
+		then
 			filho:Destroy()
 		end
 	end
@@ -743,7 +754,7 @@ local function configurarCeu()
 	ceu.CelestialBodiesShown = false
 	ceu.Parent = Lighting
 	local atmosfera = Instance.new("Atmosphere")
-	atmosfera.Density = 0.38
+	atmosfera.Density = 0.3
 	atmosfera.Offset = 0.2
 	atmosfera.Color = Color3.fromHex("6C5FA8")
 	atmosfera.Decay = Color3.fromHex("1A1030")
@@ -756,6 +767,13 @@ local function configurarCeu()
 	bloom.Size = 22
 	bloom.Threshold = 1.1
 	bloom.Parent = Lighting
+	-- Leve ganho de brilho e saturação para as cores do mapa não ficarem lavadas
+	local cor = Instance.new("ColorCorrectionEffect")
+	cor.Name = "NexoCor"
+	cor.Brightness = 0.05
+	cor.Contrast = 0.08
+	cor.Saturation = 0.12
+	cor.Parent = Lighting
 end
 
 -- Monta o mapa (uma vez). Devolve a pasta criada.

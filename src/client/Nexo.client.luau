@@ -198,7 +198,7 @@ RunService.Heartbeat:Connect(function()
 	coracao.Color = corBase:Lerp(corAgitada, agitacao)
 	casca.CFrame = CFrame.new(posicao) * CFrame.Angles(0, agora * 0.3, 0)
 	if luz then
-		luz.Brightness = 2.5 + 3 * agitacao
+		luz.Brightness = 3 + 3 * agitacao
 		luz.Color = coracao.Color
 	end
 	if k then
