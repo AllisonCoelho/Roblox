@@ -168,4 +168,40 @@ igual("auto ligado: igual nao troca", Perfil.deveEquipar(pe, false, 5, 5), false
 igual("auto ligado e nada equipado: equipa", Perfil.deveEquipar(pe, false, 5, nil), true)
 pe.auras = { nevoa = 0 }
 igual("contagem zerada conta como vazia", Perfil.colecaoVazia(pe), true)
+-- Trilhas de pose: o personagem rasga a fenda nas raridades altas e faz um gesto nas comuns
+local Trilha = req("Trilha")
+local tp = { t1 = 0.3, t2 = 1.5, t3 = 2.9, tEstouro = 3.4, t4 = 3.55, fim = 3.9 }
+local rasgar = Trilha.rasgar(tp)
+local function poseEm(tr, t)
+	local de, para, peso = Trilha.avaliar(tr, t)
+	return if peso >= 0.5 then para else de
+end
+igual("comeca neutra", poseEm(rasgar, 0), "neutra")
+igual("alcanca no chamado", poseEm(rasgar, 0.29), "alcancar")
+igual("agarra na ressonancia", poseEm(rasgar, 1.45), "agarrar")
+igual("forca na instabilidade", poseEm(rasgar, 2.85), "forcar")
+igual("segura ate a ruptura", poseEm(rasgar, 3.39), "forcar")
+igual("rasga logo apos a ruptura", poseEm(rasgar, 3.53), "rasgar")
+igual("volta ao neutro no fim", poseEm(rasgar, 3.9), "neutra")
+igual("depois do fim continua neutra", poseEm(rasgar, 10), "neutra")
+local ordenada = true
+for i = 2, #rasgar do
+	if rasgar[i].tempo < rasgar[i - 1].tempo then
+		ordenada = false
+	end
+end
+igual("trilha em ordem de tempo", ordenada, true)
+local _, _, pesoMeio = Trilha.avaliar(rasgar, 0.15)
+igual("peso suave no meio", math.abs(pesoMeio - 0.5) < 1e-9, true)
+local curto = { t1 = 0.08, t2 = 0.35, t3 = 0.35, tEstouro = 0.43, t4 = 0.47, fim = 0.82 }
+igual("comum usa gesto", poseEm(Trilha.gesto(curto, false), 0.3), "gesto")
+igual("moderada usa duas maos", poseEm(Trilha.gesto(curto, true), 0.3), "gestoDuplo")
+igual("comum solta no fim", poseEm(Trilha.gesto(curto, false), 0.465), "impulso")
+igual("comum termina neutra", poseEm(Trilha.gesto(curto, false), 0.82), "neutra")
+igual("fenda fechada antes da instabilidade", Trilha.aberturaFenda(tp, 1.0, 0, 0), 0)
+igual("fenda e fresta na instabilidade", Trilha.aberturaFenda(tp, 2.5, 0.7, 0) < 0.3, true)
+igual("fenda cresce com a instabilidade", Trilha.aberturaFenda(tp, 2.8, 0.9, 0) > Trilha.aberturaFenda(tp, 2.0, 0.3, 0), true)
+igual("fenda toda aberta na ruptura", Trilha.aberturaFenda(tp, 3.54, 1, 0) > 0.99, true)
+igual("fenda fecha no fim", Trilha.aberturaFenda(tp, 3.9, 1, 0), 0)
+igual("animacoes ligadas por padrao", Perfil.padrao().configuracoes.animacoes, true)
 print(string.format("%d testes, %d falhas", total, falhas))

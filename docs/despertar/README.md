@@ -75,3 +75,26 @@ Nada disso foi visto rodando: a validação foi por testes, tipos e build. Antes
 - tremor e brilho não incomodam; câmera volta após morte/respawn;
 - os sons embutidos existem e têm volume adequado;
 - FPS no celular, com e sem "qualidade baixa".
+
+## Motion do personagem e fenda
+
+O personagem participa do giro (poses por código, sem asset de animação):
+
+| Raridade | O que o personagem faz |
+|---|---|
+| Baixa (até 1 em 49) | Gesto curto com uma mão: chama a energia e solta. |
+| Moderada (1 em 50 – 999) | O mesmo gesto com as duas mãos. |
+| Alta para cima (1 em 1.000+) | **Rasga a ruptura do mundo:** alcança a energia, agarra, força a abertura com as pernas firmes (os braços tremem a cada batida) e, na ruptura, abre os braços de uma vez. Entre as mãos surge uma fenda: bordas incandescentes, vazio escuro e um fio de energia. A fenda cresce com a raridade e fecha na revelação. |
+
+- `src/shared/Dados/Trilha.luau`: qual pose vale em cada instante e quanto a fenda está aberta (lógica pura, testada).
+- `src/client/Mundo/Motion.luau`: os ângulos de cada pose (tabela `Motion.Poses`). Ajustar aqui depois do playtest.
+- `src/client/Mundo/Fenda.luau`: o efeito da fenda.
+- Os outros jogadores veem quem rasgou a fenda na versão abreviada (1 em 1.000+).
+
+Pular e desativar:
+- **Pular:** apertar DESPERTAR (ou `E`) durante um ritual pula direto para o resultado; nas cenas com cartão, um toque na tela também pula. O giro automático nunca pula.
+- **Ajustes → "Animações do giro"** desligado: sem ritual, pose nem câmera, para você e para os rituais dos outros; o resultado e o cartão aparecem na hora.
+- **"Movimento reduzido"** continua tirando só pose, câmera e tremor, mantendo os efeitos.
+- Nenhuma dessas opções muda resultado, cooldown ou anúncio.
+
+A conferir no Studio (`Alt+1` a `Alt+6`): direção dos braços e pernas em cada pose, posição da fenda entre as mãos e se ela fica virada para a frente do personagem. Avatares R6 não têm essas juntas e ficam sem pose.
