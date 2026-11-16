@@ -116,10 +116,14 @@ end
 -- Botão DESPERTAR / tecla E: se há um ritual em andamento, o toque PULA a animação;
 -- senão, gira. O giro automático nunca pula.
 local function aoApertar()
-	if not girando and not Revelacao.ativa() and os.clock() < ocupadoAte then
+	-- ocupadoAte só vale enquanto o ritual corre: revelar() o zera antes de abrir o cartão.
+	-- Por isso a condição não olha Revelacao.ativa(): nas cenas raras a tela já está reservada
+	-- desde o início, e era isso que impedia o pulo pela tecla.
+	if not girando and os.clock() < ocupadoAte then
 		Despertar.pular()
 		return
 	end
+	-- Com o cartão aberto, girar() não faz nada (a tecla não fecha o cartão nem gira de novo)
 	girar()
 end
 

@@ -5,7 +5,9 @@ local Fenda = {}
 
 export type Controle = {
 	-- cf: centro da fenda, de frente para onde o personagem olha. abertura: 0 (fechada) a 1.
-	atualizar: (cf: CFrame, abertura: number) -> (),
+	-- meiaLargura (opcional): metade da largura imposta por quem chama (as mãos do personagem);
+	-- sem ela, a largura vem só de `abertura`.
+	atualizar: (cf: CFrame, abertura: number, meiaLargura: number?) -> (),
 }
 
 local SEGMENTOS = 7
@@ -85,13 +87,13 @@ function Fenda.criar(
 	luz.Parent = suporte
 
 	return {
-		atualizar = function(cf: CFrame, abertura: number)
+		atualizar = function(cf: CFrame, abertura: number, meiaLargura: number?)
 			abertura = math.clamp(abertura, 0, 1)
 			local visivel = abertura > 0.01
 			local transparencia = if visivel then 0 else 1
 			-- A fenda ganha altura logo no começo e só depois largura
 			local alto = altura * (0.3 + 0.7 * math.min(abertura * 3, 1))
-			local meia = largura / 2 * abertura
+			local meia = meiaLargura or (largura / 2 * abertura)
 			suporte.CFrame = cf
 			for k = 0, SEGMENTOS do
 				local y = (k / SEGMENTOS - 0.5) * alto

@@ -82,4 +82,25 @@ function Trilha.aberturaFenda(tp: Tempos, t: number, instavel: number, impulso: 
 	return 1 - suave((t - tp.t4) / math.max(tp.fim - tp.t4, 0.01))
 end
 
+-- Quando as mãos do personagem guiam a fenda: metade da largura a partir da distância entre
+-- as mãos. As bordas ficam um pouco para dentro das mãos; depois da revelação a fenda fecha
+-- junto com `abertura`, mesmo que os braços ainda estejam voltando.
+Trilha.FOLGA_MAOS = 0.9
+-- Distância mínima da fenda à frente do corpo (studs), para ela não entrar no tronco quando
+-- os braços se abrem para os lados
+Trilha.FRENTE_MINIMA = 1.8
+
+function Trilha.meiaLarguraPelasMaos(
+	tp: Tempos,
+	t: number,
+	distanciaMaos: number,
+	abertura: number
+): number
+	local meia = distanciaMaos / 2 * Trilha.FOLGA_MAOS
+	if t >= tp.t4 then
+		meia *= abertura
+	end
+	return meia
+end
+
 return Trilha

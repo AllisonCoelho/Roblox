@@ -446,6 +446,13 @@ function Ritual.tocar(personagem: Model, aura: Auras.Aura, op: Opcoes): () -> ()
 		suporteRachaduras = suporte
 	end
 
+	-- Mãos do R15 (guiam a fenda). R6 não tem estas peças: usa o ponto fixo.
+	local function mao(nome: string): BasePart?
+		local p = personagem:FindFirstChild(nome)
+		return if p and p:IsA("BasePart") then p else nil
+	end
+	local maoDireita, maoEsquerda = mao("RightHand"), mao("LeftHand")
+
 	-- Pose do personagem e a fenda que ele rasga (raridades altas)
 	local motion: Motion.Controle? = if comPose then Motion.criar(personagem) else nil
 	local fenda: Fenda.Controle? = nil
@@ -560,8 +567,19 @@ function Ritual.tocar(personagem: Model, aura: Auras.Aura, op: Opcoes): () -> ()
 				motion.aplicar(de, para, peso, altura, tremor, t)
 			end
 
-			-- Posição do núcleo: à frente do peito, com vibração crescente
+			-- Posição do núcleo: à frente do peito, com vibração crescente.
+			-- Quando o personagem está rasgando a fenda, a âncora são as MÃOS: o ponto médio
+			-- entre elas, mantido à frente do corpo. Assim acompanha a escala do avatar e a
+			-- flutuação. Sem pose (R6 ou movimento reduzido), vale o ponto fixo à frente do peito.
 			local base = raiz.CFrame * CFrame.new(0, 0.5, -2.3)
+			local distanciaMaos: number? = nil
+			if rasga and motion and maoDireita and maoEsquerda and t >= t1 then
+				local pd, pe = maoDireita.Position, maoEsquerda.Position
+				local meio = raiz.CFrame:PointToObjectSpace((pd + pe) / 2)
+				base = raiz.CFrame
+					* CFrame.new(meio.X, meio.Y, math.min(meio.Z, -Trilha.FRENTE_MINIMA))
+				distanciaMaos = (pd - pe).Magnitude
+			end
 			local vibra = if op.movimentoReduzido
 				then 0
 				else 0.06 * cat.aneis * instavel * (1 - contracao)
@@ -657,10 +675,12 @@ function Ritual.tocar(personagem: Model, aura: Auras.Aura, op: Opcoes): () -> ()
 			-- A fenda fica onde as mãos estão, virada para a frente do personagem
 			if fenda then
 				local giro = raiz.CFrame - raiz.CFrame.Position
-				fenda.atualizar(
-					CFrame.new(centro) * giro,
-					Trilha.aberturaFenda(tempo, t, instavel, impulso)
-				)
+				local abertura = Trilha.aberturaFenda(tempo, t, instavel, impulso)
+				-- Com as mãos como guia, as bordas ficam entre elas e abrem junto com os braços
+				local meia = if distanciaMaos
+					then Trilha.meiaLarguraPelasMaos(tempo, t, distanciaMaos, abertura)
+					else nil
+				fenda.atualizar(CFrame.new(centro) * giro, abertura, meia)
 			end
 
 			-- Rachaduras acompanham o núcleo, de frente para a câmera
