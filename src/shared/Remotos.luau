@@ -7,7 +7,7 @@ local Remotos = {}
 Remotos.Eventos = {
 	"Estado", -- estado do perfil atualizado pelo servidor
 	"Aviso", -- mensagens curtas para um jogador
-	"Despertou", -- servidor -> todos: alguém tirou aura Rara ou melhor (animação + anúncio)
+	"Despertou", -- servidor -> todos: aura 1 em 1.000 ou mais rara (ritual abreviado + anúncio)
 }
 Remotos.Funcoes = {
 	"Acao", -- cliente -> servidor: pedido validado no servidor; devolve (ok, mensagem)

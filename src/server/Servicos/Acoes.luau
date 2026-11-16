@@ -7,7 +7,8 @@ local Remotos = require(ReplicatedStorage.Shared.Remotos)
 
 local Acoes = {}
 
-type Handler = (Player, ...any) -> (boolean, string?)
+-- Devolve (ok, mensagem?, dados?): dados é uma tabela simples opcional repassada ao cliente
+type Handler = (Player, ...any) -> (boolean, string?, { [string]: any }?)
 
 local handlers: { [string]: Handler } = {}
 local LIMITE_POR_SEGUNDO = 8
@@ -41,12 +42,12 @@ function Acoes.iniciar()
 		if not permitido(player) then
 			return false, "Calma! Muitos toques seguidos."
 		end
-		local ok, sucesso, msg = pcall(fn, player, ...)
+		local ok, sucesso, msg, dados = pcall(fn, player, ...)
 		if not ok then
 			warn(string.format("[Acoes] erro em %s: %s", nome, tostring(sucesso)))
 			return false, "Algo deu errado. Tente de novo."
 		end
-		return sucesso == true, msg
+		return sucesso == true, msg, dados
 	end
 	Players.PlayerRemoving:Connect(function(player)
 		janela[player] = nil

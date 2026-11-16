@@ -24,9 +24,10 @@ Conecte o plugin Rojo em `localhost:34873`. Build local: `rojo build default.pro
 - `src/server/Servicos/AuraVisual.luau` e `Ranking.luau`: aura equipada no personagem e leaderstats.
 - `src/server/Servicos/Dados.luau`: DataStore **`Despertar_v1`** com trava de sessão.
 - `src/server/Servicos/Acoes.luau` e `src/shared/Remotos.luau`: remotes autoritativos e rate limit.
-- `src/client/Mundo/Despertar.luau`: animação de despertar (pose por código, efeitos), em todos os clientes.
+- `src/shared/Dados/Apresentacao.luau`: escala do ritual por raridade (durações e intensidade, ajustáveis).
+- `src/client/Mundo`: giro "Ritual + Ruptura" (`Despertar` dirige; `Ritual`, `Camera`, `Sons`, `EfeitosAlheios`).
 - `src/client/UI`: HUD, revelação, índice e avisos (`Kit.luau` tem as peças do visual).
-- `docs/despertar/README.md`: especificação do MVP.
+- `docs/despertar/README.md`: especificação da V1 e do ritual. `docs/despertar/ROADMAP.md`: V2/V3 em debate.
 
 Merges revisados na `main` publicam na **experiência privada de testes**: Universe `10771776655`, Place `112360499723635`. O workflow `.github/workflows/validate.yml` e a chave `ROBLOX_API_KEY` permanecem intactos. A experiência pública não está configurada.
 

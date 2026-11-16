@@ -16,6 +16,12 @@ Perfil.VERSAO = 1
 Perfil.CONFIGURACOES = {
 	giroAutomatico = true,
 	anuncios = true,
+	equiparAutomatico = true, -- equipar sozinho quando sair uma aura mais rara que a atual
+	sons = true,
+	movimentoReduzido = true, -- sem câmera, tremor nem escurecimento
+	qualidadeBaixa = true, -- menos anéis, partículas e rastros
+	ocultarEfeitosAlheios = true, -- não mostrar rituais e auras dos outros jogadores
+	pularRepetidas = true, -- animação curta para auras que você já tem
 }
 
 function Perfil.padrao(): Estado
@@ -24,7 +30,16 @@ function Perfil.padrao(): Estado
 		giros = 0,
 		auras = {},
 		equipada = nil,
-		configuracoes = { giroAutomatico = false, anuncios = true },
+		configuracoes = {
+			giroAutomatico = false,
+			anuncios = true,
+			equiparAutomatico = false,
+			sons = true,
+			movimentoReduzido = false,
+			qualidadeBaixa = false,
+			ocultarEfeitosAlheios = false,
+			pularRepetidas = false,
+		},
 	}
 end
 

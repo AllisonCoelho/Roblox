@@ -1,9 +1,11 @@
 -- Sorteio de auras, equipar e configurações. O servidor é a única autoridade:
 -- o cliente só pede; cooldown, RNG, posse e anúncios são decididos aqui.
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Apresentacao = require(Shared.Dados.Apresentacao)
 local Auras = require(Shared.Dados.Auras)
 local Config = require(Shared.Config)
 local Perfil = require(Shared.Dados.Perfil)
@@ -15,9 +17,6 @@ local Sorteio = {}
 
 -- Folga para atraso de rede: o cliente espera o cooldown inteiro, o servidor aceita um pouco antes
 local TOLERANCIA = 0.1
--- A partir desta faixa (Raro) o personagem faz a animação de despertar
-local TIER_ANIMACAO = 3
-
 local rng = Random.new()
 local ultimoGiro: { [Player]: number } = {}
 
@@ -25,7 +24,7 @@ local function aleatorio(): number
 	return rng:NextNumber()
 end
 
-local function despertar(player: Player): (boolean, string?)
+local function despertar(player: Player): (boolean, string?, { [string]: any }?)
 	local agora = os.clock()
 	local ultimo = ultimoGiro[player]
 	if ultimo and agora - ultimo < Config.CooldownGiro - TOLERANCIA then
@@ -36,26 +35,51 @@ local function despertar(player: Player): (boolean, string?)
 	end
 	ultimoGiro[player] = agora
 
+	-- O resultado é decidido e registrado aqui, antes de qualquer apresentação no cliente
 	local aura = Auras.sortear(aleatorio)
+	local quantidade = 0
+	local equipou = false
 	Dados.alterar(player, function(estado)
 		Perfil.registrarGiro(estado, aura.id)
-		-- Equipa sozinho quando a nova aura é mais rara que a atual
+		quantidade = estado.auras[aura.id]
+		-- Obter não força a troca: só equipa sozinho a primeira aura, ou uma mais rara
+		-- quando o jogador ligou "equipar automaticamente"
 		local atual = if estado.equipada then Auras.porId[estado.equipada] else nil
-		if not atual or aura.chance > atual.chance then
+		if not atual or (estado.configuracoes.equiparAutomatico and aura.chance > atual.chance) then
 			estado.equipada = aura.id
+			equipou = true
 		end
 		return true
 	end)
 
-	-- Raro ou melhor: todos os clientes animam o personagem; a partir de Épico também anunciam
-	if aura.tier >= TIER_ANIMACAO then
+	-- Auras raras: os outros clientes mostram a versão abreviada e o anúncio do servidor
+	if aura.chance >= Auras.ANUNCIO_MINIMO then
 		Remotos.evento("Despertou"):FireAllClients({
 			jogador = player.DisplayName,
 			userId = player.UserId,
 			aura = aura.id,
 		})
 	end
-	return true, aura.id
+	return true, aura.id, { quantidade = quantidade, equipou = equipou }
+end
+
+-- Só no Studio: pede a encenação de uma categoria sem sortear nem dar posse de nada.
+-- Em servidores publicados esta ação nem é registrada.
+local function testeVisual(_player: Player, indice: any): (boolean, string?, { [string]: any }?)
+	if type(indice) ~= "number" or indice ~= math.floor(indice) then
+		return false, "Pedido inválido"
+	end
+	local categoria = Apresentacao.Categorias[indice]
+	if not categoria then
+		return false, "Pedido inválido"
+	end
+	-- A aura mais comum que cai nessa categoria serve de exemplo
+	for _, aura in Auras.lista do
+		if Apresentacao.indiceDe(aura.chance) == indice then
+			return true, aura.id, { quantidade = 1, equipou = false, teste = true }
+		end
+	end
+	return false, "Nenhuma aura nessa categoria"
 end
 
 -- auraId nil ou "" desequipa
@@ -92,6 +116,9 @@ function Sorteio.iniciar()
 	Acoes.registrar("Despertar", despertar)
 	Acoes.registrar("Equipar", equipar)
 	Acoes.registrar("Configurar", configurar)
+	if RunService:IsStudio() then
+		Acoes.registrar("TesteVisual", testeVisual)
+	end
 	Players.PlayerRemoving:Connect(function(player)
 		ultimoGiro[player] = nil
 	end)

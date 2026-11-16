@@ -154,6 +154,7 @@ function Kit.botaoPlaca(op: {
 	sombra: Color3,
 	pai: Instance?,
 	ordem: number?,
+	z: number?,
 	aoClicar: () -> (),
 }): BotaoPlaca
 	local placa = Kit.placa({
@@ -164,13 +165,14 @@ function Kit.botaoPlaca(op: {
 		espessura = 3,
 		sombra = op.sombra,
 		ordem = op.ordem,
+		z = op.z,
 		pai = op.pai,
 	})
 	local rotulo = Kit.texto({
 		Text = op.texto,
 		TextSize = op.tamanhoTexto,
 		Size = UDim2.fromScale(1, 1),
-		ZIndex = 3,
+		ZIndex = (op.z or 1) + 4,
 		Parent = placa.conteudo,
 	})
 	local botao = novo("TextButton", {
@@ -178,7 +180,7 @@ function Kit.botaoPlaca(op: {
 		Text = "",
 		BackgroundTransparency = 1,
 		Size = UDim2.fromScale(1, 1),
-		ZIndex = 5,
+		ZIndex = (op.z or 1) + 5,
 		Parent = placa.quadro,
 	})
 	botao.Activated:Connect(op.aoClicar)
