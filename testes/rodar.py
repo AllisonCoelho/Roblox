@@ -7,6 +7,7 @@ ROOT = Path(__file__).resolve().parent.parent
 MODULOS = {
     "Formato": "src/shared/Formato.luau",
     "Perfil": "src/shared/Dados/Perfil.luau",
+    "Auras": "src/shared/Dados/Auras.luau",
     "Sessao": "src/server/Servicos/Sessao.luau",
 }
 codigo = ["""
