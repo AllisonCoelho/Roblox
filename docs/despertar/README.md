@@ -97,4 +97,6 @@ Pular e desativar:
 - **"Movimento reduzido"** continua tirando só pose, câmera e tremor, mantendo os efeitos.
 - Nenhuma dessas opções muda resultado, cooldown ou anúncio.
 
-A conferir no Studio (`Alt+1` a `Alt+6`): direção dos braços e pernas em cada pose, posição da fenda entre as mãos e se ela fica virada para a frente do personagem. Avatares R6 não têm essas juntas e ficam sem pose.
+A fenda é guiada pelas mãos (`RightHand`/`LeftHand`): fica no ponto médio entre elas, pelo menos 1,8 stud à frente do corpo, e a largura acompanha a distância entre as mãos. Sem pose (R6 ou movimento reduzido), usa o ponto fixo à frente do peito.
+
+A conferir no Studio (`Alt+3` a `Alt+6`): direção dos braços e pernas em cada pose e se as bordas da fenda acompanham as mãos em avatares R15 de alturas diferentes. Avatares R6 não têm essas juntas e ficam sem pose.
