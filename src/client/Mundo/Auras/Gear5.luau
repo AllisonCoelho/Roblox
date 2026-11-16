@@ -1,10 +1,14 @@
 -- Gear 5 — "nuvens vivas". VFX da aura equipada, montado só neste cliente.
 -- Não anima o corpo: as nuvens reagem ao personagem (parado, andando, correndo, pulando).
 --
--- Peças (Blender, Gear5Pecas.luau): um ARCO aberto e assimétrico atrás e acima da cabeça,
--- dois lobos grandes, duas pontas em caracol, dois rolos nos ombros e dois bancos na cintura.
--- Cada peça segue o corpo por uma mola própria (as pontas e os bancos atrasam mais), respira
--- fora de fase e balança em volta do próprio pivô. Mechas pequenas se soltam no rastro.
+-- A fumaça SAI do avatar (peças em Gear5Pecas.luau, modeladas no Blender): nasce nos ombros
+-- (manto), atrás da cabeça (coroa), nas costas da cintura e nos antebraços (punhos). Da cintura
+-- ela dá uma volta pela frente das pernas (redemoinho), sobe por trás do ombro esquerdo (pluma)
+-- e enrola sobre a cabeça, terminando num caracol (ponta). O lado direito fica aberto: é uma
+-- espiral em volta do corpo, não um aro atrás dele.
+-- Cada peça segue o MEMBRO dela (tronco, cabeça, antebraço) por uma mola própria, respira fora
+-- de fase e balança em volta do próprio pivô; o redemoinho vai e volta em volta do corpo e as
+-- nuvens dos punhos giram em volta do braço. Mechas sobem dos ombros e se soltam no rastro.
 local MalhaNuvem = require(script.Parent.MalhaNuvem)
 local Pecas = require(script.Parent.Gear5Pecas)
 
@@ -28,8 +32,17 @@ export type Instancia = {
 local COR_CONTORNO = Color3.fromHex("5C5299")
 local COR_BRILHO = Color3.fromHex("DED6FF")
 
--- Altura da cabeça acima do HumanoidRootPart num R15 padrão (as malhas foram feitas nessa escala)
-local CABECA_PADRAO = 1.5
+-- Altura da cabeça acima do HumanoidRootPart no avatar em que as malhas foram feitas
+local CABECA_PADRAO = Pecas.cabecaPadrao
+
+-- Partes do personagem que cada "osso" segue (R15 primeiro, depois R6)
+local PARTES_OSSO: { [string]: { string } } = {
+	raiz = { "HumanoidRootPart" },
+	tronco = { "UpperTorso", "Torso" },
+	cabeca = { "Head" },
+	braco_dir = { "RightLowerArm", "Right Arm" },
+	braco_esq = { "LeftLowerArm", "Left Arm" },
+}
 
 local DURACAO_MANIFESTAR = 1.2
 local DURACAO_BURST = 1.5
@@ -46,6 +59,8 @@ type Peca = {
 	centroCorpo: Vector3, -- do pivô até o centro da malha (escala 1)
 	centroContorno: Vector3,
 	pivo: Vector3,
+	osso: BasePart?, -- nil = segue a raiz (só a direção do corpo, sem inclinar)
+	relOsso: Vector3, -- do centro do osso até o pivô (escala 1)
 	pos: Vector3, -- posição do pivô no mundo (com a mola)
 	vel: Vector3,
 	fase: number,
@@ -91,8 +106,27 @@ function Gear5.criar(personagem: Model, opcoes: Opcoes): Instancia?
 	local pecas: { Peca } = {}
 	local mechas: { Mecha } = {}
 
-	for _, cfg in Pecas :: { { [string]: any } } do
+	local function acharOsso(nome: string): BasePart?
+		if nome == "raiz" then
+			return nil
+		end
+		local nomes = PARTES_OSSO[nome]
+		if not nomes then
+			return nil
+		end
+		for _, n in nomes do
+			local parte = personagem:FindFirstChild(n)
+			if parte and parte:IsA("BasePart") then
+				return parte
+			end
+		end
+		return nil
+	end
+
+	for _, cfg in Pecas.pecas :: { { [string]: any } } do
 		local pivo = Vector3.new(cfg.pivo[1], cfg.pivo[2], cfg.pivo[3])
+		local osso = acharOsso(cfg.osso)
+		local centroOsso = Pecas.ossos[if osso then cfg.osso else "raiz"]
 		local corpo, centro = MalhaNuvem.criar("gear5_" .. cfg.nome, false)
 		corpo.Material = Enum.Material.SmoothPlastic
 		corpo.Color = Color3.new(1, 1, 1)
@@ -112,6 +146,8 @@ function Gear5.criar(personagem: Model, opcoes: Opcoes): Instancia?
 			centroCorpo = centro - pivo,
 			centroContorno = centroC - pivo,
 			pivo = pivo,
+			osso = osso,
+			relOsso = pivo - Vector3.new(centroOsso[1], centroOsso[2], centroOsso[3]),
 			pos = (raiz.CFrame * CFrame.new(pivo * escala)).Position,
 			vel = Vector3.zero,
 			fase = aleatorio:NextNumber(0, math.pi * 2),
@@ -318,8 +354,11 @@ function Gear5.criar(personagem: Model, opcoes: Opcoes): Instancia?
 				crescer = if t <= 0 then 0 else easeOutBack(t)
 			end
 
-			-- mola: o pivô persegue o ponto preso ao corpo; pontas e bancos atrasam mais
-			local alvo = (base * CFrame.new(p.pivo * escala)).Position
+			-- mola: o pivô persegue o ponto preso ao membro; ponta e redemoinho atrasam mais
+			local osso = p.osso
+			local cfOsso = if osso and osso.Parent then osso.CFrame else base
+			local rel = if osso and osso.Parent then p.relOsso else p.pivo
+			local alvo = (cfOsso * CFrame.new(rel * escala)).Position
 			local k = cfg.rigidez
 			local amortecer = 2 * 0.55 * math.sqrt(k) -- um pouco abaixo do crítico: leve elástico
 			local passos = if dt > 1 / 60 then 2 else 1
@@ -340,7 +379,7 @@ function Gear5.criar(personagem: Model, opcoes: Opcoes): Instancia?
 				atraso = limitar(atraso, maxAtraso)
 				p.pos = alvo + atraso
 			end
-			local atrasoLocal = base:VectorToObjectSpace(atraso) / escala
+			local atrasoLocal = cfOsso:VectorToObjectSpace(atraso) / escala
 
 			-- idle: sobe e desce fora de fase, balança em volta do pivô, respira
 			local f = p.fase
@@ -349,11 +388,16 @@ function Gear5.criar(personagem: Model, opcoes: Opcoes): Instancia?
 				* amplitude
 			local g = math.rad(cfg.giro) * amplitude
 			local rolar = g * 1.6 * fatorBurst * (if cfg.giro >= 12 then 1 else 0.3)
-			local giro = CFrame.Angles(
-				g * 0.5 * math.sin(tempo * 0.5 + f) + atrasoLocal.Z * 0.18,
-				g * 0.3 * math.sin(tempo * 0.31 + f * 1.3),
-				g * 0.6 * math.sin(tempo * 0.43 + f * 1.7) - atrasoLocal.X * 0.18 + rolar
-			)
+			-- o redemoinho vai e volta em volta do corpo; os punhos giram em volta do braço
+			local orbita = math.rad(cfg.orbita or 0) * amplitude * math.sin(tempo * 0.6 + f)
+				+ (cfg.volta or 0) * tempo
+				+ math.rad(cfg.orbita or 0) * 1.5 * fatorBurst
+			local giro = CFrame.Angles(0, orbita, 0)
+				* CFrame.Angles(
+					g * 0.5 * math.sin(tempo * 0.5 + f) + atrasoLocal.Z * 0.18,
+					g * 0.3 * math.sin(tempo * 0.31 + f * 1.3),
+					g * 0.6 * math.sin(tempo * 0.43 + f * 1.7) - atrasoLocal.X * 0.18 + rolar
+				)
 			local respira = cfg.respira * amplitude
 			local esticar = math.min(atrasoLocal.Magnitude / math.max(cfg.atraso, 0.1), 1) * 0.22
 			local inchar = 1 + 0.12 * fatorBurst * (if cfg.baixo then 1.25 else 1)
@@ -365,7 +409,7 @@ function Gear5.criar(personagem: Model, opcoes: Opcoes): Instancia?
 			end
 			local fator = Vector3.new(sx, sy, sz) * crescer * escala
 
-			local cfPivo = CFrame.new(p.pos + Vector3.new(0, sobe, 0)) * base.Rotation * giro
+			local cfPivo = CFrame.new(p.pos + Vector3.new(0, sobe, 0)) * cfOsso.Rotation * giro
 			local transp = if crescer <= 0.02 then 1 else transpBase
 			if crescer > 0.02 then
 				p.corpo.Size = p.tamCorpo * fator
@@ -397,13 +441,26 @@ function Gear5.criar(personagem: Model, opcoes: Opcoes): Instancia?
 			end
 		end
 
-		-- mechas: soltam no rastro (andando) e nos ombros (manifestação), evaporam em ~0,5 s
+		-- mechas: parado, sobem dos ombros (a fumaça "sai" do corpo); andando, soltam no rastro
 		if detalhe and not baixa and not saindo then
 			proximaMecha -= dt
-			if rapidez > 6 and proximaMecha <= 0 then
-				proximaMecha = 0.45 - 0.2 * corrida
-				local origem = pecas[aleatorio:NextInteger(#pecas - 3, #pecas)].pos -- pontas/rolos/bancos
-				soltarMecha(origem, -horizontal.Unit * (1.5 + 2 * corrida) + Vector3.new(0, 0.6, 0))
+			if proximaMecha <= 0 then
+				if rapidez > 6 then
+					proximaMecha = 0.45 - 0.2 * corrida
+					local origem = pecas[aleatorio:NextInteger(3, 5)].pos -- redemoinho, pluma, ponta
+					soltarMecha(
+						origem,
+						-horizontal.Unit * (1.5 + 2 * corrida) + Vector3.new(0, 0.6, 0)
+					)
+				else
+					proximaMecha = aleatorio:NextNumber(0.7, 1.2)
+					local lado = if aleatorio:NextNumber() < 0.5 then -1 else 1
+					local ombro = base * CFrame.new(lado * 1.1 * escala, 1.3 * escala, 0.3 * escala)
+					soltarMecha(
+						ombro.Position,
+						base:VectorToWorldSpace(Vector3.new(lado * 0.4, 1.6, 0.5))
+					)
+				end
 			end
 		end
 		for _, m in mechas do

@@ -20,14 +20,24 @@ de sorteio (`src/shared/Dados/Auras.luau` continua com as 30 auras; chances, RNG
   partículas não é criado — sem duplicar.
 - **Cliente** (`Mundo/Auras/Controlador.luau`): observa o atributo em todos os personagens e
   monta o efeito localmente (nada de centenas de peças pela rede). Um único laço `PreRender`.
-- **Gear5.luau**: 9 malhas (arco, 2 lobos, 2 pontas em caracol, 2 rolos, 2 bancos) + contorno
-  de anime (casca invertida gerada no cliente) + 6 mechas reaproveitadas + luz e poucas faíscas.
-  - Idle: cada peça sobe/desce, balança e respira fora de fase (ciclos de 6–17 s somados).
-  - Andar/correr: cada peça segue o corpo por uma mola própria; pontas e bancos atrasam mais,
-    esticam para trás e soltam mechas que evaporam em 0,5 s.
+- **Gear5.luau**: a fumaça SAI do avatar — 7 malhas presas a membros + contorno de anime
+  (casca invertida gerada no cliente) + 6 mechas reaproveitadas + luz e poucas faíscas.
+  - `manto` (tronco): nasce nos ombros e nas costas, abraça o alto dos ombros.
+  - `coroa` (cabeça): nuvem saindo de trás da cabeça, nunca na frente do rosto.
+  - `redemoinho` (raiz): sai das costas da cintura, passa fina pela frente das pernas e sobe
+    pela esquerda; vai e volta em volta do corpo (±16°).
+  - `pluma` (tronco): continua o redemoinho por trás do ombro esquerdo e enrola sobre a cabeça.
+  - `ponta` (tronco): caracol no fim da pluma, à direita da cabeça. O lado direito fica aberto:
+    é uma espiral em volta do corpo, não um aro.
+  - `punho_dir` / `punho_esq` (antebraços): nuvens enroladas perto do pulso, girando em volta do
+    braço e seguindo a animação dos braços.
+  - Idle: cada peça sobe/desce, balança e respira fora de fase; mechas sobem dos ombros.
+  - Andar/correr: cada peça segue o membro por uma mola própria; redemoinho e ponta atrasam
+    mais, esticam para trás e soltam mechas que evaporam em 0,5 s.
   - Pulo/pouso: a mola deixa as nuvens para trás na subida; no pouso o alto amassa e volta.
-  - Burst a cada 12–20 s (fase aleatória por jogador): arco incha, pontas enrolam, volta.
-  - Manifestar: fiapos saem dos ombros, peças surgem em ordem com ~10% de overshoot.
+  - Burst a cada 12–20 s: tudo incha, o redemoinho dá uma volta maior, a ponta enrola.
+  - Manifestar: fiapos saem dos ombros e as peças surgem em ordem (ombros → cabeça →
+    redemoinho → pluma → ponta → punhos) com ~10% de overshoot.
   - Desequipar/trocar/morrer: fade de 0,22 s e tudo destruído.
 - **LOD**: até 80 studs completo; 80–140 sem contorno/mechas/luz e a 10 Hz; além de 140 oculto.
   Qualidade baixa: sem contorno, mechas, luz, faíscas e burst — o arco nunca some.
