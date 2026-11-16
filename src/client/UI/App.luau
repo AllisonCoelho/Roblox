@@ -23,6 +23,7 @@ local Revelacao = require(Telas.Revelacao)
 local Mundo = script.Parent.Parent:WaitForChild("Mundo")
 local Despertar = require(Mundo:WaitForChild("Despertar"))
 local AurasControlador = require(Mundo:WaitForChild("Auras"):WaitForChild("Controlador"))
+local AurasCaudas = require(Mundo:WaitForChild("Auras"):WaitForChild("Caudas"))
 local EfeitosAlheios = require(Mundo:WaitForChild("EfeitosAlheios"))
 
 local App = {}
@@ -259,6 +260,28 @@ function App.iniciar()
 			-- Só no Studio: Alt+G liga/desliga a prévia da Gear 5 (sem posse nem save)
 			task.spawn(function()
 				local _, msg = Estado.pedir("PreviaAura", "gear5")
+				if msg then
+					Avisos.toast(msg)
+				end
+			end)
+		elseif
+			RunService:IsStudio()
+			and UserInputService:IsKeyDown(Enum.KeyCode.LeftAlt)
+			and input.KeyCode == Enum.KeyCode.N
+		then
+			-- Só no Studio: Alt+N passa pelos estágios Naruto (2 caudas ... 9 caudas, Seis Caminhos, nenhum)
+			task.spawn(function()
+				local personagem = Players.LocalPlayer.Character
+				local atual = if personagem then personagem:GetAttribute("AuraVfx") else nil
+				local ordem = AurasCaudas.ORDEM
+				local proximo = ordem[1]
+				for i, id in ordem do
+					if id == atual then
+						-- depois do último, o mesmo id de novo desliga a prévia
+						proximo = ordem[i + 1] or id
+					end
+				end
+				local _, msg = Estado.pedir("PreviaAura", proximo)
 				if msg then
 					Avisos.toast(msg)
 				end

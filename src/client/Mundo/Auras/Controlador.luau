@@ -9,6 +9,7 @@ local Workspace = game:GetService("Workspace")
 
 local AurasVfx =
 	require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Dados"):WaitForChild("AurasVfx"))
+local Caudas = require(script.Parent.Caudas)
 local Gear5 = require(script.Parent.Gear5)
 
 local Controlador = {}
@@ -21,9 +22,13 @@ export type Preferencias = {
 
 type Ativo = { personagem: Model, id: string, inst: Gear5.Instancia }
 
-local MODULOS: { [string]: typeof(Gear5) } = {
+type Modulo = { criar: (Model, Gear5.Opcoes) -> Gear5.Instancia? }
+local MODULOS: { [string]: Modulo } = {
 	gear5 = Gear5,
 }
+for _, id in Caudas.ORDEM do
+	MODULOS[id] = Caudas.estagio(id)
+end
 local JANELA_MANIFESTAR = 2.5 -- segundos desde que o servidor marcou o equipar
 
 local prefs: Preferencias =
