@@ -10,15 +10,15 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
-local Economia = require(Shared.Dados.Economia)
+local Perfil = require(Shared.Dados.Perfil)
 local Remotos = require(Shared.Remotos)
 local Sessao = require(script.Parent.Sessao)
 
-type Estado = Economia.Estado
+type Estado = Perfil.Estado
 
 local Dados = {}
 
-local NOME_STORE = "Docinhos_v1"
+local NOME_STORE = "Despertar_v1"
 local INTERVALO_AUTOSAVE = 60 -- também renova a trava (bem abaixo de Sessao.EXPIRA)
 local TENTATIVAS = 3
 -- Se outro servidor ainda está com a trava (o jogador acabou de trocar de servidor),
@@ -85,40 +85,7 @@ local function comTentativas<T>(fn: () -> T): (boolean, T | string)
 end
 
 local function estadoDeTeste(): Estado
-	local e = Economia.padrao()
-	e.moedas = 2000000 -- dá para comprar até um Lendário na esteira (tecla F7)
-	e.granulados = 320
-	e.caixa = 1200
-	e.melhorias.vitrine = 2
-	e.melhorias.escudo = 1
-	e.melhorias.tenis = 2
-	local agora = os.time()
-	for _, item in
-		{
-			{ "brigadeiro", "normal" },
-			{ "quindim", "normal" },
-			{ "pacoca", "normal" },
-			{ "balaDeCoco", "normal" },
-			{ "beijinho", "dourado" },
-		}
-	do
-		table.insert(e.vitrine, { id = item[1], variante = item[2] })
-	end
-	for id, qtd in
-		{
-			balaDeCoco = 12,
-			beijinho = 8,
-			pacoca = 3,
-			peDeMoleque = 1,
-			cocada = 2,
-			quindim = 1,
-			brigadeiro = 2,
-		}
-	do
-		e.album[id] =
-			{ qtd = qtd, desde = agora - 86400, dourado = id == "beijinho", arcoiris = false }
-	end
-	return e
+	return Perfil.padrao()
 end
 
 -- Pega a trava e lê o registro. Devolve:
@@ -191,12 +158,12 @@ function Dados.carregar(player: Player)
 		elseif resultado == "erro" or not registro then
 			-- Joga com dados vazios, mas sem salvar, para não apagar o progresso real
 			semSalvar[player] = true
-			estado = Economia.padrao()
+			estado = Perfil.padrao()
 			warn("[Dados] não consegui carregar " .. player.Name .. "; jogando sem salvar")
 		else
 			local dados = registro.dados
-			estado = if type(dados) == "table" then dados else Economia.padrao()
-			completar(estado :: any, Economia.padrao() :: any)
+			estado = if type(dados) == "table" then dados else Perfil.padrao()
+			completar(estado :: any, Perfil.padrao() :: any)
 		end
 		if not player.Parent then
 			-- Saiu enquanto carregava: solta a trava sem mudar nada
@@ -207,7 +174,7 @@ function Dados.carregar(player: Player)
 			return
 		end
 	else
-		estado = if Config.ModoTeste then estadoDeTeste() else Economia.padrao()
+		estado = if Config.ModoTeste then estadoDeTeste() else Perfil.padrao()
 		if not player.Parent then
 			return
 		end

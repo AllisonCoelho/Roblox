@@ -1,4 +1,4 @@
--- Peças visuais reutilizáveis da interface (ver docs/design/01-identidade.png).
+-- Componentes visuais reutilizáveis; redesenhar a identidade para Despertar V1.
 -- Tudo é criado por código: o repositório é a fonte da verdade e o deploy recria o jogo inteiro.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
@@ -487,7 +487,7 @@ function C.notificacao(pai: Instance): (Frame, TextLabel)
 	return bolinha, texto
 end
 
--- Fundo com degradê de raridade (cartões de Docinho)
+-- Fundo com degradê de raridade (cartões de aura)
 function C.fundoRaridade(pai: Instance, brilho: Color3, cor: Color3)
 	C.degrade(pai, brilho, cor).Rotation = 90
 end
