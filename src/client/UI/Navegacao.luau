@@ -1,25 +1,36 @@
--- Abre e fecha os painéis (Loja, Álbum, etc.): só um aberto por vez, com fundo escurecido
+-- Janelas da Órbita do Nexo, com cabeçalho fixo e uma janela ativa por vez.
+local GuiService = game:GetService("GuiService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
-local Tema = require(ReplicatedStorage.Shared.Tema)
-local C = require(script.Parent.Componentes)
+local Cores = require(ReplicatedStorage.Shared.Tema).Orbita
 local Escala = require(script.Parent.Escala)
+local Kit = require(script.Parent.Kit)
 
-local Cores = Tema.Cores
 local Navegacao = {}
-
-local LARGURA_MAX = 1340
-local ALTURA_MAX = 780
-
-type Registro = { painel: Frame, escala: UIScale, aoAbrir: (() -> ())? }
-
-local registros: { [string]: Registro } = {}
 local aberto: string? = nil
+local focoAnterior: GuiObject? = nil
 local fundo: TextButton
 local camada: Frame
 local ouvintes: { (string?) -> () } = {}
+
+export type Painel = {
+	quadro: Frame,
+	cabecalho: Frame,
+	conteudo: Frame,
+	fechar: () -> (),
+}
+
+type Registro = {
+	painel: Painel,
+	foco: TextButton,
+	titulo: TextLabel,
+	icone: TextLabel,
+	aoAbrir: (() -> ())?,
+	reserva: number,
+}
+
+local registros: { [string]: Registro } = {}
 
 function Navegacao.aoTrocar(fn: (string?) -> ())
 	table.insert(ouvintes, fn)
@@ -29,132 +40,136 @@ function Navegacao.aberto(): string?
 	return aberto
 end
 
-export type Painel = {
-	quadro: Frame,
-	cabecalho: Frame,
-	conteudo: Frame,
-	fechar: () -> (),
-}
+function Navegacao.fechar()
+	local nome = aberto
+	if not nome then
+		return
+	end
+	local registro = registros[nome]
+	local selecionado = GuiService.SelectedObject
+	registro.painel.quadro.Visible = false
+	aberto = nil
+	fundo.Visible = false
+	if selecionado and selecionado:IsDescendantOf(registro.painel.quadro) then
+		GuiService.SelectedObject = if focoAnterior and focoAnterior.Parent
+			then focoAnterior
+			else nil
+	end
+	focoAnterior = nil
+	for _, fn in ouvintes do
+		task.spawn(fn, nil)
+	end
+end
 
--- Cria o painel padrão: creme, contorno grosso, cabeçalho colorido, X vermelho
 function Navegacao.criarPainel(
 	nome: string,
-	op: { titulo: string, icone: string, cor: string },
+	op: { titulo: string, icone: string, reserva: number? },
 	aoAbrir: (() -> ())?
 ): Painel
-	local quadro = C.novo("Frame", {
-		Name = "Painel_" .. nome,
-		BackgroundColor3 = Cores.Creme,
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.fromOffset(LARGURA_MAX, ALTURA_MAX),
-		Visible = false,
-		ClipsDescendants = true,
-		Parent = camada,
+	local placa = Kit.placa({
+		nome = "Painel_" .. nome,
+		tamanho = UDim2.fromOffset(1120, 650),
+		posicao = UDim2.fromScale(0.5, 0.5),
+		ancora = Vector2.new(0.5, 0.5),
+		corte = 16,
+		pai = camada,
 	})
-	C.cantos(quadro, 28)
-	C.contorno(quadro, 5)
-	local escala = C.novo("UIScale", { Parent = quadro })
+	local quadro = placa.quadro
+	quadro.Active = true
+	quadro.Visible = false
+	quadro.SelectionGroup = true
+	quadro.SelectionBehaviorUp = Enum.SelectionBehavior.Stop
+	quadro.SelectionBehaviorDown = Enum.SelectionBehavior.Stop
+	quadro.SelectionBehaviorLeft = Enum.SelectionBehavior.Stop
+	quadro.SelectionBehaviorRight = Enum.SelectionBehavior.Stop
 
-	-- Fundo do cabeçalho: ClipsDescendants não recorta cantos arredondados, então o fundo
-	-- tem cantos próprios em cima e um complemento reto embaixo (com o mesmo degradê)
-	local cores = Tema.Botoes[op.cor] or Tema.Botoes.selo
-	local ALTURA, RETO = 76, 30
-	local fundoCabecalho = C.novo("Frame", {
-		Name = "FundoCabecalho",
-		BackgroundColor3 = Cores.Branco,
-		Size = UDim2.new(1, 0, 0, ALTURA),
-		ZIndex = 1,
-		Parent = quadro,
-	})
-	C.cantos(fundoCabecalho, 24)
-	C.degrade(fundoCabecalho, cores[1], cores[2])
-	local complemento = C.novo("Frame", {
-		Name = "FundoCabecalhoReto",
-		BackgroundColor3 = Cores.Branco,
-		BorderSizePixel = 0,
-		Size = UDim2.new(1, 0, 0, RETO),
-		Position = UDim2.fromOffset(0, ALTURA - RETO),
-		ZIndex = 1,
-		Parent = quadro,
-	})
-	C.degrade(complemento, cores[1]:Lerp(cores[2], (ALTURA - RETO) / ALTURA), cores[2])
-	local cabecalho = C.novo("Frame", {
+	local cabecalho = Kit.novo("Frame", {
 		Name = "Cabecalho",
-		BackgroundTransparency = 1,
-		Size = UDim2.new(1, 0, 0, ALTURA),
-		ZIndex = 2,
-		Parent = quadro,
-	})
-	C.novo("Frame", {
-		Name = "Linha",
-		BackgroundColor3 = Cores.Contorno,
+		BackgroundColor3 = Cores.Elevado,
 		BorderSizePixel = 0,
-		Size = UDim2.new(1, 0, 0, 5),
-		Position = UDim2.new(0, 0, 1, 0),
+		Position = UDim2.fromOffset(1, 10),
+		Size = UDim2.new(1, -2, 0, 74),
+		Parent = placa.conteudo,
+	})
+	Kit.novo("Frame", {
+		BackgroundColor3 = Cores.Borda,
+		BorderSizePixel = 0,
+		Position = UDim2.new(0, 0, 1, -1),
+		Size = UDim2.new(1, 0, 0, 1),
 		Parent = cabecalho,
 	})
-	C.emoji(op.icone, 38, {
-		Position = UDim2.new(0, 18, 0.5, 0),
-		AnchorPoint = Vector2.new(0, 0.5),
+	local icone = Kit.texto({
+		Text = op.icone,
+		TextColor3 = Cores.Lilas,
+		TextSize = 26,
+		Position = UDim2.fromOffset(16, 0),
+		Size = UDim2.new(0, 30, 1, 0),
 		Parent = cabecalho,
 	})
-	C.texto({
-		Name = "Titulo",
+	local titulo = Kit.texto({
+		fonte = "titulo",
 		Text = op.titulo,
-		TextSize = 36,
-		AutomaticSize = Enum.AutomaticSize.X,
-		Size = UDim2.fromOffset(0, 40),
-		Position = UDim2.new(0, 74, 0.5, 0),
-		AnchorPoint = Vector2.new(0, 0.5),
+		TextSize = 42,
+		TextWrapped = true,
 		TextXAlignment = Enum.TextXAlignment.Left,
+		Position = UDim2.fromOffset(56, 0),
 		Parent = cabecalho,
 	})
-	local fecharBotao = C.botao({
-		cor = "vermelho",
-		texto = "✕",
-		tamanho = UDim2.fromOffset(56, 56),
+	local fechar = Kit.botaoPlaca({
+		texto = "×",
+		tamanho = UDim2.fromOffset(66, 64),
 		tamanhoTexto = 30,
-		posicao = UDim2.new(1, -16, 0.5, -3),
-		ancora = Vector2.new(1, 0.5),
-		sombra = 4,
 		pai = cabecalho,
-		aoClicar = function()
-			Navegacao.fechar()
-		end,
+		aoClicar = Navegacao.fechar,
 	})
-	fecharBotao.quadro.ZIndex = 3
+	fechar.placa.quadro.AnchorPoint = Vector2.new(1, 0.5)
+	fechar.placa.quadro.Position = UDim2.new(1, -10, 0.5, 0)
+	fechar.botao.Text = "Fechar"
 
-	local conteudo = C.novo("Frame", {
+	local conteudo = Kit.novo("Frame", {
 		Name = "Conteudo",
 		BackgroundTransparency = 1,
-		Size = UDim2.new(1, 0, 1, -81),
-		Position = UDim2.fromOffset(0, 81),
-		Parent = quadro,
+		Parent = placa.conteudo,
 	})
-
-	registros[nome] = { painel = quadro, escala = escala, aoAbrir = aoAbrir }
-	return { quadro = quadro, cabecalho = cabecalho, conteudo = conteudo, fechar = Navegacao.fechar }
+	local painel: Painel = {
+		quadro = quadro,
+		cabecalho = cabecalho,
+		conteudo = conteudo,
+		fechar = Navegacao.fechar,
+	}
+	registros[nome] = {
+		painel = painel,
+		foco = fechar.botao,
+		titulo = titulo,
+		icone = icone,
+		aoAbrir = aoAbrir,
+		reserva = op.reserva or 0,
+	}
+	return painel
 end
 
 function Navegacao.abrir(nome: string)
 	local r = registros[nome]
-	if not r then
+	if not r or aberto == nome then
 		return
 	end
-	if aberto and aberto ~= nome then
-		registros[aberto].painel.Visible = false
+	local selecionado = GuiService.SelectedObject
+	if aberto then
+		registros[aberto].painel.quadro.Visible = false
+	else
+		focoAnterior = selecionado
 	end
 	aberto = nome
 	fundo.Visible = true
-	r.painel.Visible = true
-	r.escala.Scale = 0.85
-	TweenService:Create(r.escala, TweenInfo.new(0.22, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+	r.painel.quadro.Visible = true
+	if Escala.controle or selecionado then
+		GuiService.SelectedObject = r.foco
+	end
 	if r.aoAbrir then
 		task.spawn(r.aoAbrir)
 	end
 	for _, fn in ouvintes do
-		task.spawn(fn, aberto)
+		task.spawn(fn, nome)
 	end
 end
 
@@ -166,58 +181,60 @@ function Navegacao.alternar(nome: string)
 	end
 end
 
-function Navegacao.fechar()
-	if not aberto then
-		return
-	end
-	registros[aberto].painel.Visible = false
-	aberto = nil
-	fundo.Visible = false
-	for _, fn in ouvintes do
-		task.spawn(fn, nil)
-	end
-end
-
--- Painéis encolhem em telas pequenas (celular) para caber
-local function ajustarTamanhos()
-	local w = math.min(LARGURA_MAX, Escala.tamanho.X - 40)
-	local h = math.min(ALTURA_MAX, Escala.tamanho.Y - 30)
+function Navegacao.ajustar()
+	local w = math.min(1120, Escala.tamanho.X - 24)
+	local h = math.min(650, Escala.tamanho.Y - 24)
+	local compacto = Escala.compacto
+	local altura = if compacto then 70 else 82
+	local estreito = w < 520
+	local x = if estreito then 16 else 56
 	for _, r in registros do
-		r.painel.Size = UDim2.fromOffset(w, h)
+		local painel = r.painel
+		painel.quadro.Size = UDim2.fromOffset(w, h)
+		painel.cabecalho.Size = UDim2.new(1, -2, 0, altura)
+		painel.conteudo.Position = UDim2.fromOffset(0, altura + 10)
+		painel.conteudo.Size = UDim2.new(1, 0, 1, -altura - 16)
+		r.icone.Visible = not estreito
+		r.titulo.Position = UDim2.fromOffset(x, 0)
+		r.titulo.TextSize = if estreito then 26 elseif compacto then 30 else 42
+		r.titulo.Size = UDim2.new(1, -(x + 86 + r.reserva), 1, 0)
 	end
 end
 
 function Navegacao.montar(raiz: Frame)
-	fundo = C.novo("TextButton", {
+	fundo = Kit.novo("TextButton", {
 		Name = "FundoEscuro",
 		Text = "",
+		Selectable = false,
 		AutoButtonColor = false,
 		BackgroundColor3 = Cores.Fundo,
-		BackgroundTransparency = 0.45,
+		BackgroundTransparency = 0.34,
+		BorderSizePixel = 0,
 		Size = UDim2.fromScale(1, 1),
 		Visible = false,
 		ZIndex = 20,
 		Parent = raiz,
 	})
 	fundo.Activated:Connect(Navegacao.fechar)
-	camada = C.novo("Frame", {
+	camada = Kit.novo("Frame", {
 		Name = "Paineis",
 		BackgroundTransparency = 1,
 		Size = UDim2.fromScale(1, 1),
 		ZIndex = 21,
 		Parent = raiz,
 	})
-	Escala.aoMudar(ajustarTamanhos)
+	Escala.aoMudar(function()
+		Navegacao.ajustar()
+		if aberto and Escala.controle and not GuiService.SelectedObject then
+			GuiService.SelectedObject = registros[aberto].foco
+		end
+	end)
 	UserInputService.InputBegan:Connect(function(input, processado)
-		if not processado and input.KeyCode == Enum.KeyCode.Escape then
+		local tecla = input.KeyCode
+		if not processado and (tecla == Enum.KeyCode.Escape or tecla == Enum.KeyCode.ButtonB) then
 			Navegacao.fechar()
 		end
 	end)
-end
-
--- Chamado depois que todos os painéis foram criados
-function Navegacao.ajustar()
-	ajustarTamanhos()
 end
 
 return Navegacao

@@ -56,4 +56,22 @@ Tema.Sombra = 5
 -- Tamanho de referência das telas de design; a interface escala a partir dele
 Tema.Referencia = Vector2.new(1600, 900)
 
+-- Padrão de interface Órbita do Nexo.
+Tema.Orbita = {
+	Fundo = Color3.fromHex("0B0915"),
+	Painel = Color3.fromHex("141126"),
+	Elevado = Color3.fromHex("211C37"),
+	Borda = Color3.fromHex("605682"),
+	Lilas = Color3.fromHex("C0ADFF"),
+	Menta = Color3.fromHex("B7FFD9"),
+	Texto = Color3.fromHex("F7F2EC"),
+	TextoSuave = Color3.fromHex("C9C7D6"),
+	Foco = Color3.fromHex("E5D9FF"),
+	Aviso = Color3.fromHex("FF8298"),
+	Ativo = Color3.fromHex("17312F"),
+}
+
+Tema.FonteCorpo = Font.fromEnum(Enum.Font.BuilderSans)
+Tema.FonteNumeros = Font.fromEnum(Enum.Font.RobotoMono)
+
 return Tema

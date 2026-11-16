@@ -1,33 +1,31 @@
--- HUD "Tinta e Selo": placas de giros e aura equipada, selo DESPERTAR com anel de carga,
--- AUTO e ÍNDICE inclinados e o feed "Últimos despertares".
+-- HUD da Órbita do Nexo. O centro fica livre para o avatar e para o cenário.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage.Shared
 local Auras = require(Shared.Dados.Auras)
 local Formato = require(Shared.Formato)
 local Perfil = require(Shared.Dados.Perfil)
-local Tema = require(Shared.Tema)
+local Cores = require(Shared.Tema).Orbita
 local Escala = require(script.Parent.Parent.Escala)
 local Kit = require(script.Parent.Parent.Kit)
 
-local Cores = Tema.Cores
 local HUD = {}
+local RECENTES = 3
 
-local RECENTES = 4
+export type EstadoGiro = "perfil" | "pedido" | "recarregando" | "pular" | "pronto"
 
-export type Opcoes = {
+export type Api = {
+	definirGiro: (fracao: number, falta: number, estado: EstadoGiro) -> (),
+	definirVisivel: (visivel: boolean) -> (),
+	atualizar: (estado: Perfil.Estado) -> (),
+	registrarResultado: (aura: Auras.Aura, nova: boolean) -> (),
+}
+
+type Opcoes = {
 	aoDespertar: () -> (),
 	aoAlternarAuto: () -> (),
 	aoAbrirIndice: () -> (),
 	aoAbrirAjustes: () -> (),
-}
-
-export type Api = {
-	definirCarga: (fracao: number) -> (),
-	definirVisivel: (visivel: boolean) -> (),
-	atualizar: (estado: Perfil.Estado) -> (),
-	registrarResultado: (aura: Auras.Aura, nova: boolean) -> (),
 }
 
 local function corTier(aura: Auras.Aura): Color3
@@ -42,321 +40,441 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 		Parent = raiz,
 	})
 
-	-- Placa de giros (papel com sombra vermelha)
 	local placaGiros = Kit.placa({
-		largura = 300,
-		altura = 66,
-		fundo = Cores.Papel,
-		sombra = Cores.Selo,
-		posicao = UDim2.fromOffset(-16, 28),
+		nome = "Giros",
+		tamanho = UDim2.fromOffset(216, 52),
+		posicao = UDim2.fromOffset(22, 16),
 		pai = hud,
 	})
-	Kit.novo("UIPadding", { PaddingLeft = UDim.new(0, 44), Parent = placaGiros.conteudo })
-	Kit.novo("UIListLayout", {
-		FillDirection = Enum.FillDirection.Horizontal,
-		VerticalAlignment = Enum.VerticalAlignment.Center,
-		Padding = UDim.new(0, 14),
-		SortOrder = Enum.SortOrder.LayoutOrder,
-		Parent = placaGiros.conteudo,
-	})
 	Kit.texto({
-		fonte = "media",
 		Text = "GIROS",
-		TextSize = 18,
-		TextColor3 = Cores.Tinta,
-		AutomaticSize = Enum.AutomaticSize.X,
-		Size = UDim2.fromOffset(0, 40),
-		LayoutOrder = 1,
+		TextSize = 14,
+		TextColor3 = Cores.TextoSuave,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Position = UDim2.fromOffset(12, 0),
+		Size = UDim2.new(0, 56, 1, 0),
 		Parent = placaGiros.conteudo,
 	})
 	local giros = Kit.texto({
+		fonte = "mono",
 		Text = "0",
-		TextSize = 44,
-		TextColor3 = Cores.Tinta,
-		AutomaticSize = Enum.AutomaticSize.X,
-		Size = UDim2.fromOffset(0, 50),
-		LayoutOrder = 2,
+		TextSize = 22,
+		TextXAlignment = Enum.TextXAlignment.Right,
+		TextTruncate = Enum.TextTruncate.AtEnd,
+		Position = UDim2.fromOffset(65, 0),
+		Size = UDim2.new(1, -77, 1, 0),
 		Parent = placaGiros.conteudo,
 	})
 
-	-- Placa da aura equipada (tinta, com faixa na cor da raridade)
-	local placaAura = Kit.placa({
-		largura = 380,
-		altura = 106,
-		fundo = Cores.Tinta,
-		borda = Cores.Borda,
-		espessura = 2,
-		posicao = UDim2.fromOffset(-16, 106),
+	local feed = Kit.placa({
+		nome = "Recentes",
+		tamanho = UDim2.fromOffset(258, 140),
+		posicao = UDim2.fromOffset(22, 76),
 		pai = hud,
 	})
-	local faixaTier = Kit.placa({
-		largura = 44,
-		altura = 106,
-		fundo = Cores.Borda,
-		posicao = UDim2.fromOffset(-16, 106),
-		z = 6,
-		pai = hud,
-	})
+	feed.quadro.Visible = false
 	Kit.texto({
-		fonte = "media",
-		Text = "AURA EQUIPADA",
-		TextSize = 15,
-		TextColor3 = Cores.TextoSuave,
-		TextXAlignment = Enum.TextXAlignment.Left,
-		Position = UDim2.fromOffset(52, 8),
-		Size = UDim2.new(1, -60, 0, 20),
-		Parent = placaAura.conteudo,
-	})
-	local nomeEquipada = Kit.texto({
-		Text = "Nenhuma",
-		TextSize = 32,
-		TextXAlignment = Enum.TextXAlignment.Left,
-		TextTruncate = Enum.TextTruncate.AtEnd,
-		Position = UDim2.fromOffset(48, 28),
-		Size = UDim2.new(1, -60, 0, 40),
-		Parent = placaAura.conteudo,
-	})
-	local raridade = Kit.texto({
-		fonte = "pincel",
-		Text = "Clique em DESPERTAR",
-		TextSize = 18,
-		TextXAlignment = Enum.TextXAlignment.Left,
-		Position = UDim2.fromOffset(44, 70),
-		Size = UDim2.new(1, -60, 0, 26),
-		Parent = placaAura.conteudo,
-	})
-
-	-- Engrenagem: abre os Ajustes (anúncios, sons, acessibilidade)
-	local sino = Kit.circulo({
-		Name = "Ajustes",
-		BackgroundColor3 = Cores.TintaClara,
-		Position = UDim2.fromOffset(24, 230),
-		Size = UDim2.fromOffset(52, 52),
-		Parent = hud,
-	})
-	Kit.novo("UIStroke", { Color = Cores.Papel, Thickness = 2, Parent = sino })
-	local sinoTexto = Kit.texto({
-		Text = "⚙",
-		TextSize = 30,
-		Size = UDim2.fromScale(1, 1),
-		Parent = sino,
-	})
-	sinoTexto.FontFace = Font.fromEnum(Enum.Font.SourceSans)
-	local sinoBotao = Kit.novo("TextButton", {
-		Text = "",
-		BackgroundTransparency = 1,
-		Size = UDim2.fromScale(1, 1),
-		ZIndex = 3,
-		Parent = sino,
-	})
-	sinoBotao.Activated:Connect(op.aoAbrirAjustes)
-
-	-- Feed "Últimos despertares" (direita)
-	local feed = Kit.novo("Frame", {
-		Name = "Recentes",
-		BackgroundTransparency = 1,
-		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -24, 0, 240),
-		Size = UDim2.fromOffset(230, 200),
-		Parent = hud,
-	})
-	Kit.novo("UIListLayout", {
-		Padding = UDim.new(0, 6),
-		SortOrder = Enum.SortOrder.LayoutOrder,
-		Parent = feed,
-	})
-	Kit.texto({
-		fonte = "media",
 		Text = "ÚLTIMOS DESPERTARES",
 		TextSize = 14,
 		TextColor3 = Cores.TextoSuave,
-		TextXAlignment = Enum.TextXAlignment.Right,
-		Size = UDim2.new(1, 0, 0, 20),
-		LayoutOrder = 0,
-		Parent = feed,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Position = UDim2.fromOffset(12, 0),
+		Size = UDim2.new(1, -24, 0, 28),
+		Parent = feed.conteudo,
 	})
-	type Linha = { quadro: Frame, nome: TextLabel, chance: TextLabel, faixa: Frame }
+	type Linha = { quadro: Frame, nome: TextLabel, chance: TextLabel, marca: TextLabel }
 	local linhas: { Linha } = {}
+	local recentes: { Auras.Aura } = {}
 	for i = 1, RECENTES do
 		local quadro = Kit.novo("Frame", {
-			Name = "Linha" .. i,
-			BackgroundColor3 = Cores.TintaClara,
+			Name = "Giro" .. i,
+			BackgroundColor3 = Cores.Elevado,
 			BorderSizePixel = 0,
-			Size = UDim2.new(1, 0, 0, 32),
-			LayoutOrder = i,
+			Position = UDim2.fromOffset(8, 28 + (i - 1) * 36),
+			Size = UDim2.new(1, -16, 0, 32),
 			Visible = false,
-			Parent = feed,
+			Parent = feed.conteudo,
 		})
-		local faixa = Kit.novo("Frame", {
-			BackgroundColor3 = Cores.Borda,
-			BorderSizePixel = 0,
-			AnchorPoint = Vector2.new(1, 0),
-			Position = UDim2.fromScale(1, 0),
-			Size = UDim2.new(0, 6, 1, 0),
+		local marca = Kit.texto({
+			Text = "◆",
+			TextSize = 12,
+			Size = UDim2.new(0, 22, 1, 0),
 			Parent = quadro,
 		})
 		local nome = Kit.texto({
-			fonte = "media",
+			fonte = "titulo",
 			TextSize = 18,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			TextTruncate = Enum.TextTruncate.AtEnd,
-			Position = UDim2.fromOffset(12, 0),
-			Size = UDim2.new(1, -90, 1, 0),
+			Position = UDim2.fromOffset(24, 0),
+			Size = UDim2.new(1, -100, 1, 0),
 			Parent = quadro,
 		})
 		local chance = Kit.texto({
-			fonte = "media",
-			TextSize = 18,
+			fonte = "mono",
+			TextSize = 14,
 			TextXAlignment = Enum.TextXAlignment.Right,
-			Position = UDim2.new(1, -86, 0, 0),
-			Size = UDim2.new(0, 70, 1, 0),
+			Position = UDim2.new(1, -74, 0, 0),
+			Size = UDim2.new(0, 66, 1, 0),
 			Parent = quadro,
 		})
-		linhas[i] = { quadro = quadro, nome = nome, chance = chance, faixa = faixa }
+		linhas[i] = { quadro = quadro, nome = nome, chance = chance, marca = marca }
 	end
-	local recentes: { Auras.Aura } = {}
 
-	-- Barra inferior: AUTO | selo DESPERTAR | ÍNDICE
+	local ajustes = Kit.botaoPlaca({
+		texto = "⚙",
+		tamanho = UDim2.fromOffset(64, 64),
+		tamanhoTexto = 28,
+		pai = hud,
+		aoClicar = op.aoAbrirAjustes,
+	})
+	ajustes.rotulo.FontFace = Font.fromEnum(Enum.Font.SourceSans)
+	ajustes.placa.quadro.AnchorPoint = Vector2.new(1, 0)
+	ajustes.placa.quadro.Position = UDim2.new(1, -22, 0, 16)
+	ajustes.botao.Text = "Ajustes"
+
+	local placaAura = Kit.placa({
+		nome = "AuraEquipada",
+		tamanho = UDim2.fromOffset(292, 96),
+		posicao = UDim2.new(1, -22, 0, 88),
+		ancora = Vector2.new(1, 0),
+		pai = hud,
+	})
+	local iconeAura, centroAura = Kit.cristal(placaAura.conteudo, 48, Cores.Borda)
+	iconeAura.AnchorPoint = Vector2.new(0, 0.5)
+	iconeAura.Position = UDim2.new(0, 12, 0.5, 0)
+	local tituloAura = Kit.texto({
+		Text = "AURA EQUIPADA",
+		TextSize = 14,
+		TextColor3 = Cores.TextoSuave,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Position = UDim2.fromOffset(70, 8),
+		Size = UDim2.new(1, -78, 0, 20),
+		Parent = placaAura.conteudo,
+	})
+	local nomeEquipada = Kit.texto({
+		fonte = "titulo",
+		Text = "Nenhuma",
+		TextSize = 24,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextWrapped = true,
+		Position = UDim2.fromOffset(70, 26),
+		Size = UDim2.new(1, -80, 1, -51),
+		Parent = placaAura.conteudo,
+	})
+	local raridade = Kit.texto({
+		fonte = "mono",
+		Text = "Desperte uma aura",
+		TextSize = 14,
+		TextColor3 = Cores.TextoSuave,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextWrapped = true,
+		Position = UDim2.new(0, 70, 1, -25),
+		Size = UDim2.new(1, -80, 0, 20),
+		Parent = placaAura.conteudo,
+	})
+
 	local barra = Kit.novo("Frame", {
 		Name = "Acoes",
 		BackgroundTransparency = 1,
 		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, -28),
-		Size = UDim2.fromOffset(700, 200),
+		Position = UDim2.new(0.5, 0, 1, -22),
+		Size = UDim2.fromOffset(464, 156),
 		Parent = hud,
 	})
-	Kit.novo("UIListLayout", {
-		FillDirection = Enum.FillDirection.Horizontal,
-		HorizontalAlignment = Enum.HorizontalAlignment.Center,
-		VerticalAlignment = Enum.VerticalAlignment.Center,
-		Padding = UDim.new(0, 28),
-		SortOrder = Enum.SortOrder.LayoutOrder,
-		Parent = barra,
-	})
-	local auto = Kit.botaoPlaca({
-		texto = "AUTO",
-		largura = 190,
-		altura = 66,
-		tamanhoTexto = 26,
-		sombra = Color3.new(0, 0, 0),
-		ordem = 1,
+	local auto = Kit.placa({
+		nome = "Auto",
+		tamanho = UDim2.fromOffset(154, 68),
+		ancora = Vector2.new(0, 1),
+		posicao = UDim2.fromScale(0, 1),
 		pai = barra,
-		aoClicar = op.aoAlternarAuto,
+	})
+	local indice = Kit.placa({
+		nome = "Indice",
+		tamanho = UDim2.fromOffset(154, 68),
+		ancora = Vector2.new(1, 1),
+		posicao = UDim2.fromScale(1, 1),
+		pai = barra,
 	})
 
-	local seloQuadro = Kit.circulo({
+	local function rotulos(placa: Kit.Placa, titulo: string, valor: string): TextLabel
+		Kit.texto({
+			Text = titulo,
+			TextSize = 14,
+			TextColor3 = Cores.TextoSuave,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Position = UDim2.fromOffset(12, 7),
+			Size = UDim2.new(1, -24, 0, 20),
+			Parent = placa.conteudo,
+		})
+		return Kit.texto({
+			fonte = "mono",
+			Text = valor,
+			TextSize = 18,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Position = UDim2.fromOffset(12, 27),
+			Size = UDim2.new(1, -24, 0, 29),
+			Parent = placa.conteudo,
+		})
+	end
+
+	local valorAuto = rotulos(auto, "AUTO", "Desligado")
+	local valorIndice = rotulos(indice, "ÍNDICE", "0 / " .. #Auras.lista)
+	local estadoAuto = Kit.texto({
+		Text = "○",
+		TextColor3 = Cores.TextoSuave,
+		TextSize = 16,
+		Position = UDim2.new(1, -26, 0, 4),
+		Size = UDim2.fromOffset(18, 18),
+		Parent = auto.conteudo,
+	})
+	local trilho = Kit.novo("Frame", {
+		BackgroundColor3 = Cores.Elevado,
+		BorderSizePixel = 0,
+		Position = UDim2.new(0, 12, 1, -9),
+		Size = UDim2.new(1, -24, 0, 3),
+		Parent = indice.conteudo,
+	})
+	local progresso = Kit.novo("Frame", {
+		BackgroundColor3 = Cores.Lilas,
+		BorderSizePixel = 0,
+		Size = UDim2.fromScale(0, 1),
+		Parent = trilho,
+	})
+	local autoBotao = Kit.alvo(auto.quadro, "Giro automático", op.aoAlternarAuto)
+	local indiceBotao = Kit.alvo(indice.quadro, "Índice de auras", op.aoAbrirIndice)
+
+	local giro = Kit.novo("Frame", {
 		Name = "Despertar",
-		BackgroundColor3 = Cores.Papel,
-		Size = UDim2.fromOffset(196, 196),
-		LayoutOrder = 2,
+		BackgroundTransparency = 1,
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.fromScale(0.5, 1),
+		Size = UDim2.fromOffset(134, 156),
 		Parent = barra,
 	})
-	local seloEscala = Kit.novo("UIScale", { Parent = seloQuadro })
-	local anel = Kit.anel(seloQuadro, 180, Cores.Selo, Cores.SeloEscuro, 2)
-	local miolo = Kit.circulo({
-		Name = "Miolo",
-		BackgroundColor3 = Cores.Selo,
-		Size = UDim2.fromOffset(156, 156),
-		Position = UDim2.fromScale(0.5, 0.5),
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		ZIndex = 4,
-		Parent = seloQuadro,
-	})
-	Kit.novo("UIStroke", { Color = Cores.Tinta, Thickness = 4, Parent = miolo })
-	local olho = Kit.olho(miolo, 58, Cores.Papel, 5)
-	olho.AnchorPoint = Vector2.new(0.5, 0)
-	olho.Position = UDim2.new(0.5, 0, 0, 30)
-	Kit.texto({
-		Text = "DESPERTAR",
-		TextSize = 25,
-		Position = UDim2.fromOffset(0, 92),
-		Size = UDim2.new(1, 0, 0, 30),
-		ZIndex = 5,
-		Parent = miolo,
-	})
-	local seloBotao = Kit.novo("TextButton", {
-		Text = "",
+	local orbita = Kit.novo("Frame", {
+		Name = "Orbita",
 		BackgroundTransparency = 1,
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.fromScale(0.5, 0),
+		Size = UDim2.fromOffset(126, 126),
+		Parent = giro,
+	})
+	local orbitaEscala = Kit.novo("UIScale", { Parent = orbita })
+	local anel = Kit.anel(orbita, 126, Cores.Lilas, Cores.Borda, 1)
+	local disco = Kit.circulo({
+		BackgroundColor3 = Cores.Fundo,
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(118, 118),
+		ZIndex = 2,
+		Parent = orbita,
+	})
+	Kit.novo("UIStroke", { Color = Cores.Elevado, Thickness = 1, Parent = disco })
+	for i = 0, 7 do
+		local graus = 45 * i
+		local rad = math.rad(graus)
+		Kit.novo("Frame", {
+			BackgroundColor3 = if i % 2 == 0 then Cores.Lilas else Cores.Borda,
+			BorderSizePixel = 0,
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromOffset(63 + 60 * math.sin(rad), 63 - 60 * math.cos(rad)),
+			Size = UDim2.fromOffset(2, if i % 2 == 0 then 11 else 6),
+			Rotation = graus,
+			ZIndex = 3,
+			Parent = orbita,
+		})
+	end
+
+	local cristal, centro = Kit.cristal(disco, 66, Cores.Lilas)
+	cristal.AnchorPoint = Vector2.new(0.5, 0.5)
+	cristal.Position = UDim2.fromScale(0.5, 0.48)
+	local carga = Kit.texto({
+		fonte = "mono",
+		TextSize = 18,
+		TextColor3 = Cores.Menta,
+		Position = UDim2.new(0, 0, 1, -36),
+		Size = UDim2.new(1, 0, 0, 24),
+		Parent = disco,
+	})
+	local etiqueta = Kit.placa({
+		tamanho = UDim2.new(1, 0, 0, 40),
+		fundo = Cores.Elevado,
+		borda = Cores.Lilas,
+		ancora = Vector2.new(0, 1),
+		posicao = UDim2.fromScale(0, 1),
+		z = 3,
+		pai = giro,
+	})
+	local rotuloGiro = Kit.texto({
+		fonte = "titulo",
+		Text = "DESPERTAR",
+		TextSize = 26,
+		TextWrapped = true,
+		Position = UDim2.fromOffset(5, 0),
+		Size = UDim2.new(1, -10, 1, 0),
+		Parent = etiqueta.conteudo,
+	})
+	local tecla = Kit.placa({
+		nome = "Atalho",
+		tamanho = UDim2.fromOffset(28, 28),
+		posicao = UDim2.new(1, 4, 0, 55),
+		corte = 5,
+		z = 4,
+		pai = giro,
+	})
+	Kit.texto({
+		fonte = "mono",
+		Text = "E",
+		TextSize = 16,
 		Size = UDim2.fromScale(1, 1),
-		ZIndex = 6,
-		Parent = seloQuadro,
+		Parent = tecla.conteudo,
 	})
-	seloBotao.MouseButton1Down:Connect(function()
-		seloEscala.Scale = 0.94
-	end)
-	seloBotao.MouseButton1Up:Connect(function()
-		seloEscala.Scale = 1
-	end)
-	seloBotao.MouseLeave:Connect(function()
-		seloEscala.Scale = 1
-	end)
-	seloBotao.Activated:Connect(op.aoDespertar)
+	local giroBotao = Kit.alvo(giro, "Despertar", op.aoDespertar)
+	giroBotao.NextSelectionLeft = autoBotao
+	giroBotao.NextSelectionRight = indiceBotao
+	autoBotao.NextSelectionRight = giroBotao
+	indiceBotao.NextSelectionLeft = giroBotao
+	indiceBotao.NextSelectionUp = ajustes.botao
+	ajustes.botao.NextSelectionDown = indiceBotao
 
-	local indice = Kit.botaoPlaca({
-		texto = "ÍNDICE",
-		largura = 190,
-		altura = 66,
-		tamanhoTexto = 26,
-		sombra = Cores.Selo,
-		ordem = 3,
+	local resultado = Kit.placa({
+		nome = "Resultado",
+		tamanho = UDim2.fromOffset(446, 52),
+		ancora = Vector2.new(0.5, 1),
+		posicao = UDim2.new(0.5, 0, 0, -18),
 		pai = barra,
-		aoClicar = op.aoAbrirIndice,
 	})
-
-	-- Resultado rápido acima do botão (todas as raridades)
-	local resultado = Kit.texto({
-		Name = "Resultado",
-		TextSize = 30,
-		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, -240),
-		Size = UDim2.fromOffset(700, 40),
-		TextTransparency = 1,
-		Parent = hud,
-	})
-	local resultadoContorno = Kit.novo("UIStroke", {
-		Color = Cores.Tinta,
-		Thickness = 3,
-		Transparency = 1,
-		Parent = resultado,
+	resultado.quadro.Visible = false
+	local textoResultado = Kit.texto({
+		fonte = "titulo",
+		TextSize = 21,
+		TextWrapped = true,
+		Position = UDim2.fromOffset(10, 0),
+		Size = UDim2.new(1, -20, 1, 0),
+		Parent = resultado.conteudo,
 	})
 	local resultadoToken = 0
+	local estadoGiro: EstadoGiro? = nil
+	local tempoMostrado = ""
+
+	local function atualizarFeed()
+		feed.quadro.Visible = not Escala.compacto and #recentes > 0
+		feed.quadro.Size = UDim2.fromOffset(258, 32 + 36 * #recentes)
+	end
+
+	local function ajustarRotuloGiro()
+		local tamanho = if Escala.compacto then 22 else 26
+		local aguardando = estadoGiro == "perfil" or estadoGiro == "pedido"
+		rotuloGiro.TextSize = if aguardando then tamanho - 5 else tamanho
+		etiqueta.quadro.Size = UDim2.new(1, 0, 0, if aguardando then 48 else 40)
+	end
 
 	Escala.aoMudar(function()
-		feed.Visible = not Escala.compacto
+		local compacto = Escala.compacto
+		local estreito = Escala.tamanho.X < 600
+		local largura = math.min(if compacto then 390 else 464, Escala.tamanho.X - 28)
+		local larguraGiro = if compacto then 106 else 134
+		local lateral = math.floor((largura - larguraGiro) / 2 - 9)
+		local altura = if compacto then 118 else 156
+		local ladoDireito = math.clamp((Escala.tamanho.X - largura) * 0.5 - 160, 0, 112)
+		local deslocamento = if Escala.toque then ladoDireito else 0
+		local margem = if Escala.toque and ladoDireito == 0 then 126 else 22
+		barra.Size = UDim2.fromOffset(largura, altura)
+		barra.Position = UDim2.new(0.5, deslocamento, 1, -margem)
+		giro.Size = UDim2.fromOffset(larguraGiro, altura)
+		orbitaEscala.Scale = if compacto then 86 / 126 else 1
+		auto.quadro.Size = UDim2.fromOffset(lateral, 68)
+		indice.quadro.Size = UDim2.fromOffset(lateral, 68)
+		ajustes.placa.quadro.Position = UDim2.new(1, -14, 0, 10)
+		local larguraAura = if estreito then 202 elseif compacto then 230 else 292
+		placaAura.quadro.Size = UDim2.fromOffset(larguraAura, if compacto then 112 else 96)
+		placaAura.quadro.Position = UDim2.new(1, -14, 0, 84)
+		local textoX = if estreito then 46 else 70
+		iconeAura.Size = UDim2.fromOffset(if estreito then 30 else 48, if estreito then 30 else 48)
+		iconeAura.Position = UDim2.new(0, 10, 0.5, 0)
+		tituloAura.Position = UDim2.fromOffset(textoX, 8)
+		tituloAura.Size = UDim2.new(1, -textoX - 8, 0, 20)
+		nomeEquipada.Position = UDim2.fromOffset(textoX, 26)
+		nomeEquipada.Size = UDim2.new(1, -textoX - 8, 1, if compacto then -70 else -51)
+		nomeEquipada.TextSize = if compacto then 20 else 24
+		raridade.Position = UDim2.new(0, textoX, 1, if compacto then -41 else -24)
+		raridade.Size = UDim2.new(1, -textoX - 8, 0, if compacto then 37 else 20)
+		placaGiros.quadro.Size = UDim2.fromOffset(if compacto then 158 else 216, 52)
+		placaGiros.quadro.Position = UDim2.fromOffset(if compacto then 14 else 22, 16)
+		giros.TextSize = if compacto then 18 else 22
+		ajustarRotuloGiro()
+		tecla.quadro.Position = UDim2.new(1, 4, 0, if compacto then 18 else 55)
+		tecla.quadro.Visible = Escala.teclado and (estadoGiro == "pronto" or estadoGiro == "pular")
+		resultado.quadro.Size = UDim2.fromOffset(math.min(largura, 446), 52)
+		atualizarFeed()
 	end)
 
 	return {
-		definirCarga = function(fracao: number)
-			anel.definir(fracao)
-			miolo.BackgroundColor3 = if fracao >= 1
-				then Cores.Selo
-				else Cores.Selo:Lerp(Cores.SeloEscuro, 0.35)
+		definirGiro = function(fracao: number, falta: number, estado: EstadoGiro)
+			local carregando = estado == "recarregando"
+			local disponivel = estado == "pronto" or estado == "pular"
+			anel.definir(
+				fracao,
+				if carregando then Cores.Menta elseif disponivel then Cores.Lilas else Cores.Borda
+			)
+			local tempo = if carregando
+				then string.format("%.1f s", math.ceil(falta * 10) / 10)
+				else ""
+			if tempo ~= tempoMostrado then
+				tempoMostrado = tempo
+				carga.Text = tempo:gsub("%.", ",")
+			end
+			if estadoGiro == estado then
+				return
+			end
+			estadoGiro = estado
+			ajustarRotuloGiro()
+			local titulo = if estado == "perfil"
+				then "Aguardando perfil"
+				elseif estado == "pedido" then "Despertando…"
+				elseif estado == "pular" then "Pular ritual"
+				else "DESPERTAR"
+			rotuloGiro.Text = titulo
+			giroBotao.Text = titulo
+			giroBotao.Interactable = disponivel
+			tecla.quadro.Visible = Escala.teclado and disponivel
+			centro.BackgroundColor3 = if disponivel or carregando then Cores.Lilas else Cores.Borda
+			etiqueta.definirCor(Cores.Elevado, if disponivel then Cores.Lilas else Cores.Borda)
 		end,
 		definirVisivel = function(visivel: boolean)
 			hud.Visible = visivel
 		end,
 		atualizar = function(estado: Perfil.Estado)
-			giros.Text = Formato.inteiro(estado.giros)
+			giros.Text = if estado.giros < 1000000
+				then Formato.inteiro(estado.giros)
+				else Formato.curto(estado.giros)
 			local aura = if estado.equipada then Auras.porId[estado.equipada] else nil
-			if aura then
-				local cor = corTier(aura)
-				nomeEquipada.Text = aura.nome
-				nomeEquipada.TextColor3 = cor
-				raridade.Text = string.format(
+			nomeEquipada.Text = if aura then aura.nome else "Nenhuma"
+			local cor = if aura then corTier(aura) else Cores.Borda
+			centroAura.BackgroundColor3 = cor
+			raridade.Text = if aura
+				then string.format(
 					"%s · 1 em %s",
 					Auras.Tiers[aura.tier].nome,
 					Formato.chance(aura.chance)
 				)
-				faixaTier.definirCor(cor)
-			else
-				nomeEquipada.Text = "Nenhuma"
-				nomeEquipada.TextColor3 = Cores.Papel
-				raridade.Text = "Clique em DESPERTAR"
-				faixaTier.definirCor(Cores.Borda)
-			end
-			auto.definirAtivo(estado.configuracoes.giroAutomatico == true)
+				else "Desperte uma aura"
+			raridade.TextColor3 = if aura then Kit.corLegivel(cor) else Cores.TextoSuave
+
+			local ligado = estado.configuracoes.giroAutomatico == true
+			valorAuto.Text = if ligado then "Ligado" else "Desligado"
+			valorAuto.TextColor3 = if ligado then Cores.Menta else Cores.Texto
+			estadoAuto.Text = if ligado then "●" else "○"
+			estadoAuto.TextColor3 = if ligado then Cores.Menta else Cores.TextoSuave
+			auto.definirCor(
+				if ligado then Cores.Ativo else Cores.Painel,
+				if ligado then Cores.Menta else Cores.Borda
+			)
+			autoBotao.Text = "Giro automático · " .. valorAuto.Text
 			local descobertas = Auras.contarDescobertas(estado.auras)
-			indice.definirTexto(string.format("ÍNDICE %d/%d", descobertas, #Auras.lista))
+			valorIndice.Text = string.format("%d / %d", descobertas, #Auras.lista)
+			progresso.Size = UDim2.fromScale(descobertas / #Auras.lista, 1)
 		end,
 		registrarResultado = function(aura: Auras.Aura, nova: boolean)
 			table.insert(recentes, 1, aura)
@@ -367,31 +485,25 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 				local a = recentes[i]
 				linha.quadro.Visible = a ~= nil
 				if a then
-					local cor = corTier(a)
 					linha.nome.Text = a.nome
 					linha.chance.Text = "1/" .. Formato.chanceCurta(a.chance)
-					linha.chance.TextColor3 = cor
-					linha.faixa.BackgroundColor3 = cor
-					linha.quadro.BackgroundTransparency = (i - 1) * 0.15
+					linha.marca.TextColor3 = corTier(a)
 				end
 			end
-			-- Nome acima do botão
+			atualizarFeed()
 			resultadoToken += 1
 			local meu = resultadoToken
-			resultado.Text = string.format(
+			textoResultado.Text = string.format(
 				"%s%s · 1 em %s",
-				if nova then "NOVA! " else "",
+				if nova then "Nova · " else "",
 				aura.nome,
 				Formato.chance(aura.chance)
 			)
-			resultado.TextColor3 = corTier(aura)
-			resultado.TextTransparency = 0
-			resultadoContorno.Transparency = 0
-			task.delay(1.1, function()
+			resultado.definirCor(Cores.Painel, corTier(aura))
+			resultado.quadro.Visible = true
+			task.delay(1.45, function()
 				if resultadoToken == meu then
-					local info = TweenInfo.new(0.3)
-					TweenService:Create(resultado, info, { TextTransparency = 1 }):Play()
-					TweenService:Create(resultadoContorno, info, { Transparency = 1 }):Play()
+					resultado.quadro.Visible = false
 				end
 			end)
 		end,

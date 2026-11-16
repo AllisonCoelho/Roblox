@@ -1,14 +1,9 @@
--- Peças visuais da identidade "Tinta e Selo".
--- O Roblox não inclina (skew) elementos de UI, então as placas inclinadas são feitas
--- com fatias horizontais finas, cada uma deslocada um pouco: de longe vira um paralelogramo.
+-- Componentes da interface Órbita do Nexo. Todas as formas usam instâncias nativas.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Tema = require(ReplicatedStorage.Shared.Tema)
-
-local Cores = Tema.Cores
+local Cores = Tema.Orbita
 local Kit = {}
-
-local INCLINACAO = math.tan(math.rad(12))
 
 local function novo(classe: string, props: { [string]: any }): any
 	local inst = Instance.new(classe)
@@ -22,54 +17,57 @@ local function novo(classe: string, props: { [string]: any }): any
 end
 Kit.novo = novo
 
--- Texto sem fundo. fonte: "negrito" (padrão) | "media" | "pincel"
 function Kit.texto(props: { [string]: any }): TextLabel
 	local fonte = props.fonte
 	props.fonte = nil
 	props.BackgroundTransparency = 1
-	props.FontFace = if fonte == "pincel"
-		then Tema.FontePincel
-		elseif fonte == "media" then Tema.FonteMedia
-		else Tema.FonteNegrito
-	props.TextColor3 = props.TextColor3 or Cores.Papel
-	props.TextSize = props.TextSize or 24
+	props.FontFace = if fonte == "titulo"
+		then Tema.FonteNegrito
+		elseif fonte == "mono" then Tema.FonteNumeros
+		else Tema.FonteCorpo
+	props.TextColor3 = props.TextColor3 or Cores.Texto
+	props.TextSize = props.TextSize or 18
 	props.Text = props.Text or ""
 	return novo("TextLabel", props)
 end
 
--- Uma camada de fatias formando um paralelogramo dentro de `pai`
-local function fatias(
+function Kit.corLegivel(cor: Color3): Color3
+	return cor:Lerp(Cores.Texto, 0.38)
+end
+
+local function bloco(
 	pai: Instance,
-	largura: number,
-	altura: number,
-	deslocX: number,
-	deslocY: number,
 	cor: Color3,
-	nome: string,
-	z: number
-): { Frame }
-	local passo = 3
-	local n = math.ceil(altura / passo)
-	local lista = {}
-	for i = 0, n - 1 do
-		local y = i * passo
-		local h = math.min(passo, altura - y)
-		-- Quanto mais para baixo, mais à esquerda (inclinação para a direita)
-		local x = (altura - y - h / 2) * INCLINACAO
-		table.insert(
-			lista,
-			novo("Frame", {
-				Name = nome,
-				BackgroundColor3 = cor,
-				BorderSizePixel = 0,
-				Position = UDim2.fromOffset(x + deslocX, y + deslocY),
-				Size = UDim2.fromOffset(largura - altura * INCLINACAO, h),
-				ZIndex = z,
-				Parent = pai,
-			})
-		)
-	end
-	return lista
+	tamanho: UDim2,
+	posicao: UDim2,
+	ancora: Vector2?
+): Frame
+	return novo("Frame", {
+		AnchorPoint = ancora or Vector2.zero,
+		BackgroundColor3 = cor,
+		BorderSizePixel = 0,
+		Position = posicao,
+		Size = tamanho,
+		Parent = pai,
+	})
+end
+
+-- Dois cantos chanfrados. As faixas centrais acompanham o tamanho da placa.
+local function superficie(pai: Frame, cor: Color3, corte: number): { Frame }
+	local meio = bloco(pai, cor, UDim2.new(1, 0, 1, -2 * corte), UDim2.fromOffset(0, corte))
+	local topo = bloco(pai, cor, UDim2.new(1, -corte, 0, corte), UDim2.new())
+	local base = bloco(pai, cor, UDim2.new(1, -corte, 0, corte), UDim2.new(0, corte, 1, -corte))
+	local superior = bloco(pai, cor, UDim2.fromOffset(corte, corte), UDim2.new(1, -corte, 0, 0))
+	local inferior = bloco(pai, cor, UDim2.fromOffset(corte, corte), UDim2.new(0, 0, 1, -corte))
+	local recorte = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0),
+		NumberSequenceKeypoint.new(0.495, 0),
+		NumberSequenceKeypoint.new(0.505, 1),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	novo("UIGradient", { Rotation = -45, Transparency = recorte, Parent = superior })
+	novo("UIGradient", { Rotation = 135, Transparency = recorte, Parent = inferior })
+	return { meio, topo, base, superior, inferior }
 end
 
 export type Placa = {
@@ -78,49 +76,45 @@ export type Placa = {
 	definirCor: (fundo: Color3, borda: Color3?) -> (),
 }
 
--- Placa inclinada com borda e sombra deslocada. O conteúdo fica num Frame reto por cima.
 function Kit.placa(op: {
-	largura: number,
-	altura: number,
-	fundo: Color3,
+	nome: string?,
+	tamanho: UDim2,
+	fundo: Color3?,
 	borda: Color3?,
-	espessura: number?,
-	sombra: Color3?,
+	corte: number?,
 	pai: Instance?,
 	posicao: UDim2?,
 	ancora: Vector2?,
 	ordem: number?,
 	z: number?,
 }): Placa
-	local z = op.z or 1
-	local e = op.espessura or 0
+	local corte = op.corte or 10
 	local quadro = novo("Frame", {
-		Name = "Placa",
+		Name = op.nome or "Placa",
 		BackgroundTransparency = 1,
-		Size = UDim2.fromOffset(op.largura, op.altura),
+		Size = op.tamanho,
 		Position = op.posicao or UDim2.new(),
 		AnchorPoint = op.ancora or Vector2.zero,
 		LayoutOrder = op.ordem or 0,
-		ZIndex = z,
+		ZIndex = op.z or 1,
+		Parent = op.pai,
 	})
-	if op.sombra then
-		fatias(quadro, op.largura, op.altura, 6, 6, op.sombra, "Sombra", z)
-	end
-	local camadaBorda = if op.borda and e > 0
-		then fatias(quadro, op.largura, op.altura, 0, 0, op.borda, "Borda", z + 1)
-		else {}
-	local miolo =
-		fatias(quadro, op.largura - e * 2, op.altura - e * 2, e, e, op.fundo, "Fundo", z + 2)
+	local bordas = superficie(quadro, op.borda or Cores.Borda, corte)
+	local interior = novo("Frame", {
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(1, 1),
+		Size = UDim2.new(1, -2, 1, -2),
+		ZIndex = 2,
+		Parent = quadro,
+	})
+	local miolo = superficie(interior, op.fundo or Cores.Painel, corte - 1)
 	local conteudo = novo("Frame", {
 		Name = "Conteudo",
 		BackgroundTransparency = 1,
 		Size = UDim2.fromScale(1, 1),
-		ZIndex = z + 3,
+		ZIndex = 3,
 		Parent = quadro,
 	})
-	if op.pai then
-		quadro.Parent = op.pai
-	end
 	return {
 		quadro = quadro,
 		conteudo = conteudo,
@@ -129,7 +123,7 @@ function Kit.placa(op: {
 				f.BackgroundColor3 = fundo
 			end
 			if borda then
-				for _, f in camadaBorda do
+				for _, f in bordas do
 					f.BackgroundColor3 = borda
 				end
 			end
@@ -137,65 +131,159 @@ function Kit.placa(op: {
 	}
 end
 
+function Kit.alvo(pai: GuiObject, nome: string, aoClicar: () -> ()): TextButton
+	local botao = novo("TextButton", {
+		Name = "Acao",
+		Text = nome,
+		TextTransparency = 1,
+		AutoButtonColor = false,
+		BackgroundTransparency = 1,
+		Size = UDim2.fromScale(1, 1),
+		Selectable = true,
+		ZIndex = 4,
+		Parent = pai,
+	})
+	local foco = novo("Frame", {
+		Name = "Foco",
+		BackgroundTransparency = 1,
+		Size = UDim2.fromScale(1, 1),
+		Parent = botao,
+	})
+	local contorno =
+		novo("UIStroke", { Color = Cores.Foco, Thickness = 2, Enabled = false, Parent = foco })
+	local vazio = novo("ImageLabel", {
+		BackgroundTransparency = 1,
+		ImageTransparency = 1,
+		Size = UDim2.fromScale(1, 1),
+		Parent = botao,
+	})
+	botao.SelectionImageObject = vazio
+	botao.SelectionGained:Connect(function()
+		contorno.Enabled = true
+	end)
+	botao.SelectionLost:Connect(function()
+		contorno.Enabled = false
+	end)
+
+	local pressionado = bloco(botao, Cores.Fundo, UDim2.fromScale(1, 1), UDim2.new())
+	pressionado.BackgroundTransparency = 1
+	local token = 0
+	botao.Activated:Connect(function()
+		if not botao.Interactable then
+			return
+		end
+		token += 1
+		local meu = token
+		pressionado.BackgroundTransparency = 0.77
+		task.delay(0.09, function()
+			if token == meu then
+				pressionado.BackgroundTransparency = 1
+			end
+		end)
+		aoClicar()
+	end)
+	return botao
+end
+
+export type Tom = "lilas" | "menta" | "neutro"
 export type BotaoPlaca = {
 	placa: Placa,
 	botao: TextButton,
 	rotulo: TextLabel,
-	definirTexto: (texto: string) -> (),
-	definirAtivo: (ativo: boolean) -> (),
+	definirTom: (tom: Tom) -> (),
 }
 
--- Botão inclinado (AUTO, ÍNDICE). ativo = fundo papel com texto tinta.
 function Kit.botaoPlaca(op: {
 	texto: string,
-	largura: number,
-	altura: number,
-	tamanhoTexto: number,
-	sombra: Color3,
+	tamanho: UDim2,
+	tamanhoTexto: number?,
+	tom: Tom?,
 	pai: Instance?,
 	ordem: number?,
-	z: number?,
 	aoClicar: () -> (),
 }): BotaoPlaca
-	local placa = Kit.placa({
-		largura = op.largura,
-		altura = op.altura,
-		fundo = Cores.Tinta,
-		borda = Cores.Papel,
-		espessura = 3,
-		sombra = op.sombra,
-		ordem = op.ordem,
-		z = op.z,
-		pai = op.pai,
-	})
+	local placa = Kit.placa({ tamanho = op.tamanho, pai = op.pai, ordem = op.ordem })
 	local rotulo = Kit.texto({
+		fonte = "titulo",
 		Text = op.texto,
-		TextSize = op.tamanhoTexto,
-		Size = UDim2.fromScale(1, 1),
-		ZIndex = (op.z or 1) + 4,
+		TextSize = op.tamanhoTexto or 22,
+		TextWrapped = true,
+		Size = UDim2.new(1, -12, 1, 0),
+		Position = UDim2.fromOffset(6, 0),
 		Parent = placa.conteudo,
 	})
-	local botao = novo("TextButton", {
-		Name = "Clique",
-		Text = "",
-		BackgroundTransparency = 1,
-		Size = UDim2.fromScale(1, 1),
-		ZIndex = (op.z or 1) + 5,
-		Parent = placa.quadro,
-	})
-	botao.Activated:Connect(op.aoClicar)
+	local function definirTom(tom: Tom)
+		local primario = tom == "lilas"
+		local ativo = tom == "menta"
+		placa.definirCor(
+			if primario then Cores.Lilas elseif ativo then Cores.Ativo else Cores.Painel,
+			if primario then Cores.Lilas elseif ativo then Cores.Menta else Cores.Borda
+		)
+		rotulo.TextColor3 = if primario
+			then Cores.Fundo
+			elseif ativo then Cores.Menta
+			else Cores.Texto
+	end
+	definirTom(op.tom or "neutro")
 	return {
 		placa = placa,
-		botao = botao,
+		botao = Kit.alvo(placa.quadro, op.texto, op.aoClicar),
 		rotulo = rotulo,
-		definirTexto = function(texto: string)
-			rotulo.Text = texto
-		end,
-		definirAtivo = function(ativo: boolean)
-			placa.definirCor(if ativo then Cores.Papel else Cores.Tinta)
-			rotulo.TextColor3 = if ativo then Cores.Tinta else Cores.Papel
-		end,
+		definirTom = definirTom,
 	}
+end
+
+function Kit.rolagem(pai: Instance): ScrollingFrame
+	return novo("ScrollingFrame", {
+		Name = "Lista",
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		Size = UDim2.new(1, -24, 1, -16),
+		Position = UDim2.fromOffset(12, 8),
+		ScrollingDirection = Enum.ScrollingDirection.Y,
+		ScrollBarThickness = 6,
+		ScrollBarImageColor3 = Cores.Lilas,
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		CanvasSize = UDim2.new(),
+		Parent = pai,
+	})
+end
+
+function Kit.cristal(pai: Instance, largura: number, cor: Color3): (Frame, Frame)
+	local quadro = novo("Frame", {
+		Name = "Cristal",
+		BackgroundTransparency = 1,
+		Size = UDim2.fromOffset(largura, largura),
+		Parent = pai,
+	})
+	local diamante = bloco(
+		quadro,
+		Cores.Elevado,
+		UDim2.fromScale(0.68, 0.68),
+		UDim2.fromScale(0.5, 0.5),
+		Vector2.new(0.5, 0.5)
+	)
+	diamante.Rotation = 45
+	novo("UIStroke", { Color = Cores.Borda, Thickness = 1, Parent = diamante })
+	local centro = bloco(
+		quadro,
+		cor,
+		UDim2.fromScale(0.38, 0.38),
+		UDim2.fromScale(0.5, 0.5),
+		Vector2.new(0.5, 0.5)
+	)
+	centro.Rotation = 45
+	novo("UIGradient", {
+		Rotation = -45,
+		Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Cores.Texto),
+			ColorSequenceKeypoint.new(0.495, Cores.Texto),
+			ColorSequenceKeypoint.new(0.505, Cores.Borda),
+			ColorSequenceKeypoint.new(1, Cores.Borda),
+		}),
+		Parent = centro,
+	})
+	return quadro, centro
 end
 
 function Kit.circulo(props: { [string]: any }): Frame
@@ -204,7 +292,7 @@ function Kit.circulo(props: { [string]: any }): Frame
 	return f
 end
 
-export type Anel = { quadro: Frame, definir: (fracao: number) -> () }
+export type Anel = { quadro: Frame, definir: (fracao: number, cor: Color3?) -> () }
 
 -- Anel de progresso circular (técnica das duas metades com UIGradient).
 -- Preenche no sentido horário a partir do topo.
@@ -218,6 +306,7 @@ function Kit.anel(pai: Instance, tamanho: number, cor: Color3, fundo: Color3, z:
 		ZIndex = z,
 		Parent = pai,
 	})
+	local discos: { Frame } = {}
 	local function metade(direita: boolean): UIGradient
 		local recorte = novo("Frame", {
 			Name = if direita then "Direita" else "Esquerda",
@@ -235,6 +324,7 @@ function Kit.anel(pai: Instance, tamanho: number, cor: Color3, fundo: Color3, z:
 			ZIndex = z,
 			Parent = recorte,
 		})
+		table.insert(discos, disco)
 		-- Metade direita: lado esquerdo do disco opaco, que gira para dentro do recorte
 		local a, b = if direita then 0 else 1, if direita then 1 else 0
 		return novo("UIGradient", {
@@ -249,56 +339,25 @@ function Kit.anel(pai: Instance, tamanho: number, cor: Color3, fundo: Color3, z:
 	end
 	local direita = metade(true)
 	local esquerda = metade(false)
-	local function definir(fracao: number)
+	local corAtual = cor
+	local fracaoAtual = -1
+	local function definir(fracao: number, novaCor: Color3?)
+		if novaCor and novaCor ~= corAtual then
+			corAtual = novaCor
+			for _, disco in discos do
+				disco.BackgroundColor3 = novaCor
+			end
+		end
+		if fracao == fracaoAtual then
+			return
+		end
+		fracaoAtual = fracao
 		local graus = math.clamp(fracao, 0, 1) * 360
 		direita.Rotation = math.clamp(graus, 0, 180)
 		esquerda.Rotation = math.clamp(graus - 180, 0, 180)
 	end
 	definir(1)
 	return { quadro = quadro, definir = definir }
-end
-
--- Ícone do olho se abrindo (selo do botão DESPERTAR)
-function Kit.olho(pai: Instance, largura: number, cor: Color3, z: number): Frame
-	local quadro = novo("Frame", {
-		Name = "Olho",
-		BackgroundTransparency = 1,
-		Size = UDim2.fromOffset(largura, largura * 0.55),
-		ZIndex = z,
-		Parent = pai,
-	})
-	local contorno = Kit.circulo({
-		BackgroundTransparency = 1,
-		Size = UDim2.fromScale(1, 0.7),
-		Position = UDim2.fromScale(0.5, 0.6),
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		ZIndex = z,
-		Parent = quadro,
-	})
-	novo("UIStroke", { Color = cor, Thickness = 3.5, Parent = contorno })
-	Kit.circulo({
-		BackgroundColor3 = cor,
-		Size = UDim2.fromOffset(largura * 0.24, largura * 0.24),
-		Position = UDim2.fromScale(0.5, 0.6),
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		ZIndex = z,
-		Parent = quadro,
-	})
-	-- Raios acima do olho
-	for i, angulo in { -35, 0, 35 } do
-		novo("Frame", {
-			Name = "Raio" .. i,
-			BackgroundColor3 = cor,
-			BorderSizePixel = 0,
-			Size = UDim2.fromOffset(3, largura * 0.12),
-			Position = UDim2.new(0.5 + angulo / 140, 0, 0, 0),
-			AnchorPoint = Vector2.new(0.5, 0),
-			Rotation = angulo,
-			ZIndex = z,
-			Parent = quadro,
-		})
-	end
-	return quadro
 end
 
 return Kit
