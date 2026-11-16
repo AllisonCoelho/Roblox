@@ -4,7 +4,8 @@ Marcar cada item no Studio (`rojo serve` + Play) e depois na experiência privad
 
 ## Montagem
 - [ ] Output sem `[Nexo] kit 3D indisponível`.
-- [ ] `Workspace.Nexo.Kit3D` existe no cliente, com 54 peças e a pasta `Colisores`.
+- [ ] `Workspace.Nexo.Kit3D` existe no cliente, com as peças do kit (313 na fase 2).
+- [ ] As caixas `ColisorKit` existem no servidor e somem (ficam transparentes) no cliente quando o kit monta.
 - [ ] Peças viradas para fora (não "do avesso") e no lugar: pedestal no centro, cristal acima, arco ao norte.
 - [ ] As peças antigas da praça e do Núcleo sumiram; nada duplicado.
 
@@ -41,6 +42,7 @@ Marcar cada item no Studio (`rojo serve` + Play) e depois na experiência privad
 - [ ] Os seis lugares aparecem em 3D e o esqueleto cinza some.
 - [ ] Caminhos: a transição de cada um é perceptível (mármore e símbolos azuis no Arquivo, vegetação e verde no Jardim, chão fraturado nos Portais).
 - [ ] Ninguém sai do mapa: andar e pular contra os penhascos em vários pontos.
+- [ ] Cenário de reserva (kit desligado, por exemplo com erro forçado em `Montagem.construir`): o anel `BordaProvisoria` fecha a borda e os blocos `ColisorKit` aparecem onde estão os obstáculos.
 - [ ] Do alto do Obelisco ou pulando perto da borda, não se vê o lado de fora.
 - [ ] Painel do ranking legível, dentro da moldura, virado para a praça.
 - [ ] Arquivo: "Abrir índice" no console; colunas e degraus sem prender o personagem.

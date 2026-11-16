@@ -33,10 +33,11 @@ assets/nexo/
   previews/*.jpg              renders do Blender: spawn, nucleo, alto
 src/client/Mundo/Nexo3D/
   Dados/*.luau                GERADO: geometria compacta de cada peça (base64)
-  Cena.luau                   GERADO: posição, giro, escala, material e colisores de cada peça
+  Cena.luau                   GERADO: posição, giro, escala e material de cada peça
   Malha.luau                  dados -> EditableMesh -> MeshPart
-  Montagem.luau               monta a praça e os colisores locais
+  Montagem.luau               monta as peças 3D (só visual; não cria colisão)
 src/client/Nexo.client.luau   chama a montagem, esconde o provisório e anima o kit
+src/shared/Dados/NexoColisores.luau  GERADO: caixas de colisão do kit no espaço do mundo (o servidor cria)
 src/server/Mundo/Nexo.luau    marca as peças antigas da praça/Núcleo com o atributo Provisorio
 ```
 
@@ -49,7 +50,7 @@ Daqui não há Roblox Studio nem permissão para enviar assets, então **não ex
 3. `rojo build` leva tudo no `.rbxlx`; o deploy automático não precisa de nenhum passo manual.
 
 Consequências:
-- As peças visuais não colidem. A colisão vem do piso e do pedestal provisórios do servidor (escondidos, não removidos) e de caixas invisíveis locais nos pilares, muros e pés dos arcos.
+- As peças visuais não colidem. A colisão é toda do servidor: o piso, o pedestal e o esqueleto dos lugares (escondidos, não removidos) e as caixas de `src/shared/Dados/NexoColisores.luau` (pilares, muros, pés dos arcos, troncos e ruínas), geradas pelo Blender a partir dos mesmos dados que posicionam as malhas. Assim todos os jogadores colidem igual, com ou sem o kit carregado.
 - Sem texturas: a cor vem dos vértices e a superfície do material do Roblox (`Slate` na pedra, `Metal` nas garras, `Glass` nos cristais, `Neon` na energia).
 - **Fallback temporário:** se `Montagem.construir` falhar, o cliente avisa no Output e o cenário antigo continua visível. Remover o cenário antigo do servidor só depois de validar o kit no Studio e no celular.
 
@@ -91,7 +92,7 @@ Convenções: 1 unidade do Blender = 1 stud; norte = +Y no Blender e −Z no Rob
 - **Neon e cor por vértice:** se o material Neon ignorar a cor por vértice, as canaletas ficam brancas; a correção é separar as peças de energia por cor.
 - **Vidro transparente** pode ter ordenação estranha entre estilhaços; alternativa: `Transparency = 0`.
 - **Custo:** 54 MeshParts e a criação das malhas na entrada (a montagem cede o quadro a cada 6 peças). Memória de EditableMesh no celular não medida.
-- **Colisão:** arcos e pilares só colidem para o próprio jogador (colisores locais). Outros jogadores veem todos respeitando os mesmos obstáculos porque cada cliente simula o próprio personagem.
+- **Colisão por caixas:** as caixas são aproximações das peças (um bloco por pilar, por pé de arco, por muro). Se alguma ficar maior ou menor que o modelo, o ajuste é em `colisores` na `montar_cena` do gerador.
 
 
 ## Fase 2: os seis lugares, caminhos de transição e mapa fechado
@@ -124,7 +125,9 @@ Cada caminho é uma peça única, modelada da praça (pedra comum, 10 studs de l
 - **Arena:** marcas vermelhas transversais, como faixas de pista.
 
 ### Como a colisão funciona agora
-O servidor (`src/server/Mundo/Nexo.luau`) monta só o **esqueleto**: plataformas, colunas, monólitos, pilares dos portais, arquibancada e caminhos com as mesmas medidas dos modelos, mais as partes funcionais e as placas. Tudo que não é funcional recebe o atributo `Provisorio` e o cliente esconde ao montar o kit. No Jardim, troncos, ruínas e muro colidem pelos colisores locais do kit.
+O servidor (`src/server/Mundo/Nexo.luau`) monta só o **esqueleto**: plataformas, colunas, monólitos, pilares dos portais, arquibancada e caminhos com as mesmas medidas dos modelos, mais as partes funcionais e as placas. Tudo que não é funcional recebe o atributo `Provisorio` e o cliente esconde ao montar o kit. As 26 caixas de `src/shared/Dados/NexoColisores.luau` (arcos, pilares e muros da praça; troncos, arco, pilares e muro do Jardim) são criadas pelo servidor (`construirColisoresKit`) e também são `Provisorio`: no cenário de reserva aparecem como blocos simples.
+
+No cenário de reserva, um anel opaco de rocha (`BordaProvisoria`, raio 243, sem colisão) fecha a borda do mapa; ele some quando os penhascos 3D carregam. A parede invisível (`ParedeLimite`, raio 238) vale sempre.
 
 **As medidas estão duplicadas** em `generate_nexo.py` (`LOCAIS`, `BORDAS`, `montar_locais`) e no servidor (`LOCAIS` e `construir*`). Ao mudar um, mudar o outro.
 
