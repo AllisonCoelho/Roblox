@@ -212,48 +212,191 @@ def fazer_gema(rng):
     return None, bm, Vector((0, 0, 0))
 
 
-def fazer_soldado(rng):
-    """Soldado das sombras: cavaleiro de armadura com ombreiras pontudas, elmo com chifres, capa
-    rasgada e espada cravada à frente. Pés na origem, olhando para +Y, ~5,6 studs."""
-    vol = Volume("soldado", 0.06)
+# ---------------------------------------------------------------- soldados das sombras
+# Quatro soldados diferentes, cada um com silhueta própria (pés na origem, olhando para +Y).
+# Cada função devolve (volume, tubos, pontos dos olhos).
+
+
+def membro(vol, a, b, r0, r1, n=6):
+    a, b = Vector(a), Vector(b)
+    for j in range(n):
+        f = j / (n - 1)
+        vol.bola(a + (b - a) * f, r0 + (r1 - r0) * f)
+
+
+def capa(t, x0, x1, y, z, comp, n=7, grossura=0.3):
+    for j in range(n):
+        x = x0 + (x1 - x0) * j / (n - 1)
+        garra(t, (x, y, z), (x * 0.25, -0.35, -1), (0, -1, 0), comp * (1 + 0.18 * (j % 2)), grossura, gancho=0.25, n=10)
+
+
+def soldado_cavaleiro(rng):
+    """Comandante (estilo Igris): cavaleiro alto e esguio, elmo com penacho longo, ombreiras em
+    lâmina, capa comprida e a espada longa cravada à frente com as duas mãos."""
+    vol = Volume("cavaleiro", 0.06)
     t = bmesh.new()
     for lado in (1, -1):
-        for j in range(7):  # pernas
-            vol.bola((lado * 0.45, 0, 0.25 + 0.33 * j), 0.4 - 0.02 * j)
-        vol.bola((lado * 0.5, 0.25, 0.2), 0.34)  # pé
-        vol.bola((lado * 1.2, 0, 3.95), 0.6)  # ombreira
-        garra(t, (lado * 1.35, 0, 4.2), (lado, 0, 0.8), (0, 0, 1), 0.75, 0.24, gancho=0.5)
-        garra(t, (lado * 1.45, 0, 3.9), (lado, 0, 0.15), (0, 0, 1), 0.55, 0.18, gancho=0.5)
-        for j in range(5):  # braços
-            vol.bola((lado * (1.3 + 0.03 * j), 0.08 * j, 3.5 - 0.3 * j), 0.33)
-        garra(t, (lado * 0.22, 0.05, 4.95), (lado * 0.6, -0.2, 1), (lado, 0, 0), 0.7, 0.13, gancho=0.5)  # chifres
-    for j in range(6):  # tronco (peitoral largo)
-        f = j / 5
-        vol.bola((0, 0, 2.3 + 0.32 * j), 0.62 + 0.2 * f, achatar=(1.25, 0.8, 1.0))
-    vol.bola((0, 0, 4.65), 0.5)  # elmo
-    vol.bola((0, 0.2, 4.5), 0.38)  # viseira
-    # espada cravada no chão, à frente, com as duas mãos
-    lamina = [Vector((0, 0.75, 3.5 - 3.3 * j / 15)) for j in range(16)]
-    tubo_liso(t, lamina, [0.17 * (1 - 0.5 * (j / 15) ** 2) + 0.01 for j in range(16)], lados=8, achatar=0.35)
-    guarda = [Vector((-0.55 + 1.1 * j / 9, 0.75, 3.5)) for j in range(10)]
-    tubo_liso(t, guarda, [0.09] * 10, lados=6)
-    cabo = [Vector((0, 0.75, 3.5 + 0.6 * j / 5)) for j in range(6)]
-    tubo_liso(t, cabo, [0.08] * 6, lados=6)
-    for lado in (1, -1):  # antebraços até o cabo
-        vol.bola((lado * 0.9, 0.45, 2.9), 0.3)
-        vol.bola((lado * 0.45, 0.65, 3.3), 0.28)
-    for j in range(7):  # capa rasgada
-        x = -0.9 + 0.3 * j
-        garra(t, (x, -0.55, 3.6), (x * 0.25, -0.35, -1), (0, -1, 0), 2.6 + 0.5 * (j % 2), 0.3, gancho=0.25, n=10)
-    return vol.malha(), t, Vector((0, 0, 0))
+        membro(vol, (lado * 0.42, 0, 0.2), (lado * 0.4, 0, 2.5), 0.36, 0.34, 8)
+        vol.bola((lado * 0.48, 0.25, 0.18), 0.32)  # bota
+        garra(t, (lado * 0.45, 0.3, 1.35), (0, 1, 0.3), (0, 0, 1), 0.35, 0.14, gancho=0.4)  # joelheira
+        vol.bola((lado * 1.1, 0, 4.3), 0.5)  # ombreira
+        for k in range(3):  # ombreira em lâminas sobrepostas
+            garra(t, (lado * (1.2 + 0.1 * k), 0, 4.5 - 0.22 * k), (lado, 0, 0.55 - 0.3 * k), (0, 0, 1), 0.8 - 0.12 * k, 0.2, gancho=0.45)
+        membro(vol, (lado * 1.2, 0, 4.0), (lado * 0.95, 0.4, 3.2), 0.3, 0.27, 4)
+        membro(vol, (lado * 0.95, 0.4, 3.2), (lado * 0.25, 0.8, 3.75), 0.27, 0.24, 4)
+    for j in range(7):  # tronco: cintura fina, peito largo
+        f = j / 6
+        vol.bola((0, 0, 2.6 + 0.3 * j), 0.5 + 0.32 * f, achatar=(1.2, 0.8, 1.0))
+    vol.bola((0, 0, 5.05), 0.44)  # elmo
+    vol.bola((0, 0.22, 4.92), 0.32)  # viseira em bico
+    garra(t, (0, 0.38, 4.85), (0, 1, -0.25), (0, 0, -1), 0.35, 0.14, gancho=0.3)
+    # penacho: sai do alto do elmo e cai longo para trás
+    pen = catmull([(0, 0.05, 5.4), (0, -0.25, 6.1), (0, -0.95, 6.2), (0, -1.5, 5.4), (0, -1.75, 4.3), (0, -1.6, 3.4)], 26)
+    tubo_liso(t, pen, [0.2 * (1 - (j / 25) ** 1.5) + 0.02 for j in range(26)], lados=8, achatar=0.5)
+    # espada longa cravada no chão
+    lam = [Vector((0, 0.85, 3.9 - 3.8 * j / 17)) for j in range(18)]
+    tubo_liso(t, lam, [0.19 * (1 - 0.6 * (j / 17) ** 2) + 0.01 for j in range(18)], lados=8, achatar=0.3)
+    tubo_liso(t, [Vector((-0.7 + 1.4 * j / 9, 0.85, 3.9 + 0.1 * abs(j - 4.5) / 4.5)) for j in range(10)], [0.09] * 10, lados=6)
+    tubo_liso(t, [Vector((0, 0.85, 3.9 + 0.75 * j / 5)) for j in range(6)], [0.08] * 6, lados=6)
+    capa(t, -0.95, 0.95, -0.5, 4.1, 3.3, 8, 0.32)
+    olhos = [[(lado * (0.08 + 0.06 * j), 0.5, 4.97 + 0.03 * j) for j in range(4)] for lado in (1, -1)]
+    return vol, t, olhos
 
 
-def fazer_soldado_olhos(rng):
-    vol = Volume("olhos", 0.02)
+def soldado_gigante(rng):
+    """Gigante de armadura pesada: muito largo, ombros enormes, elmo pequeno com chifres para os
+    lados, escudo-torre no braço esquerdo e um machado grande apoiado no ombro direito."""
+    vol = Volume("gigante", 0.07)
+    t = bmesh.new()
     for lado in (1, -1):
-        for j in range(4):
-            vol.bola((lado * (0.1 + 0.07 * j), 0.56, 4.52 + 0.025 * j), 0.05)
-    return vol.malha(), bmesh.new(), Vector((0, 0, 0))
+        membro(vol, (lado * 0.75, 0, 0.3), (lado * 0.7, 0, 2.6), 0.62, 0.6, 6)
+        vol.bola((lado * 0.8, 0.35, 0.3), 0.55)
+        vol.bola((lado * 1.9, 0, 5.0), 0.95)  # ombros enormes
+        garra(t, (lado * 2.2, 0, 5.5), (lado * 0.6, 0, 1), (lado, 0, 0), 0.8, 0.3, gancho=0.5)
+        garra(t, (lado * 0.5, 0, 6.35), (lado, 0, 0.35), (0, 0, 1), 0.9, 0.2, gancho=0.6)  # chifres laterais
+    for j in range(7):  # barril
+        f = j / 6
+        vol.bola((0, 0, 2.9 + 0.38 * j), 1.0 + 0.3 * math.sin(f * math.pi * 0.8), achatar=(1.25, 0.9, 1.0))
+    vol.bola((0, 0.25, 3.3), 0.85)  # barriga
+    vol.bola((0, 0.05, 6.1), 0.5)  # elmo pequeno
+    # braço esquerdo com escudo-torre
+    membro(vol, (-2.0, 0, 4.6), (-2.1, 0.6, 3.0), 0.55, 0.5, 5)
+    esc = [Vector((-2.0, 1.25, 5.2 - 4.9 * j / 15)) for j in range(16)]
+    tubo_liso(t, esc, [1.15 * (1 - 0.5 * (j / 15) ** 3) * (0.75 + 0.25 * math.sin(math.pi * min(j / 4, 1) / 2)) for j in range(16)], lados=14, achatar=0.16)
+    garra(t, (-2.0, 1.45, 3.6), (0, 1, 0), (0, 0, 1), 0.5, 0.25, gancho=0.2)  # espigão do escudo
+    # braço direito e machado no ombro
+    membro(vol, (2.0, 0, 4.6), (2.3, 0.5, 3.6), 0.55, 0.5, 4)
+    membro(vol, (2.3, 0.5, 3.6), (2.0, 0.7, 4.6), 0.5, 0.45, 4)
+    cabo = [Vector((2.0, 0.9 - 2.6 * j / 13, 3.6 + 3.9 * j / 13)) for j in range(14)]
+    tubo_liso(t, cabo, [0.13] * 14, lados=6)
+    topo = cabo[-1]
+    for sinal in (1, -1):  # lâminas duplas do machado
+        for k in range(5):
+            a = math.radians(-50 + 25 * k)
+            garra(t, topo + Vector((0, 0, -0.3)), (sinal * math.cos(a), 0, math.sin(a)), (0, 0, -1), 1.25, 0.34, gancho=0.2, achatar=0.3)
+    capa(t, -1.6, 1.6, -0.85, 4.6, 2.6, 6, 0.4)
+    olhos = [[(-0.28 + 0.08 * j, 0.52, 6.15) for j in range(8)]]  # um visor só, em fenda
+    return vol, t, olhos
+
+
+def soldado_mago(rng):
+    """Mago das sombras: encapuzado, curvado, manto que se desfaz em trapos (sem pernas: flutua),
+    presas saindo do capuz, cajado alto com um orbe e uma chama na outra mão."""
+    vol = Volume("mago", 0.06)
+    t = bmesh.new()
+    for j in range(9):  # manto: abre para baixo
+        f = j / 8
+        vol.bola((0, -0.1 * f, 4.2 - 0.38 * j), 0.6 + 0.55 * f, achatar=(1.1, 0.85, 1.0))
+    for j in range(10):  # barra em trapos
+        a = 2 * math.pi * j / 10
+        garra(t, (1.05 * math.cos(a), 0.85 * math.sin(a) - 0.1, 1.15), (0.25 * math.cos(a), 0.25 * math.sin(a), -1), (math.cos(a), math.sin(a), 0), 0.9 + 0.35 * (j % 2), 0.3, gancho=0.35, n=10)
+    vol.bola((0, 0.25, 4.75), 0.62)  # capuz (curvado para a frente)
+    vol.bola((0, -0.2, 4.6), 0.6)
+    garra(t, (0, -0.35, 5.1), (0, -1, 0.5), (0, 0, -1), 1.1, 0.34, gancho=0.7)  # bico do capuz
+    for lado in (1, -1):
+        vol.bola((lado * 0.85, 0, 4.25), 0.48)  # ombros caídos
+        garra(t, (lado * 0.24, 0.72, 4.45), (lado * 0.25, 0.35, 1), (0, 1, 0), 0.55, 0.1, gancho=0.35)  # presas
+    # braço direito segurando o cajado
+    membro(vol, (0.95, 0.1, 4.1), (1.45, 0.7, 3.5), 0.34, 0.3, 4)
+    caj = [Vector((1.5, 0.8, 0.7 + 6.0 * j / 15)) for j in range(16)]
+    tubo_liso(t, caj, [0.1] * 16, lados=6)
+    lua = [Vector((1.5 + 0.55 * math.cos(a), 0.8, 7.05 + 0.55 * math.sin(a))) for a in (math.radians(200 + 320 * j / 15) for j in range(16))]
+    tubo_liso(t, lua, [0.13 * math.sin(math.pi * j / 15) + 0.02 for j in range(16)], lados=6, achatar=0.5)
+    # braço esquerdo erguido com uma chama
+    membro(vol, (-0.95, 0.1, 4.1), (-1.55, 0.75, 4.35), 0.34, 0.28, 4)
+    for k in range(4):
+        garra(t, (-1.6 + 0.12 * (k - 1.5), 0.8, 4.55), (0.2 * (k - 1.5), 0, 1), (1 if k % 2 else -1, 0, 0), 0.7 + 0.2 * (k % 2), 0.16, gancho=0.5)
+    olhos = [[(lado * 0.2, 0.86, 4.8)] for lado in (1, -1)] + [[(1.5, 0.8, 7.05)]]  # dois olhos redondos + orbe
+    return vol, t, olhos
+
+
+def soldado_formiga(rng):
+    """Rei-formiga (estilo Beru): magro e curvado, pernas de inseto, braços longos com garras,
+    mandíbulas, antenas compridas, abdômen atrás e quatro asas finas."""
+    vol = Volume("formiga", 0.055)
+    t = bmesh.new()
+    for lado in (1, -1):
+        # pernas digitígradas (joelho para trás)
+        membro(vol, (lado * 0.45, 0.25, 0.15), (lado * 0.5, -0.45, 1.3), 0.22, 0.26, 12)
+        membro(vol, (lado * 0.5, -0.45, 1.3), (lado * 0.4, 0.1, 2.5), 0.26, 0.34, 12)
+        for k in range(3):
+            garra(t, (lado * 0.45, 0.3, 0.15), (lado * 0.4 * (k - 1), 1, -0.1), (0, 0, -1), 0.45, 0.1, gancho=0.4)
+        vol.bola((lado * 0.95, 0, 4.25), 0.42)
+        garra(t, (lado * 1.05, 0, 4.5), (lado, -0.2, 0.8), (0, 0, 1), 0.6, 0.16, gancho=0.5)
+        # braços longos, abertos, com três garras
+        membro(vol, (lado * 1.05, 0, 4.1), (lado * 1.75, 0.3, 3.0), 0.24, 0.2, 12)
+        membro(vol, (lado * 1.75, 0.3, 3.0), (lado * 1.55, 0.95, 2.2), 0.2, 0.22, 12)
+        for k in range(3):
+            garra(t, (lado * 1.55, 1.0, 2.15), (lado * 0.35 * (k - 1), 0.8, -0.7), (0, 0, -1), 0.8, 0.1, gancho=0.5)
+        # mandíbulas e antenas
+        garra(t, (lado * 0.2, 0.5, 4.75), (lado * 0.5, 1, -0.5), (-lado, 0, 0), 0.5, 0.1, gancho=0.7)
+        ant = catmull([(lado * 0.2, 0.2, 5.3), (lado * 0.55, 0.3, 6.2), (lado * 0.9, -0.3, 6.9), (lado * 1.0, -1.0, 6.9)], 16)
+        tubo_liso(t, ant, [0.06 * (1 - j / 15) + 0.012 for j in range(16)], lados=6)
+        # asas de inseto: duas por lado, finas
+        for k, (dz, comp) in enumerate(((0.6, 3.4), (-0.5, 2.6))):
+            asa = [Vector((lado * (0.3 + 1.6 * f), -0.6 - 1.4 * f, 3.9 + dz * f * 2 + 0.5 * math.sin(f * math.pi))) for f in (j / 13 * comp / 3.4 for j in range(14))]
+            tubo_liso(t, asa, [0.55 * math.sin(math.pi * (j / 13) ** 0.7) + 0.02 for j in range(14)], lados=8, achatar=0.08)
+    for j in range(6):  # tórax: peito projetado, cintura finíssima
+        f = j / 5
+        vol.bola((0, 0.1 * f, 2.7 + 0.32 * j), 0.3 + 0.38 * f, achatar=(1.2, 0.9, 1.0))
+    vol.bola((0, 0.3, 4.95), 0.42, achatar=(0.9, 1.2, 1.0))  # cabeça alongada
+    vol.bola((0, -0.1, 5.15), 0.36)
+    for j in range(5):  # abdômen segmentado atrás
+        vol.bola((0, -0.55 - 0.42 * j, 2.6 - 0.22 * j), 0.5 - 0.06 * abs(j - 1.5), achatar=(1.0, 1.0, 0.9))
+    garra(t, (0, -2.35, 1.6), (0, -1, -0.4), (0, 0, -1), 0.7, 0.2, gancho=0.5)  # ferrão
+    olhos = [[(lado * (0.14 + 0.07 * j), 0.68 - 0.03 * j, 5.0 + 0.05 * j) for j in range(4)] for lado in (1, -1)]
+    return vol, t, olhos
+
+
+# tipo: malha, escala no jogo, altura (para emergir), flutua (studs), balanço (graus)
+SOLDADOS = [
+    ("cavaleiro", soldado_cavaleiro, 4200, dict(escala=1.2, altura=6.6, flutua=0, balanco=0)),
+    ("gigante", soldado_gigante, 4200, dict(escala=1.05, altura=8.0, flutua=0, balanco=1)),
+    ("mago", soldado_mago, 3600, dict(escala=1.0, altura=7.8, flutua=0.35, balanco=2)),
+    ("formiga", soldado_formiga, 4200, dict(escala=1.0, altura=7.2, flutua=0, balanco=4)),
+]
+
+
+def malha_olhos(grupos):
+    vol = Volume("olhos", 0.025)
+    for g in grupos:
+        for p in g:
+            vol.bola(p, 0.075 if len(g) > 1 else 0.16)
+    bm = vol.malha()
+    bmesh.ops.triangulate(bm, faces=bm.faces)
+    return bm
+
+
+def fazer_chama_pequena(rng):
+    """Labareda pequena (origem na base): muitas delas sobem e somem em volta do corpo."""
+    vol = Volume("pequena", 0.04)
+    t = bmesh.new()
+    for j in range(6):
+        f = j / 5
+        vol.bola((0.08 * math.sin(f * 3), 0, 0.15 + 0.5 * f), 0.26 * (1 - 0.45 * f), achatar=(1.0, 0.65, 1.0))
+    garra(t, (0.05, 0, 0.55), (0.15, 0, 1), (1, 0, 0), 0.95, 0.17, gancho=0.55)
+    garra(t, (-0.12, 0, 0.3), (-0.5, 0, 1), (-1, 0, 0), 0.5, 0.1, gancho=0.6)
+    return vol.malha(), t, Vector((0, 0, 0))
 
 
 def fazer_olhos_par(rng):
@@ -377,14 +520,15 @@ CORPO = [
     ("chama_lado_d", lambda r: labareda(r, [(1.5, -0.35, 2.5), (2.5, -0.1, 2.9), (3.1, 0.25, 3.8), (3.4, 0.45, 4.6), (3.2, 0.5, 5.1)], 0.58, ((0.35, 0.7, 1),), -1.0), 2000, ch("tronco", 45, 0.8, 0.45, giro=10)),
     ("chama_baixo_e", lambda r: labareda(r, [(-0.8, -0.5, 1.7), (-1.8, -0.2, 1.2), (-2.4, 0.4, 1.7), (-2.2, 0.8, 2.5), (-1.8, 0.9, 2.8)], 0.5, ((0.3, 0.55, 1),), 1.0), 1600, ch("raiz", 34, 1.0, 0.55, giro=10)),
     ("chama_baixo_d", lambda r: labareda(r, [(0.8, -0.5, 1.5), (1.7, -0.2, 0.9), (2.3, 0.4, 1.3), (2.5, 0.8, 2.1), (2.2, 0.9, 2.6)], 0.5, ((0.3, 0.55, -1),), -1.0), 1600, ch("raiz", 34, 1.0, 0.6, giro=10)),
+    ("chama_frente_e", lambda r: labareda(r, [(-0.9, 0.55, 0.5), (-1.8, 0.95, 1.0), (-2.4, 0.9, 1.9), (-2.2, 0.8, 2.7), (-1.8, 0.8, 3.0)], 0.42, ((0.3, 0.45, -1),), 1.0), 1400, ch("raiz", 40, 0.8, 0.62, giro=10)),
+    ("chama_frente_d", lambda r: labareda(r, [(1.0, 0.55, 0.3), (1.9, 0.95, 0.7), (2.5, 0.9, 1.5), (2.7, 0.8, 2.3), (2.4, 0.8, 2.7)], 0.4, ((0.3, 0.45, 1),), -1.0), 1400, ch("raiz", 40, 0.8, 0.66, giro=10)),
     ("corte_a", lambda r: corte_meia_lua([(-2.1, 0.3, 1.7), (-0.9, 1.0, 2.0), (0.6, 1.1, 2.45), (2.0, 0.5, 3.1)], 0.2), 600, ch("raiz", 80, 0.4, 0.7, tremor=0.0, giro=3, volta=0.5)),
     ("corte_b", lambda r: corte_meia_lua([(1.9, 0.4, 1.4), (0.7, 1.05, 1.15), (-0.7, 1.0, 1.0), (-1.9, 0.3, 0.7)], 0.16), 600, ch("raiz", 80, 0.4, 0.8, tremor=0.0, giro=3, volta=-0.35)),
 ]
 SOLTAS = [
     ("coroa", fazer_coroa, 2500),
     ("coroa_gema", fazer_gema, 50),
-    ("soldado", fazer_soldado, 3000),
-    ("soldado_olhos", fazer_soldado_olhos, 300),
+    ("chama_pequena", fazer_chama_pequena, 300),
     ("olhos_par", fazer_olhos_par, 400),
     ("poca", fazer_poca, 1600),
     ("mecha", fazer_mecha, 200),
@@ -408,7 +552,7 @@ def montar(fn, alvo, rng, achatar_z=None):
     return bm, pivo
 
 
-def escrever_pecas(lista):
+def escrever_pecas(lista, soldados):
     linhas = [
         "-- GERADO por assets/auras/monarca/source/generate_monarca.py. Não editar à mão.",
         "-- Chamas do Monarca das Sombras (studs, relativo ao HumanoidRootPart de um R15 padrão).",
@@ -423,6 +567,10 @@ def escrever_pecas(lista):
         campos = ['nome = "%s"' % nome, "pivo = { %.3f, %.3f, %.3f }" % (pivo.x, pivo.z - ALTURA_RAIZ, -pivo.y)]
         for k, v in cfg.items():
             campos.append(('%s = "%s"' if isinstance(v, str) else "%s = %g") % (k, v))
+        linhas.append("\t\t{ " + ", ".join(campos) + " },")
+    linhas += ["\t},", "\tsoldados = {"]
+    for nome, cfg in soldados:
+        campos = ['malha = "monarca_soldado_%s"' % nome, 'olhos = "monarca_soldado_%s_olhos"' % nome] + ["%s = %g" % kv for kv in cfg.items()]
         linhas.append("\t\t{ " + ", ".join(campos) + " },")
     linhas += ["\t},", "}", ""]
     with open(os.path.join(DIR_LUAU, "MonarcaPecas.luau"), "w", encoding="utf-8") as f:
@@ -453,17 +601,48 @@ def gerar():
     objs = {}
     lista = []
     for i, (nome, fn, alvo, cfg) in enumerate(CORPO):
-        bm, pivo = montar(fn, alvo, random.Random(1300 + i))
+        corpo, tubos, pivo = fn(random.Random(1300 + i))
+        cfg = dict(cfg)
+        if corpo is None:  # cortes: só a lâmina
+            bm = tubos
+            bmesh.ops.triangulate(bm, faces=bm.faces)
+            cfg["pontas"] = 0
+        else:
+            # corpo (escuro) e pontas (roxo vivo) são malhas separadas: o degradê da chama
+            bmesh.ops.remove_doubles(corpo, verts=corpo.verts, dist=0.004)
+            suavizar(corpo, 2)
+            bm = reduzir(corpo, alvo)
+            bmesh.ops.triangulate(tubos, faces=tubos.faces)
+            escrever_luau(nome + "_pontas", tubos, True)
+            objs[nome + "_pontas"] = objeto(nome + "_pontas", tubos)
+            cfg["pontas"] = 1
         nv, nt = escrever_luau(nome, bm, True)
         print("%-16s %5d vértices %5d triângulos" % (nome, nv, nt))
         objs[nome] = objeto(nome, bm)
         lista.append((nome, pivo, cfg))
+    soldados = []
+    for i, (nome, fn, alvo, cfg) in enumerate(SOLDADOS):
+        vol, tubos, olhos = fn(random.Random(1500 + i))
+        bm = vol.malha()
+        bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.004)
+        suavizar(bm, 2)
+        bm = reduzir(bm, alvo)
+        junta(bm, tubos)
+        tubos.free()
+        bmesh.ops.triangulate(bm, faces=bm.faces)
+        nv, nt = escrever_luau("soldado_" + nome, bm, False)
+        print("%-16s %5d vértices %5d triângulos" % ("soldado_" + nome, nv, nt))
+        objs["soldado_" + nome] = objeto("soldado_" + nome, bm)
+        bo = malha_olhos(olhos)
+        escrever_luau("soldado_" + nome + "_olhos", bo, False)
+        objs["soldado_" + nome + "_olhos"] = objeto("soldado_" + nome + "_olhos", bo)
+        soldados.append((nome, cfg))
     for i, (nome, fn, alvo) in enumerate(SOLTAS):
         bm, _ = montar(fn, alvo, random.Random(1400 + i), 0.12 if nome == "poca" else None)
         nv, nt = escrever_luau(nome, bm, False)
         print("%-16s %5d vértices %5d triângulos" % (nome, nv, nt))
         objs[nome] = objeto(nome, bm)
-    escrever_pecas(lista)
+    escrever_pecas(lista, soldados)
     for obj in objs.values():
         bpy.ops.object.select_all(action="DESELECT")
         obj.select_set(True)
@@ -569,8 +748,16 @@ def renderizar(objs):
     for c, t in (((-0.5, 0, 1), (0.9, 0.9, 2)), ((0.5, 0, 1), (0.9, 0.9, 2)), ((0, 0, 3), (2, 1, 2)), ((-1.5, 0, 3), (0.95, 0.95, 2)), ((1.5, 0, 3), (0.95, 0.95, 2)), ((0, 0, 4.6), (1.2, 1.2, 1.2))):
         caixa(c, t, avatar)
     caixa((0, 0, -0.06), (60, 60, 0.1), fosco((0.03, 0.025, 0.045)))
+    vivo = emissao("vivo", (0.22, 0.04, 0.75), 2.2)
     for nome, _, _, _ in CORPO:
         copia(objs[nome], (0, 0, 0), 1, 0, [escuro, roxo])
+        if nome + "_pontas" in objs:
+            copia(objs[nome + "_pontas"], (0, 0, 0), 1, 0, [vivo])
+    rp = random.Random(3)
+    for k in range(14):  # labaredas pequenas em volta (inclusive na frente, abaixo dos ombros)
+        a = 2 * math.pi * k / 14 + rp.uniform(-0.2, 0.2)
+        d = rp.uniform(1.3, 2.3)
+        copia(objs["chama_pequena"], (math.cos(a) * d, math.sin(a) * d * 0.8, rp.uniform(0.1, 3.0)), rp.uniform(0.7, 1.3), rp.uniform(0, 6.28), [vivo])
     copia(objs["coroa"], (0, 0, 5.75), 1, 0, [escuro, roxo], 0.04)
     copia(objs["coroa_gema"], (0, 0, 5.75), 1, 0, [brilho])
     copia(objs["poca"], (0, 0, 0.02), 3.4, 0, [escuro, roxo], 0.02)
@@ -604,14 +791,21 @@ def renderizar(objs):
         a = math.radians(graus)
         tirar(nome, (math.sin(a) * 17, math.cos(a) * 17, 4.6), (0, 0, 3.8), 600, 760)
     # soldados em guarda (jogador parado)
-    soldados = []
-    for k in range(4):
+    for k, (nome, _, _, cfg) in enumerate(SOLDADOS):
         a = math.radians(45 + 90 * k)
-        p = (math.sin(a) * 6.5, math.cos(a) * 6.5, 0)
-        soldados.append(copia(objs["soldado"], p, 1.0 + 0.1 * (k % 2), -a, [escuro, roxo], 0.06))
-        soldados.append(copia(objs["soldado_olhos"], p, 1.0 + 0.1 * (k % 2), -a, [brilho]))
-        soldados.append(copia(objs["poca"], (p[0], p[1], 0.02), 1.8, a, [escuro, roxo], 0.02))
-    tirar("soldados", (9, 24, 10), (0, 0, 2.6), 1000, 700)
+        p = (math.sin(a) * 7.5, math.cos(a) * 7.5, cfg["flutua"])
+        e = cfg["escala"]
+        copia(objs["soldado_" + nome], p, e, -a, [escuro, roxo], 0.06)
+        copia(objs["soldado_" + nome + "_olhos"], p, e, -a, [brilho])
+        copia(objs["poca"], (p[0], p[1], 0.02), 2.2, a, [escuro, roxo], 0.02)
+    # cada soldado de perto, de frente
+    for k, (nome, _, _, cfg) in enumerate(SOLDADOS):
+        a = math.radians(45 + 90 * k)
+        c = Vector((math.sin(a) * 7.5, math.cos(a) * 7.5, 0))
+        fora = Vector((math.sin(a), math.cos(a), 0))
+        ladoc = Vector((math.cos(a), -math.sin(a), 0))
+        tirar("soldado_" + nome, c + fora * 15 + ladoc * 5 + Vector((0, 0, 4.5)), c + Vector((0, 0, 3.6)), 520, 640)
+    tirar("soldados", (10, 27, 12), (0, 0, 2.8), 1000, 700)
 
 
 if __name__ == "__main__":

@@ -16,6 +16,7 @@ local Monarca = {}
 
 local COR_SOMBRA = Color3.fromRGB(30, 10, 62) -- corpo das chamas (Neon escuro: roxo quase preto)
 local COR_BORDA = Color3.fromHex("8B3DFF") -- borda brilhante
+local COR_PONTA = Color3.fromRGB(96, 38, 205) -- pontas das chamas: roxo vivo (o degradê)
 local COR_OLHOS = Color3.fromHex("C9A6FF")
 local COR_POCA = Color3.fromRGB(8, 3, 16)
 local BORDA_CHAMA = 0.06 -- espessura da borda roxa (studs)
@@ -30,7 +31,7 @@ local ESPERA_SOLDADOS = 5.5 -- segundos parado até os soldados surgirem
 local RAIO_GUARDA = 6.5
 local SUBIDA = 0.9 -- segundos para um soldado emergir
 local DESCIDA = 0.4
-local ALTURA_SOLDADO = 6.2
+local N_PEQUENAS = 12 -- labaredas pequenas em volta do corpo
 local N_OLHOS = 12
 local N_RASTRO = 5
 
@@ -43,6 +44,9 @@ type Chama = {
 	cfg: { [string]: any },
 	corpo: MeshPart,
 	borda: MeshPart,
+	pontas: MeshPart?, -- garras e ponta em gancho, em roxo vivo
+	tamPontas: Vector3,
+	centroPontas: Vector3,
 	tamCorpo: Vector3,
 	tamBorda: Vector3,
 	centroCorpo: Vector3,
@@ -71,6 +75,9 @@ type Soldado = {
 	poca: Dupla,
 	angulo: number,
 	escala: number,
+	altura: number, -- quanto precisa subir para sair inteiro da sombra
+	flutua: number,
+	balanco: number,
 	atraso: number,
 	nivel: number, -- 0 = dentro da sombra .. 1 = de pé
 	cf: CFrame, -- onde está de guarda (pés)
@@ -163,10 +170,21 @@ function Monarca.criar(personagem: Model, opcoes: Gear5.Opcoes): Gear5.Instancia
 		neon(borda, COR_BORDA)
 		table.insert(partesCorpo, corpo)
 		table.insert(partesCorpo, borda)
+		local pontas: MeshPart? = nil
+		local tamPontas, centroPontas = Vector3.one, Vector3.zero
+		if cfg.pontas == 1 then
+			local p, cp = MalhaNuvem.criar("monarca_" .. cfg.nome .. "_pontas", false)
+			neon(p, COR_PONTA)
+			pontas, tamPontas, centroPontas = p, p.Size, cp - pivo
+			table.insert(partesCorpo, p)
+		end
 		table.insert(chamas, {
 			cfg = cfg,
 			corpo = corpo,
 			borda = borda,
+			pontas = pontas,
+			tamPontas = tamPontas,
+			centroPontas = centroPontas,
 			tamCorpo = corpo.Size,
 			tamBorda = borda.Size,
 			centroCorpo = centro - pivo,
@@ -219,17 +237,49 @@ function Monarca.criar(personagem: Model, opcoes: Gear5.Opcoes): Gear5.Instancia
 
 	-- soldados das sombras
 	local soldados: { Soldado } = {}
-	for k = 1, 4 do
+	-- quatro tipos, cada um com a própria malha: cavaleiro comandante, gigante de escudo, mago e
+	-- rei-formiga. A ordem em volta do jogador é sorteada (só visual).
+	local giroInicial = aleatorio:NextInteger(0, 3)
+	for k, tipo in Pecas.soldados :: { { [string]: any } } do
 		table.insert(soldados, {
-			corpo = dupla("monarca_soldado", COR_SOMBRA),
-			borda = dupla("monarca_soldado", COR_BORDA, true, 0.05),
-			olhos = dupla("monarca_soldado_olhos", COR_OLHOS),
+			corpo = dupla(tipo.malha, COR_SOMBRA),
+			borda = dupla(tipo.malha, COR_BORDA, true, 0.05),
+			olhos = dupla(tipo.olhos, COR_OLHOS),
 			poca = dupla("monarca_poca", COR_POCA),
-			angulo = math.rad(45 + 90 * (k - 1)) + aleatorio:NextNumber(-0.2, 0.2),
-			escala = if k % 2 == 0 then 1.1 else 1,
-			atraso = (k - 1) * 0.18,
+			angulo = math.rad(45 + 90 * (k - 1 + giroInicial)) + aleatorio:NextNumber(-0.2, 0.2),
+			escala = tipo.escala,
+			altura = tipo.altura,
+			flutua = tipo.flutua,
+			balanco = tipo.balanco,
+			atraso = (k - 1) * 0.22,
 			nivel = 0,
 			cf = CFrame.identity,
+		})
+	end
+
+	-- labaredas pequenas: nascem em volta do corpo (também na frente, abaixo dos ombros), sobem,
+	-- afinam e somem, cada uma no seu ciclo — é o que faz a aura parecer fogo, não escultura
+	type Pequena = {
+		d: Dupla,
+		angulo: number,
+		raio: number,
+		y: number,
+		fase: number,
+		ritmo: number,
+		giro: number,
+	}
+	local pequenas: { Pequena } = {}
+	for i = 1, N_PEQUENAS do
+		local d = dupla("monarca_chama_pequena", COR_PONTA)
+		table.insert(partesCorpo, d.parte)
+		table.insert(pequenas, {
+			d = d,
+			angulo = (i / N_PEQUENAS) * math.pi * 2 + aleatorio:NextNumber(-0.25, 0.25),
+			raio = aleatorio:NextNumber(1.2, 2.1),
+			y = aleatorio:NextNumber(-2.8, 0.2),
+			fase = aleatorio:NextNumber(0, 1),
+			ritmo = aleatorio:NextNumber(0.7, 1.2),
+			giro = aleatorio:NextNumber(0, math.pi * 2),
 		})
 	end
 
@@ -441,6 +491,44 @@ function Monarca.criar(personagem: Model, opcoes: Gear5.Opcoes): Gear5.Instancia
 				c.corpo.Transparency = 1
 				c.borda.Transparency = 1
 			end
+			local pontas = c.pontas
+			if pontas then
+				if crescer > 0.02 then
+					pontas.Size = c.tamPontas * fator
+					pontas.CFrame = cf * CFrame.new(c.centroPontas * fator)
+					-- pulsam de leve: a brasa roxa "respira"
+					pontas.Transparency = some
+						+ (1 - some)
+							* (0.12 + 0.1 * math.sin(tempo * 3 + f) - 0.12 * fatorBurst)
+				else
+					pontas.Transparency = 1
+				end
+			end
+		end
+
+		-- labaredas pequenas: ciclo de nascer, subir e sumir
+		local nPequenas = if baixa then 4 elseif detalhe then N_PEQUENAS else 6
+		for i, q in pequenas do
+			if i > nPequenas or surgir < 1 then
+				q.d.parte.Transparency = 1
+				continue
+			end
+			local ciclo = (tempo * 0.9 * q.ritmo + q.fase) % 1
+			local tam = math.sin(ciclo * math.pi) ^ 0.6 -- cresce e encolhe
+			local a = q.angulo + 0.3 * math.sin(tempo * 0.4 + q.fase * 6)
+			local lugar = base
+				* CFrame.new(
+					math.sin(a) * q.raio * escala,
+					(q.y + ciclo * 1.6) * escala,
+					math.cos(a) * q.raio * 0.85 * escala - mov * 0.5 * escala
+				)
+			local s = escala * (0.7 + 0.5 * q.ritmo) * (1 + 0.3 * fatorBurst)
+			por(
+				q.d,
+				lugar * CFrame.Angles(0, q.giro, 0),
+				Vector3.new(s * tam, s * (0.6 + 0.8 * ciclo), s * tam),
+				some + (1 - some) * (0.1 + 0.75 * ciclo * ciclo)
+			)
 		end
 
 		-- ---------------------------------------------------------------- coroa
@@ -553,7 +641,7 @@ function Monarca.criar(personagem: Model, opcoes: Gear5.Opcoes): Gear5.Instancia
 			guarda = false
 		end
 		tempoGuarda += dt
-		local nSoldados = if baixa then 2 else 4
+		local nSoldados = if baixa then 2 else #soldados
 		for k, s in soldados do
 			local alvo = if guarda and k <= nSoldados and tempoGuarda >= s.atraso then 1 else 0
 			local passo = dt / (if alvo == 1 then SUBIDA else DESCIDA)
@@ -570,13 +658,25 @@ function Monarca.criar(personagem: Model, opcoes: Gear5.Opcoes): Gear5.Instancia
 			-- a poça abre primeiro; o soldado sobe de dentro dela
 			local sub = 1 - (1 - math.clamp((n - 0.15) / 0.85, 0, 1)) ^ 3
 			local respira = 1 + 0.015 * math.sin(tempo * 1.8 + k)
-			local cf = s.cf * CFrame.new(0, -(1 - sub) * ALTURA_SOLDADO * e, 0)
+			-- cada tipo fica de guarda do seu jeito: o mago flutua, a formiga se remexe
+			local cf = s.cf
+				* CFrame.new(
+					0,
+					-(1 - sub) * s.altura * e
+						+ s.flutua * e * sub * (1 + 0.4 * math.sin(tempo * 1.4 + k)),
+					0
+				)
+				* CFrame.Angles(
+					math.rad(s.balanco) * 0.5 * math.sin(tempo * 2.3 + k),
+					math.rad(s.balanco) * 2 * math.sin(tempo * 0.9 + k * 2),
+					math.rad(s.balanco) * math.sin(tempo * 1.7 + k)
+				)
 			local sv = Vector3.new(e, e * respira, e)
 			local t = some
 			por(s.corpo, cf, sv, t + (1 - t) * 0.06)
 			por(s.borda, cf, sv, t + (1 - t) * 0.2)
 			por(s.olhos, cf, sv, if sub > 0.6 then t else 1)
-			local rp = 2 * e * math.min(n / 0.25, 1)
+			local rp = 2.4 * e * math.min(n / 0.25, 1)
 			por(s.poca, s.cf * CFrame.new(0, 0.04, 0), Vector3.new(rp, e, rp), t + (1 - t) * 0.05)
 		end
 
@@ -587,7 +687,7 @@ function Monarca.criar(personagem: Model, opcoes: Gear5.Opcoes): Gear5.Instancia
 				proximaMecha = aleatorio:NextNumber(0.25, 0.6)
 				for _, m in mechas do
 					if m.vida >= 1 then
-						local c = chamas[aleatorio:NextInteger(1, 7)]
+						local c = chamas[aleatorio:NextInteger(1, #chamas)]
 						m.vida = 0
 						m.cf = CFrame.new(
 							c.pos
