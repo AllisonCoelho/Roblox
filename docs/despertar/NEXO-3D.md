@@ -139,3 +139,43 @@ Quatro pares de postes com topo em Neon marcam as margens de cada caminho. O cam
 - 475 peças na cena, 77 malhas únicas e cerca de 66 mil triângulos no kit, ~2,4 MB de dados de malha em `Dados/` (decodificados por cada cliente ao entrar).
 - Os maiores: `caminho_portais` (4,5 mil triângulos), `arquivo_estrutura` (5,5 mil), `caminho_*` (~4,7 mil cada), `arena_arquibancada` (3,3 mil).
 - Não medido no celular. Se pesar, os primeiros cortes são o chanfro das lajes dos caminhos e o número de penhascos.
+
+## Fase 3: Bastião das Incursões e Arena do Trono (só cenário)
+
+Nada aqui tem sistema ligado: não há teleporte, fila, combate, título nem recompensa. As placas e a
+mesa dizem isso ("Em preparação", "Duelos por turnos — em desenvolvimento").
+
+### Bastião das Incursões
+- **Onde:** 157° / 173 studs (centro em X ≈ +67,6, Z ≈ +159,2), entre os Portais e a Arena. Plataforma de
+  raio 20,5; a borda fica a ~44 studs da parede invisível (238). `BASTIAO` em `generate_nexo.py` e em
+  `Nexo.luau` usam os mesmos valores.
+- **Diferença para os Portais Fragmentados:** pedra cinza com veios **ciano** (os Portais são violeta),
+  e em vez de três molduras iguais há **um** arco assimétrico e rachado: pilar esquerdo inteiro, direito
+  partido e inclinado, aduelas desalinhadas que não fecham, pedaços boiando. Dentro, um vazio quase preto
+  com a borda luminosa e silhuetas de ruínas em duas profundidades (paralaxe simples).
+- **Marcos de universos futuros:** três molduras com painel — Cinzas (vermelho), Maré Morta (azul),
+  Crepúsculo Umbral (roxo). São só imagens.
+- **Mesa dos Cartógrafos:** mapa rachado, ponteiros e fragmentos flutuando. O `ProximityPrompt` usa a
+  ação `em_construcao` que já existia (mostra um aviso curto).
+- **Ramal:** 22 studs, da borda da plataforma dos Portais até a do Bastião; a pedra passa de violeta para
+  cinza com veio ciano. Não há ligação direta com a Arena: a arquibancada fecha aquele lado, e cortar
+  a arquibancada estava fora do combinado.
+- As rochas, cristais e canteiros que estavam nesse trecho do campo foram retirados (só ali).
+
+### Arena do Trono
+- A arena continua a mesma (piso, arquibancada, colunas e estandartes), agora em basalto.
+- **Novo:** portão de duas colunas curvas na entrada (local z = −29), plataforma de três degraus e o
+  **trono** no fundo (local z ≈ +17 a +21, oposto à entrada), **coroa** flutuante girando sobre ele,
+  quatro braseiros com cristal vermelho, fissuras vermelhas que irradiam do trono, divisas douradas e
+  dois círculos para os desafiantes (local x = ±7). O centro fica livre.
+- O **Primeiro Soberano** (NPC) não está neste PR: vem em um PR próprio (modelo, rig, idle e conversa).
+
+### Colisão e reserva
+Degraus, trono, colunas do portão, braseiros, pilares do portal, marcos e mesa têm caixas em
+`NexoColisores.luau` (geradas com os modelos; criadas pelo servidor). A base do Bastião é um cilindro
+do servidor. Se o kit 3D falhar num cliente, essas caixas aparecem como blocos simples.
+
+### Peso (depois desta fase)
+- 522 peças na cena, 103 malhas únicas, ~74 mil triângulos no kit (26 malhas novas, ~8 mil triângulos).
+- 45 caixas de colisão (eram 26).
+- Não medido no celular nem no Studio.
