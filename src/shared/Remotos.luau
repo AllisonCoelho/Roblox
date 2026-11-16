@@ -5,10 +5,8 @@ local RunService = game:GetService("RunService")
 local Remotos = {}
 
 Remotos.Eventos = {
-	"Estado", -- servidor -> cliente: estado completo do jogador
-	"Aviso", -- servidor -> cliente: mensagem curta ({ tipo, texto, docinho? })
-	"NovoDocinho", -- servidor -> cliente: Docinho descoberto ({ id, variante })
-	"Resgate", -- servidor -> cliente: alguém está levando um Docinho seu ({ id })
+	"Estado", -- estado do perfil atualizado pelo servidor
+	"Aviso", -- mensagens e futuros anúncios de auras raras
 }
 Remotos.Funcoes = {
 	"Acao", -- cliente -> servidor: pedido validado no servidor; devolve (ok, mensagem)

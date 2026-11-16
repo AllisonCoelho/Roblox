@@ -1,28 +1,32 @@
-# Roblox — Projeto base
+# Despertar — Aura RNG
 
-Projeto Roblox em Luau, gerenciado por GitHub e sincronizado com Roblox Studio via [Rojo](https://rojo.space/).
+Roblox com **Luau + Rojo**, estética anime original. Repositório `AllisonCoelho/Roblox`.
 
-## Rodar no Windows
+## Estado
 
-1. Instale Git, Roblox Studio e Rojo.
-2. Execute `rojo plugin install` para instalar o plugin no Studio.
-3. Clone: `git clone https://github.com/AllisonCoelho/Roblox.git`.
-4. Entre na pasta: `cd Roblox`.
-5. Rode `rojo serve default.project.json` e **deixe o terminal aberto**.
-6. No Roblox Studio, abra um Baseplate, acesse Plugins > Rojo > Connect e confirme a sincronização.
+**Base técnica limpa.** A V1 ainda não está implementada: no Studio, uma tela temporária apenas confirma o carregamento do perfil. O futuro loop será: **Despertar → sorteio no servidor → índice → equipar aura → repetir**.
 
-O Rojo sincroniza **arquivos locais** para o Studio. Para receber mudanças feitas no GitHub pelo ChatGPT, execute `git pull` na pasta local e mantenha o Rojo conectado.
+V1 planejada: cerca de 30 auras (1 em 2 até 1 em 1.000.000), cooldown de aproximadamente 1 segundo, partículas e luzes, índice, anúncios de raros, `leaderstats`, persistência e giro automático. Sem nomes, marcas ou técnicas de animes existentes.
 
-## Estrutura
+## Comandos PowerShell
 
-- `src/server`: scripts de servidor
-- `src/client`: scripts locais de jogador
-- `src/shared`: módulos compartilhados
-- `default.project.json`: mapeamento Rojo
-- `.github/workflows`: CI de validação
+```powershell
+cd "$HOME\Documents\Roblox"
+git pull --ff-only
+rojo serve default.project.json --port 34873
+```
 
-## Segurança e publicação
+Conecte o plugin Rojo em `localhost:34873`. Build local: `rojo build default.project.json --output build.rbxlx`. Testes: `python testes/rodar.py` (requer Luau CLI no PATH).
 
-Não inclua chaves Open Cloud no Git. A futura variável `ROBLOX_API_KEY` deve ficar em GitHub Actions Secrets. Publicação em produção requer configuração e aprovação específicas; **nenhuma publicação no Roblox acontece só por subir este repositório**.
+## Estrutura e deploy
 
-> Estado atual: projeto inicial de código e sincronização. Conexão com Open Cloud e testes de publicação ainda precisam ser configurados nas contas Roblox/GitHub.
+- `src/shared/Dados/Perfil.luau`: novo perfil da experiência, sem lógica RNG ainda.
+- `src/server/Servicos/Dados.luau`: DataStore **`Despertar_v1`** com trava de sessão.
+- `src/server/Servicos/Sessao.luau`: lógica pura da trava.
+- `src/server/Servicos/Acoes.luau` e `src/shared/Remotos.luau`: remotes autoritativos e rate limit.
+- `src/client/UI`: infraestrutura genérica de interface, a ser redesenhada.
+- `docs/despertar/README.md`: especificação do MVP.
+
+Merges revisados na `main` publicam na **experiência privada de testes**: Universe `10771776655`, Place `112360499723635`. O workflow `.github/workflows/validate.yml` e a chave `ROBLOX_API_KEY` permanecem intactos. A experiência pública não está configurada.
+
+**Fluxo:** Claude desenvolve na branch `claude/<tarefa>`; Codex/ChatGPT revisa e integra; o dono testa no Roblox.

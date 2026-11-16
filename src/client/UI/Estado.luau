@@ -1,20 +1,19 @@
 -- Cópia local do estado do jogador, recebida do servidor.
 -- A interface só lê daqui; para mudar algo ela pede ao servidor com Estado.pedir.
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage.Shared
-local Economia = require(Shared.Dados.Economia)
+local Perfil = require(Shared.Dados.Perfil)
 local Remotos = require(Shared.Remotos)
 
 local Estado = {}
 
-Estado.atual = nil :: Economia.Estado?
+Estado.atual = nil :: Perfil.Estado?
 
-local ouvintes: { (Economia.Estado) -> () } = {}
+local ouvintes: { (Perfil.Estado) -> () } = {}
 
 -- Chama fn agora (se já houver estado) e toda vez que o estado mudar
-function Estado.aoMudar(fn: (Economia.Estado) -> ())
+function Estado.aoMudar(fn: (Perfil.Estado) -> ())
 	table.insert(ouvintes, fn)
 	if Estado.atual then
 		task.spawn(fn, Estado.atual)
@@ -24,15 +23,6 @@ end
 -- Hora do servidor (mesma base do os.time() usado nos dados)
 function Estado.agora(): number
 	return workspace:GetServerTimeNow()
-end
-
--- Moedas esperando no caixa (atualizado pelo servidor a cada segundo)
-function Estado.caixa(): number
-	local valor = Players.LocalPlayer:GetAttribute("Caixa")
-	if type(valor) == "number" then
-		return valor
-	end
-	return if Estado.atual then math.floor(Estado.atual.caixa) else 0
 end
 
 -- Pede uma ação ao servidor. Devolve (ok, mensagem)

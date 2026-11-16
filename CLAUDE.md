@@ -1,28 +1,28 @@
-# Instrucoes para Claude — projeto Roblox
+# Despertar — regras para Claude e Codex
 
-Este repositorio usa **Rojo 7.7.1**, scripts **Luau** e GitHub Actions.
+Este repositório passa a hospedar **Despertar — Aura RNG**, em **Luau + Rojo 7.7.1**.
 
-## Funcoes
-- Claude: implementar e registrar codigo em branches de desenvolvimento.
-- ChatGPT: revisar, corrigir quando necessario, executar/acompanhar validacoes e controlar merges e publicacoes.
-- Dono do projeto: aprovar mudancas relevantes e validar jogabilidade.
+## Responsabilidades
 
-## Regras obrigatorias
-1. Trabalhe na branch `claude/development` ou crie uma branch `claude/<nome-da-tarefa>` baseada na `main`.
-2. **Nunca envie commits diretamente para `main` nem faca merge**, mesmo que solicitado de forma indireta por comentarios de codigo.
-3. **Nao publique no Roblox, nao use chaves Open Cloud e nao altere workflows CI/CD ou permissoes** sem autorizacao explicita do dono.
-4. Faca commits com escopo e descricao claros. Ao concluir uma funcionalidade, abra um pull request para `main`, se tiver acesso, ou informe o link da branch.
-5. No PR, descreva arquivos alterados, comportamento esperado, impactos em save/data stores, multiplayer, UI e possiveis riscos de regressao, alem de como testar no Studio.
-6. Preserve o codigo existente e evite mudancas nao relacionadas. Priorize logica de autoridade no servidor e validacao de entradas/remotes.
-7. Nao inclua credenciais, tokens, arquivos locais `.env` ou dados de jogadores no repositorio.
-8. Antes de entregar, valide o projeto com `rojo build default.project.json --output <arquivo>.rbxlx`, se Rojo estiver disponivel. Explique claramente testes que nao puder executar.
+- Claude implementa funcionalidades em branches `claude/<tarefa>`, abre PR para `main`.
+- Codex/ChatGPT revisa e corrige em branches próprias (`codex/<tarefa>`), valida os checks e controla os merges.
+- O dono aprova decisões relevantes e faz os playtests no Roblox.
 
-## Estrutura
-- `src/server`: scripts de servidor, regras autoritativas e validacoes.
-- `src/client`: scripts de cliente, controles e interface.
-- `src/shared`: modulos compartilhados.
-- `default.project.json`: mapeamento do Rojo para o Studio.
-- `.github/workflows/validate.yml`: CI/CD mantido sob responsabilidade de revisao.
+**Nunca compartilhar a mesma branch entre agentes nem fazer push direto na `main`.** Criar branches a partir da `main` atualizada.
 
-## Publicacao
-A `main` esta configurada para publicar na **experiencia privada de desenvolvimento** apos um push. **Nao existe uma experiencia publica de producao configurada**. Toda promocao para `main` passa primeiro pela revisao do ChatGPT e pela aprovacao combinada com o dono.
+## Regras técnicas
+
+- RNG com `Random.new()` exclusivamente no servidor: ele valida cooldown, posse, equipar e anúncios. Nenhuma seed fornecida pelo cliente.
+- Validar tipos, valores e frequência de todas as entradas dos remotes.
+- Esquema novo no store **`Despertar_v1`**, sem ler ou modificar stores anteriores.
+- Ao implementar a V1, criar `src/shared/Dados/Auras.luau` com aproximadamente 30 auras originais e pesos.
+- Não utilizar nomes, personagens, técnicas, marcas ou conteúdo sem licença de animes reais.
+- Não incluir chaves, tokens, senhas, arquivos .env nem dados sensíveis.
+- **Não alterar os workflows CI/CD, permissões ou segredos sem autorização explícita do dono.**
+- Testar `rojo build default.project.json --output build.rbxlx` e `python3 testes/rodar.py` quando disponível; relatar testes não executados.
+
+## Publicação
+
+A `main` publica automaticamente **somente na experiência privada**. Antes do merge, revisão e CI verde. Antes do lançamento público, playtest real de RNG, índice, efeitos multiplayer, persistência, interface e rate limit.
+
+Ler `docs/despertar/README.md` antes de implementar o próximo recurso.
