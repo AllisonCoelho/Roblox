@@ -20,15 +20,20 @@ de sorteio (`src/shared/Dados/Auras.luau` continua com as 30 auras; chances, RNG
   partículas não é criado — sem duplicar.
 - **Cliente** (`Mundo/Auras/Controlador.luau`): observa o atributo em todos os personagens e
   monta o efeito localmente (nada de centenas de peças pela rede). Um único laço `PreRender`.
-- **Gear5.luau**: 9 malhas (arco, 2 lobos, 2 pontas em caracol, 2 rolos, 2 bancos) + contorno
-  de anime (casca invertida gerada no cliente) + 6 mechas reaproveitadas + luz e poucas faíscas.
-  - Idle: cada peça sobe/desce, balança e respira fora de fase (ciclos de 6–17 s somados).
-  - Andar/correr: cada peça segue o corpo por uma mola própria; pontas e bancos atrasam mais,
-    esticam para trás e soltam mechas que evaporam em 0,5 s.
-  - Pulo/pouso: a mola deixa as nuvens para trás na subida; no pouso o alto amassa e volta.
-  - Burst a cada 12–20 s (fase aleatória por jogador): arco incha, pontas enrolam, volta.
-  - Manifestar: fiapos saem dos ombros, peças surgem em ordem com ~10% de overshoot.
-  - Desequipar/trocar/morrer: fade de 0,22 s e tudo destruído.
+- **Gear5.luau**: o arco não é uma peça — ele aparece da SOMA de várias correntes de fumaça que
+  nascem nos ombros e nas costas (7 malhas presas a membros + contorno de anime gerado no
+  cliente + 6 mechas reaproveitadas + luz e poucas faíscas).
+  - `ombros` (tronco): volumes grandes e sobrepostos de onde as correntes saem.
+  - `corrente_a` (tronco): a maior; sobe do ombro esquerdo, cruza por cima da cabeça e termina
+    numa espiral grande.
+  - `corrente_b` (tronco): sobe do ombro direito, passa por trás da A e termina em ponta comprida.
+  - `corrente_c` (tronco): do meio das costas, colada atrás da cabeça, termina em espiral.
+  - `lateral_esq` / `lateral_dir` (tronco): saem dos ombros para fora; espiral e ponta.
+  - `cintura` (raiz): correntes finas que saem da parte de baixo das costas e abraçam a cintura.
+  - Volumes: elipsoides grandes sobrepostos (metaballs), sem bolhinhas — lisos, não espuma.
+    Pontas, espirais e chamas são tubos afinados até ficarem afiados.
+  - Cada corrente segue o membro por uma mola própria (as compridas atrasam mais), respira e
+    balança em volta da raiz dela no ombro. Burst, manifestação, pulo e saída como antes.
 - **LOD**: até 80 studs completo; 80–140 sem contorno/mechas/luz e a 10 Hz; além de 140 oculto.
   Qualidade baixa: sem contorno, mechas, luz, faíscas e burst — o arco nunca some.
 
