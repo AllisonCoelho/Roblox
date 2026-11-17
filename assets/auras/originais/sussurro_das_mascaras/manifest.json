@@ -1,0 +1,27 @@
+{
+  "auraId": "sussurro_das_mascaras",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/sussurro_das_mascaras",
+  "templateFile": "assets/roblox/auras_originais/sussurro_das_mascaras.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "mascara",
+      "triangles": 148,
+      "sizeStuds": [
+        1.549,
+        1.4495,
+        0.2064
+      ],
+      "centerFromPivot": [
+        0.3545,
+        -0.1831,
+        -0.0232
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 5
+}

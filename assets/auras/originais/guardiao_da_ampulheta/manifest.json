@@ -1,0 +1,42 @@
+{
+  "auraId": "guardiao_da_ampulheta",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/guardiao_da_ampulheta",
+  "templateFile": "assets/roblox/auras_originais/guardiao_da_ampulheta.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "ampulheta",
+      "triangles": 892,
+      "sizeStuds": [
+        1.4322,
+        2.6354,
+        1.4356
+      ],
+      "centerFromPivot": [
+        0.0029,
+        0.0,
+        -0.0005
+      ],
+      "meshId": null
+    },
+    {
+      "name": "areia",
+      "triangles": 40,
+      "sizeStuds": [
+        0.5657,
+        1.8814,
+        0.5519
+      ],
+      "centerFromPivot": [
+        0.0173,
+        -0.0407,
+        0.0007
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 2
+}

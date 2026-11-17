@@ -1,0 +1,27 @@
+{
+  "auraId": "valsa_do_abismo",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/valsa_do_abismo",
+  "templateFile": "assets/roblox/auras_originais/valsa_do_abismo.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "fita",
+      "triangles": 408,
+      "sizeStuds": [
+        3.2882,
+        3.848,
+        1.9329
+      ],
+      "centerFromPivot": [
+        0.4123,
+        0.0969,
+        0.9343
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 2
+}

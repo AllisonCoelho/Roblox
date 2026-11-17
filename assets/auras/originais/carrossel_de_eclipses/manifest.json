@@ -1,0 +1,42 @@
+{
+  "auraId": "carrossel_de_eclipses",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/carrossel_de_eclipses",
+  "templateFile": "assets/roblox/auras_originais/carrossel_de_eclipses.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "eclipse",
+      "triangles": 452,
+      "sizeStuds": [
+        0.9029,
+        0.6151,
+        0.8983
+      ],
+      "centerFromPivot": [
+        0.0038,
+        0.001,
+        0.003
+      ],
+      "meshId": null
+    },
+    {
+      "name": "orbita",
+      "triangles": 480,
+      "sizeStuds": [
+        4.7768,
+        0.0281,
+        4.824
+      ],
+      "centerFromPivot": [
+        -0.0237,
+        0.0,
+        0.0003
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 6
+}

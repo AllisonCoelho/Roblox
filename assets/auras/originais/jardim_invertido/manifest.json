@@ -1,0 +1,42 @@
+{
+  "auraId": "jardim_invertido",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/jardim_invertido",
+  "templateFile": "assets/roblox/auras_originais/jardim_invertido.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "flor_pendente",
+      "triangles": 126,
+      "sizeStuds": [
+        0.4648,
+        1.481,
+        0.5367
+      ],
+      "centerFromPivot": [
+        0.0,
+        -0.1353,
+        -0.0
+      ],
+      "meshId": null
+    },
+    {
+      "name": "raiz_teto",
+      "triangles": 150,
+      "sizeStuds": [
+        2.0993,
+        0.5854,
+        2.0289
+      ],
+      "centerFromPivot": [
+        0.0084,
+        -0.2157,
+        0.0906
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 6
+}

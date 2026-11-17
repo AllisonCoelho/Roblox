@@ -510,4 +510,200 @@ return {
 		},
 		especial = { cor = 0, escala = 2, material = "Glass", n = 8, origem = { 0, 0.8, 0 }, raio = 3.4, template = "placa_som" },
 	},
+	jardim_das_agulhas = {
+		cores = { "FF8AD7", "5E379A" },
+		templates = {
+			flor = { centro = { -0.084, -0.0394, 0 }, tamanho = { 1.3976, 1.7331, 1.671 } },
+		},
+		pecas = {
+			{ apontar = true, atraso = 0.5, cor = 0, detalhe = false, escala = 1.7, material = "Neon", modo = "ancora", osc = { 2, 12, 0.35 }, pos = { -1.6, 1.2, 0.3 }, rigidez = 40, rot = { 0, 0, 20 }, template = "flor" },
+			{ apontar = true, atraso = 0.5, cor = 1, detalhe = false, escala = 1.5, material = "Neon", modo = "ancora", osc = { 2, 12, 0.43 }, pos = { 1.7, 0.9, 0.4 }, rigidez = 40, rot = { 0, 0, -25 }, template = "flor" },
+			{ apontar = true, atraso = 0.5, cor = 0, detalhe = false, escala = 1.7, material = "Neon", modo = "ancora", osc = { 2, 12, 0.51 }, pos = { -1.3, -0.5, 0.7 }, rigidez = 40, rot = { 0, 0, 35 }, template = "flor" },
+			{ apontar = true, atraso = 0.5, cor = 1, detalhe = false, escala = 1.5, material = "Neon", modo = "ancora", osc = { 2, 12, 0.59 }, pos = { 1.4, -0.9, 0.6 }, rigidez = 40, rot = { 0, 0, -30 }, template = "flor" },
+			{ apontar = true, atraso = 0.5, cor = 0, detalhe = true, escala = 1.7, material = "Neon", modo = "ancora", osc = { 2, 12, 0.67 }, pos = { 0, 2.3, 1 }, rigidez = 40, rot = { -20, 0, 0 }, template = "flor" },
+		},
+		especial = { cor = 0, escala = 1.6, material = "Neon", n = 8, origem = { 0, 1, 0 }, raio = 2.6, template = "flor" },
+	},
+	carrossel_de_eclipses = {
+		cores = { "E8B56E", "693A6B" },
+		templates = {
+			eclipse = { centro = { 0.0038, 0.001, 0.003 }, tamanho = { 0.9029, 0.6151, 0.8983 } },
+			orbita = { centro = { -0.0237, 0, 0.0003 }, tamanho = { 4.7768, 0.0281, 4.824 } },
+		},
+		pecas = {
+			{ atraso = 0.4, cor = 0, detalhe = false, giro = { 0, 10, 0 }, material = "Neon", modo = "ancora", pos = { 0, 0.8, 0 }, rigidez = 50, rot = { 20, 0, -15 }, template = "orbita", transp = 0.3 },
+			{ atraso = 0.4, cor = 0, detalhe = false, giro = { 0, 15, 0 }, material = "Neon", modo = "ancora", pos = { 0, 1.4, 0 }, rigidez = 50, rot = { 0, 30, 0 }, template = "orbita", transp = 0.3 },
+			{ atraso = 0.4, cor = 0, detalhe = true, giro = { 0, 20, 0 }, material = "Neon", modo = "ancora", pos = { 0, 2, 0 }, rigidez = 50, rot = { -20, 60, 15 }, template = "orbita", transp = 0.3 },
+			{ altura = 0.8, ang = 0, atraso = 0.5, cor = 1, correr = { -0.9, 1, 1.6 }, escala = 1.6, inclinacao = 0.5, material = "SmoothPlastic", modo = "orbita", rigidez = 40, rx = 2.4, rz = 2.4, template = "eclipse", vel = 0.4 },
+			{ altura = 1.4, ang = 2.1, atraso = 0.5, cor = 1, correr = { 0, 1.5, 1.9 }, escala = 1.6, inclinacao = 0.15, material = "SmoothPlastic", modo = "orbita", rigidez = 40, rx = 2.4, rz = 2.4, template = "eclipse", vel = 0.55 },
+			{ altura = 2, ang = 4.2, atraso = 0.5, cor = 1, correr = { 0.9, 2, 2.2 }, escala = 1.6, inclinacao = -0.2, material = "SmoothPlastic", modo = "orbita", rigidez = 40, rx = 2.4, rz = 2.4, template = "eclipse", vel = 0.7 },
+		},
+		especial = { cor = 1, escala = 4, material = "SmoothPlastic", n = 1, origem = { 0, 2.2, 1 }, raio = 0, template = "eclipse" },
+	},
+	coracao_de_basalto = {
+		cores = { "FF684D", "4C4159" },
+		templates = {
+			coracao = { centro = { 0.0153, 0.0214, -0.0551 }, tamanho = { 0.8516, 1.0178, 0.7209 } },
+			veio = { centro = { -0.0014, -0.1418, 0.0003 }, tamanho = { 0.663, 0.7303, 0.5119 } },
+			pedra = { centro = { 0.0122, 0.0094, 0.0084 }, tamanho = { 0.282, 0.3575, 0.3068 } },
+		},
+		pecas = {
+			{ atraso = 0.3, cor = 1, escala = 2, giro = { 0, 10, 0 }, material = "Slate", modo = "ancora", pos = { 0, 0.7, 1.2 }, pulso = 0.05, rigidez = 60, template = "coracao" },
+			{ atraso = 0.3, cor = 0, escala = 2.1, giro = { 0, 10, 0 }, material = "Neon", modo = "ancora", pos = { 0, 0.7, 1.2 }, pulso = 0.1, rigidez = 60, template = "veio" },
+			{ altura = 0.3, ang = 0, atraso = 0.6, cor = 0, detalhe = false, escala = 2, giro = { 40, 50, 0 }, inclinacao = 0.3, material = "Neon", modo = "orbita", rigidez = 36, rx = 2.1, rz = 1.9, template = "pedra", vel = -0.35 },
+			{ altura = 0.8, ang = 1.6, atraso = 0.6, cor = 1, detalhe = false, escala = 2, giro = { 40, 50, 0 }, inclinacao = 0.3, material = "Slate", modo = "orbita", rigidez = 36, rx = 2.1, rz = 1.9, template = "pedra", vel = 0.45 },
+			{ altura = 1.3, ang = 3.2, atraso = 0.6, cor = 0, detalhe = false, escala = 2, giro = { 40, 50, 0 }, inclinacao = 0.3, material = "Neon", modo = "orbita", rigidez = 36, rx = 2.1, rz = 1.9, template = "pedra", vel = -0.35 },
+			{ altura = 1.8, ang = 4.8, atraso = 0.6, cor = 1, detalhe = true, escala = 2, giro = { 40, 50, 0 }, inclinacao = 0.3, material = "Slate", modo = "orbita", rigidez = 36, rx = 2.1, rz = 1.9, template = "pedra", vel = 0.45 },
+		},
+		especial = { cor = 0, escala = 1.8, material = "Neon", n = 8, origem = { 0, 0.7, 1.2 }, raio = 2.6, template = "pedra" },
+	},
+	plumas_de_mercurio = {
+		cores = { "D7E7F0", "6E809B" },
+		templates = {
+			asa = { centro = { 0.9875, 0.613, 0.0279 }, tamanho = { 2.435, 2.7514, 0.1831 } },
+		},
+		pecas = {
+			{ abrirGiro = { 0, 35, 40 }, atraso = 0.5, cor = 0, correrRot = { 10, -70, -30 }, escala = 1.5, espelhar = true, material = "Metal", modo = "ancora", osc = { 2, -8, 0.4 }, pos = { -0.5, 1.2, 0.9 }, rigidez = 40, rot = { 10, -25, 0 }, template = "asa" },
+			{ abrirGiro = { 0, -35, -40 }, atraso = 0.5, cor = 0, correrRot = { 10, 70, 30 }, escala = 1.5, espelhar = false, material = "Metal", modo = "ancora", osc = { 2, 8, 0.4 }, pos = { 0.5, 1.2, 0.9 }, rigidez = 40, rot = { 10, 25, 0 }, template = "asa" },
+		},
+		especial = { cor = 1, escala = 0.8, material = "Metal", n = 6, origem = { 0, 2, 0.6 }, raio = 1.2, template = "asa" },
+	},
+	valsa_do_abismo = {
+		cores = { "8E75E5", "1D1638" },
+		templates = {
+			fita = { centro = { 0.4123, 0.0969, 0.9343 }, tamanho = { 3.2882, 3.848, 1.9329 } },
+		},
+		pecas = {
+			{ atraso = 0.8, bob = 0.25, cor = 1, correrRot = { -15, 0, 0 }, giro = { 0, 30, 0 }, material = "SmoothPlastic", modo = "ancora", pos = { 0, 0.3, 0 }, rigidez = 30, template = "fita" },
+			{ atraso = 0.9, bob = -0.25, cor = 0, escala = 0.92, giro = { 0, 30, 0 }, material = "Neon", modo = "ancora", pos = { 0, 0.2, 0 }, rigidez = 26, rot = { 0, 180, 0 }, template = "fita", transp = 0.15 },
+		},
+		especial = { cor = 0, escala = 1.2, girar = 200, material = "Neon", n = 1, origem = { 0, 0.6, 0.8 }, raio = 0, template = "fita" },
+	},
+	navio_de_papel_fantasma = {
+		cores = { "ECE7D1", "3D88A5" },
+		templates = {
+			barco = { centro = { 0, 0.25, 0 }, tamanho = { 0.3, 1, 1.2 } },
+			onda = { centro = { -0.0056, -0.0002, 0.0046 }, tamanho = { 2.0426, 0.237, 0.1103 } },
+		},
+		pecas = {
+			{ altura = 0.6, ang = 0, atraso = 0.7, cor = 0, correr = { -0.7, 0.8, 1.8 }, detalhe = false, escala = 1.7, inclinacao = 0.25, material = "SmoothPlastic", modo = "orbita", osc = { 2, 10, 0.4 }, rigidez = 30, rx = 2, rz = 1.8, template = "barco", vel = 0.3 },
+			{ altura = 1.2, ang = 2.1, atraso = 0.7, cor = 0, correr = { 0, 0.8, 1.8 }, detalhe = false, escala = 1.7, inclinacao = 0.25, material = "SmoothPlastic", modo = "orbita", osc = { 2, 10, 0.5 }, rigidez = 30, rx = 2.25, rz = 1.8, template = "barco", vel = 0.3 },
+			{ altura = 1.8, ang = 4.2, atraso = 0.7, cor = 0, correr = { 0.7, 0.8, 1.8 }, detalhe = true, escala = 1.7, inclinacao = 0.25, material = "SmoothPlastic", modo = "orbita", osc = { 2, 10, 0.6 }, rigidez = 30, rx = 2.5, rz = 1.8, template = "barco", vel = 0.3 },
+			{ altura = 0.35, ang = 0, atraso = 0.7, cor = 1, detalhe = false, escala = 1.3, inclinacao = 0.25, material = "Neon", modo = "orbita", rigidez = 30, rx = 2, rz = 1.8, template = "onda", transp = 0.2, vel = 0.3 },
+			{ altura = 0.95, ang = 2.1, atraso = 0.7, cor = 1, detalhe = false, escala = 1.3, inclinacao = 0.25, material = "Neon", modo = "orbita", rigidez = 30, rx = 2.25, rz = 1.8, template = "onda", transp = 0.2, vel = 0.3 },
+			{ altura = 1.55, ang = 4.2, atraso = 0.7, cor = 1, detalhe = true, escala = 1.3, inclinacao = 0.25, material = "Neon", modo = "orbita", rigidez = 30, rx = 2.5, rz = 1.8, template = "onda", transp = 0.2, vel = 0.3 },
+		},
+		especial = { cor = 1, escala = 4, material = "ForceField", n = 1, origem = { 0, 1.6, 2.2 }, raio = 0, template = "barco" },
+	},
+	duas_luas_partidas = {
+		cores = { "E7EAFF", "7A69B8" },
+		templates = {
+			lua = { centro = { -0.1827, 0.1763, 0 }, tamanho = { 2.7213, 2.7068, 0.5228 } },
+		},
+		pecas = {
+			{ abrir = { 0.9, -0.5, 0 }, atraso = 0.5, bob = 0.15, cor = 0, correr = { -1, 2.1, 1.6 }, correrRot = { 0, 70, 30 }, escala = 1.4, giro = { 0, 0, 12 }, material = "Neon", modo = "ancora", pos = { -1.4, 2, 0.8 }, rigidez = 40, rot = { 0, 20, 30 }, template = "lua" },
+			{ abrir = { -0.9, 0.6, 0 }, atraso = 0.5, bob = -0.15, cor = 1, correr = { 1, -0.2, 1.8 }, correrRot = { 0, -70, 210 }, escala = 1.25, giro = { 0, 0, -10 }, material = "Neon", modo = "ancora", pos = { 1.4, -0.4, 0.9 }, rigidez = 40, rot = { 0, -20, 210 }, template = "lua" },
+		},
+		especial = { cor = 0, escala = 1.6, girar = 90, material = "Neon", n = 2, origem = { 0, 1, 1.4 }, raio = 0.5, template = "lua" },
+	},
+	correntes_do_vazio = {
+		cores = { "6FA0C3", "1A1539" },
+		templates = {
+			corrente = { centro = { -0.0004, -1.4007, -0.002 }, tamanho = { 0.3489, 3.2686, 0.344 } },
+			nucleo = { centro = { 0.009, -0.029, 0.0168 }, tamanho = { 0.7721, 0.7966, 0.7997 } },
+		},
+		pecas = {
+			{ atraso = 0.4, cor = 1, escala = 1.3, material = "SmoothPlastic", modo = "ancora", pos = { 0, -0.3, 1.3 }, pulso = 0.1, rigidez = 50, template = "nucleo" },
+			{ atraso = 0.8, cor = 1, correrRot = { 110, 0, 0 }, detalhe = false, escala = 1.4, material = "Metal", modo = "ancora", osc = { 0, 12, 0.3 }, pos = { 0, -0.3, 1.3 }, rigidez = 24, rot = { 70, 0, 0 }, template = "corrente" },
+			{ atraso = 0.8, cor = 0, correrRot = { 110, 0, 0 }, detalhe = false, escala = 1.4, material = "Metal", modo = "ancora", osc = { 0, 12, 0.37 }, pos = { 0, -0.3, 1.3 }, rigidez = 26, rot = { 34.83, 60, 60.7196 }, template = "corrente" },
+			{ atraso = 0.8, cor = 1, correrRot = { 110, 0, 0 }, detalhe = false, escala = 1.4, material = "Metal", modo = "ancora", osc = { 0, 12, 0.44 }, pos = { 0, -0.3, 1.3 }, rigidez = 28, rot = { -35.3392, 120, 60.4247 }, template = "corrente" },
+			{ atraso = 0.8, cor = 0, correrRot = { 110, 0, 0 }, detalhe = false, escala = 1.4, material = "Metal", modo = "ancora", osc = { 0, 12, 0.51 }, pos = { 0, -0.3, 1.3 }, rigidez = 30, rot = { -69.9975, 180, -0.5885 }, template = "corrente" },
+			{ atraso = 0.8, cor = 1, correrRot = { 110, 0, 0 }, detalhe = true, escala = 1.4, material = "Metal", modo = "ancora", osc = { 0, 12, 0.58 }, pos = { 0, -0.3, 1.3 }, rigidez = 32, rot = { -34.3183, 240, -61.0103 }, template = "corrente" },
+			{ atraso = 0.8, cor = 0, correrRot = { 110, 0, 0 }, detalhe = true, escala = 1.4, material = "Metal", modo = "ancora", osc = { 0, 12, 0.65 }, pos = { 0, -0.3, 1.3 }, rigidez = 34, rot = { 35.846, 300, -60.1254 }, template = "corrente" },
+		},
+		especial = { cor = 0, escala = 1.4, material = "Neon", n = 6, origem = { 0, 1, 0 }, raio = 2.4, template = "corrente" },
+	},
+	catedral_de_sal = {
+		cores = { "F7F5E5", "7BDDE8" },
+		templates = {
+			arco = { centro = { -0.0012, 0.2494, 0.0154 }, tamanho = { 1.957, 3.3013, 0.1854 } },
+		},
+		pecas = {
+			{ atraso = 0.4, cor = 0, correrRot = { 0, 0, 0 }, detalhe = false, escala = 1.5, material = "Glass", modo = "ancora", pos = { 0, 1, 1 }, rigidez = 46, rot = { 0, 0, 0 }, template = "arco", transp = 0.15 },
+			{ atraso = 0.4, cor = 1, correrRot = { 0, -60, 0 }, detalhe = false, escala = 1.32, material = "Glass", modo = "ancora", pos = { -1.2, 1, 1.48 }, rigidez = 46, rot = { 0, -30, 0 }, template = "arco", transp = 0.15 },
+			{ atraso = 0.4, cor = 0, correrRot = { 0, 60, 0 }, detalhe = false, escala = 1.32, material = "Glass", modo = "ancora", pos = { 1.2, 1, 1.48 }, rigidez = 46, rot = { 0, 30, 0 }, template = "arco", transp = 0.15 },
+			{ atraso = 0.4, cor = 1, correrRot = { 0, -100, 0 }, detalhe = true, escala = 1.2, material = "Glass", modo = "ancora", pos = { -2, 1, 1.8 }, rigidez = 46, rot = { 0, -50, 0 }, template = "arco", transp = 0.15 },
+			{ atraso = 0.4, cor = 0, correrRot = { 0, 100, 0 }, detalhe = true, escala = 1.2, material = "Glass", modo = "ancora", pos = { 2, 1, 1.8 }, rigidez = 46, rot = { 0, 50, 0 }, template = "arco", transp = 0.15 },
+		},
+		especial = { cor = 1, escala = 2, material = "Glass", n = 8, origem = { 0, 1, 0 }, raio = 1.8, template = "arco" },
+	},
+	circulo_dos_predadores = {
+		cores = { "FFB38A", "6D263B" },
+		templates = {
+			pegada = { centro = { 0, 0.2096, 0 }, tamanho = { 0.9788, 1.3758, 0.05 } },
+			arranhao = { centro = { 0.0148, -0.0002, 0.0399 }, tamanho = { 0.6409, 1.8016, 0.0911 } },
+		},
+		pecas = {
+			{ altura = 0.2, ang = 0.78, atraso = 0.6, cor = 0, detalhe = false, escala = 1.8, inclinacao = 0.2, material = "Neon", modo = "orbita", pulso = 0.15, rigidez = 36, rot = { 0, 0, -45 }, rx = 2.3, rz = 2.1, template = "pegada", vel = 0.35 },
+			{ altura = 0.9, ang = 2.35, atraso = 0.6, cor = 1, detalhe = false, escala = 1.8, inclinacao = 0.2, material = "Neon", modo = "orbita", pulso = 0.15, rigidez = 36, rot = { 0, 0, 45 }, rx = 2.3, rz = 2.1, template = "pegada", vel = 0.35 },
+			{ altura = 0.2, ang = 3.92, atraso = 0.6, cor = 0, detalhe = false, escala = 1.8, inclinacao = 0.2, material = "Neon", modo = "orbita", pulso = 0.15, rigidez = 36, rot = { 0, 0, -45 }, rx = 2.3, rz = 2.1, template = "pegada", vel = 0.35 },
+			{ altura = 0.9, ang = 5.49, atraso = 0.6, cor = 1, detalhe = true, escala = 1.8, inclinacao = 0.2, material = "Neon", modo = "orbita", pulso = 0.15, rigidez = 36, rot = { 0, 0, 45 }, rx = 2.3, rz = 2.1, template = "pegada", vel = 0.35 },
+			{ atraso = 0.5, cor = 0, correr = { 0, 0.4, 2.6 }, escala = 1.6, material = "Neon", modo = "ancora", pos = { 0, 0.6, 1.8 }, pulso = 0.2, rigidez = 50, rot = { 0, 0, 25 }, template = "arranhao", transp = 0.1 },
+		},
+		especial = { cor = 0, escala = 3, material = "Neon", n = 3, origem = { 0, 1.2, -1.4 }, raio = 0.8, template = "arranhao" },
+	},
+	jardim_invertido = {
+		cores = { "87F3CE", "3B4B9E" },
+		templates = {
+			flor_pendente = { centro = { 0, -0.1353, 0 }, tamanho = { 0.4648, 1.481, 0.5367 } },
+			raiz_teto = { centro = { 0.0084, -0.2157, 0.0906 }, tamanho = { 2.0993, 0.5854, 2.0289 } },
+		},
+		pecas = {
+			{ atraso = 0.5, cor = 1, correrRot = { -15, 0, 0 }, escala = 1.6, giro = { 0, 8, 0 }, material = "SmoothPlastic", modo = "ancora", pos = { 0, 3.6, 0.2 }, rigidez = 40, template = "raiz_teto" },
+			{ atraso = 0.7, cor = 0, correrRot = { -30, 0, 0 }, detalhe = false, escala = 1.6, material = "Neon", modo = "ancora", osc = { 0, 10, 0.4 }, pos = { 1.433, 3, 0.4137 }, rigidez = 26, template = "flor_pendente" },
+			{ atraso = 0.7, cor = 0, correrRot = { -30, 0, 0 }, detalhe = false, escala = 1.6, material = "Neon", modo = "ancora", osc = { 0, 10, 0.5 }, pos = { 0.0312, 2.7, 1.3997 }, rigidez = 26, template = "flor_pendente" },
+			{ atraso = 0.7, cor = 0, correrRot = { -30, 0, 0 }, detalhe = false, escala = 1.6, material = "Neon", modo = "ancora", osc = { 0, 10, 0.6 }, pos = { -1.4133, 3, 0.469 }, rigidez = 26, template = "flor_pendente" },
+			{ atraso = 0.7, cor = 0, correrRot = { -30, 0, 0 }, detalhe = false, escala = 1.6, material = "Neon", modo = "ancora", osc = { 0, 10, 0.7 }, pos = { -0.9225, 2.7, -1.1039 }, rigidez = 26, template = "flor_pendente" },
+			{ atraso = 0.7, cor = 0, correrRot = { -30, 0, 0 }, detalhe = true, escala = 1.6, material = "Neon", modo = "ancora", osc = { 0, 10, 0.8 }, pos = { 0.8316, 3, -1.1652 }, rigidez = 26, template = "flor_pendente" },
+		},
+		especial = { cor = 0, escala = 1.6, material = "Neon", n = 10, origem = { 0, -2.5, 0 }, raio = 2.4, template = "flor_pendente" },
+	},
+	guardiao_da_ampulheta = {
+		cores = { "E6C681", "7E5E6F" },
+		templates = {
+			ampulheta = { centro = { 0.0029, 0, -0.0005 }, tamanho = { 1.4322, 2.6354, 1.4356 } },
+			areia = { centro = { 0.0173, -0.0407, 0.0007 }, tamanho = { 0.5657, 1.8814, 0.5519 } },
+		},
+		pecas = {
+			{ abrirGiro = { 0, 0, 180 }, atraso = 0.5, cor = 1, escala = 1.4, giro = { 0, 15, 0 }, material = "Glass", modo = "ancora", pos = { 0, 1, 1.6 }, rigidez = 40, rot = { 0, 0, 8 }, template = "ampulheta", transp = 0.2 },
+			{ abrirGiro = { 0, 0, 180 }, atraso = 0.5, cor = 0, escala = 1.4, giro = { 0, 15, 0 }, material = "Neon", modo = "ancora", pos = { 0, 1, 1.6 }, pulso = 0.06, rigidez = 40, rot = { 0, 0, 8 }, template = "areia" },
+		},
+		especial = { cor = 0, escala = 0.8, material = "Neon", n = 6, origem = { 0, 1, 1.6 }, raio = 2.2, template = "areia" },
+	},
+	mare_de_vidro_negro = {
+		cores = { "7695CA", "080F28" },
+		templates = {
+			onda = { centro = { -0.0034, 0.7047, 0.1377 }, tamanho = { 2.471, 1.5654, 0.7016 } },
+		},
+		pecas = {
+			{ atraso = 0.5, cor = 1, correr = { -0.6, -2.4, 1.8 }, correrRot = { -60, -20, 0 }, escala = 1.6, material = "Glass", modo = "ancora", osc = { 0, 8, 0.35 }, pos = { -0.9, -1.8, 1 }, rigidez = 40, rot = { 0, -30, 0 }, template = "onda", transp = 0.05 },
+			{ atraso = 0.5, cor = 1, correr = { 0.6, -2.4, 1.8 }, correrRot = { -60, 20, 0 }, escala = 1.6, material = "Glass", modo = "ancora", osc = { 0, 8, 0.35 }, pos = { 0.9, -1.8, 1 }, rigidez = 40, rot = { 0, 30, 0 }, template = "onda", transp = 0.05 },
+			{ atraso = 0.6, cor = 0, detalhe = true, escala = 1.8, material = "Neon", modo = "ancora", osc = { 0, 6, 0.3 }, pos = { 0, -1.6, 1.4 }, rigidez = 36, template = "onda", transp = 0.6 },
+		},
+		especial = { cor = 0, escala = 3.4, material = "Glass", n = 1, origem = { 0, -1.2, 2 }, raio = 0, template = "onda" },
+	},
+	sussurro_das_mascaras = {
+		cores = { "D6C7FF", "663763" },
+		templates = {
+			mascara = { centro = { 0.3545, -0.1831, -0.0232 }, tamanho = { 1.549, 1.4495, 0.2064 } },
+		},
+		pecas = {
+			{ altura = 0.6, ang = 0, atraso = 0.7, cor = 0, correr = { -0.6, 1.2, 1.4 }, detalhe = false, escala = 1.6, inclinacao = 0.25, material = "SmoothPlastic", modo = "orbita", osc = { 1, 25, 0.12 }, rigidez = 32, rot = { 0, 180, 0 }, rx = 2.3, rz = 2.1, template = "mascara", vel = 0.2 },
+			{ altura = 0.9854, ang = 1.256, atraso = 0.7, cor = 1, correr = { -0.3, 1.3, 1.75 }, detalhe = false, escala = 1.6, inclinacao = 0.25, material = "Wood", modo = "orbita", osc = { 1, 25, 0.12 }, rigidez = 32, rot = { 0, 180, 0 }, rx = 2.3, rz = 2.1, template = "mascara", vel = 0.2 },
+			{ altura = 0.8062, ang = 2.512, atraso = 0.7, cor = 0, correr = { 0, 1.4, 2.1 }, detalhe = false, escala = 1.6, inclinacao = 0.25, material = "SmoothPlastic", modo = "orbita", osc = { 1, 25, 0.12 }, rigidez = 32, rot = { 0, 180, 0 }, rx = 2.3, rz = 2.1, template = "mascara", vel = 0.2 },
+			{ altura = 0.3249, ang = 3.768, atraso = 0.7, cor = 1, correr = { 0.3, 1.5, 2.45 }, detalhe = false, escala = 1.6, inclinacao = 0.25, material = "Wood", modo = "orbita", osc = { 1, 25, 0.12 }, rigidez = 32, rot = { 0, 180, 0 }, rx = 2.3, rz = 2.1, template = "mascara", vel = 0.2 },
+			{ altura = 0.2466, ang = 5.024, atraso = 0.7, cor = 0, correr = { 0.6, 1.6, 2.8 }, detalhe = true, escala = 1.6, inclinacao = 0.25, material = "SmoothPlastic", modo = "orbita", osc = { 1, 25, 0.12 }, rigidez = 32, rot = { 0, 180, 0 }, rx = 2.3, rz = 2.1, template = "mascara", vel = 0.2 },
+		},
+		especial = { arco = true, cor = 0, escala = 1.8, material = "Neon", n = 5, origem = { 0, 1.2, -1 }, raio = 2.2, template = "mascara" },
+	},
 }

@@ -1,0 +1,42 @@
+{
+  "auraId": "navio_de_papel_fantasma",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/navio_de_papel_fantasma",
+  "templateFile": "assets/roblox/auras_originais/navio_de_papel_fantasma.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "barco",
+      "triangles": 40,
+      "sizeStuds": [
+        0.3,
+        1.0,
+        1.2
+      ],
+      "centerFromPivot": [
+        0.0,
+        0.25,
+        -0.0
+      ],
+      "meshId": null
+    },
+    {
+      "name": "onda",
+      "triangles": 200,
+      "sizeStuds": [
+        2.0426,
+        0.237,
+        0.1103
+      ],
+      "centerFromPivot": [
+        -0.0056,
+        -0.0002,
+        0.0046
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 6
+}

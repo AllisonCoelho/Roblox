@@ -1,0 +1,27 @@
+{
+  "auraId": "mare_de_vidro_negro",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/mare_de_vidro_negro",
+  "templateFile": "assets/roblox/auras_originais/mare_de_vidro_negro.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "onda",
+      "triangles": 350,
+      "sizeStuds": [
+        2.471,
+        1.5654,
+        0.7016
+      ],
+      "centerFromPivot": [
+        -0.0034,
+        0.7047,
+        0.1377
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 3
+}
