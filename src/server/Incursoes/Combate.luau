@@ -431,7 +431,7 @@ end
 
 -- Defesa: todo dano de inimigo em jogador passa por aqui (ligado em Inimigos.defesa)
 function Combate.defesa(h: Humanoid, dano: number, origem: Vector3, inimigo: any): number
-	local _, e = porHumanoide(h)
+	local dono, e = porHumanoide(h)
 	if not e or not e.ctx then
 		return dano
 	end
@@ -449,7 +449,11 @@ function Combate.defesa(h: Humanoid, dano: number, origem: Vector3, inimigo: any
 		e.ctx.paraRun({ tipo = "combate", acao = "aparou", origem = raiz.Position, cor = e.cor })
 		-- Gear 5: o corpo de borracha devolve parte do golpe
 		if e.kit.guarda.rebote > 0 and inimigo and inimigo.vida and inimigo.vida > 0 then
-			Inimigos.ferir(inimigo, math.floor(dano * e.kit.guarda.rebote + 0.5))
+			local morreu =
+				Inimigos.ferir(inimigo, math.floor(dano * e.kit.guarda.rebote + 0.5), raiz.Position)
+			if morreu and dono and Combate.aoAbater then
+				Combate.aoAbater(dono, inimigo)
+			end
 		end
 	end
 	return final

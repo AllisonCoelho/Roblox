@@ -124,6 +124,29 @@ do
 		R.MULT_NOTA.S > R.MULT_NOTA.A and R.MULT_NOTA.A > R.MULT_NOTA.B,
 		true
 	)
+	-- Fase B: preparo (Marcas e Pesadelo) vindo do cliente é sempre validado
+	local vazio = R.preparo(nil)
+	igual("preparo: padrão sem Pesadelo", vazio.pesadelo, false)
+	igual("preparo: padrão normal", R.descreverPreparo(vazio), "Normal")
+	igual("preparo: padrão x1", R.multPreparo(vazio), 1)
+	local lixo =
+		R.preparo({ pesadelo = "sim", marcas = { inventada = true, densas = 1, vidro = true } })
+	igual("preparo: pesadelo só com true", lixo.pesadelo, false)
+	igual("preparo: ignora marca inventada", lixo.marcas.inventada, nil)
+	igual("preparo: ignora valor não booleano", lixo.marcas.densas, nil)
+	igual("preparo: aceita marca válida", lixo.marcas.vidro, true)
+	local tudo = R.preparo({ pesadelo = true, marcas = { densas = true, semVidas = true } })
+	igual(
+		"preparo: pesadelo dobra e marcas somam",
+		math.floor(R.multPreparo(tudo) * 100 + 0.5),
+		350
+	)
+	igual(
+		"preparo: descrição",
+		R.descreverPreparo(tudo),
+		"PESADELO · Hordas Densas · Sem Reviver"
+	)
+	igual("guardião: fases em ordem", R.FASES_GUARDIAO[1] > R.FASES_GUARDIAO[2], true)
 end
 
 local Perfil = req("Perfil")

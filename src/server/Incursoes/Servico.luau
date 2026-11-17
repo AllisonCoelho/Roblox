@@ -54,6 +54,7 @@ type Run = {
 	universo: string,
 	andar: number,
 	tipos: { string }, -- tipo de cada andar, sorteado no início (IncursoesRun)
+	preparo: Run.Preparo, -- Marcas da Fenda e Pesadelo, escolhidos antes de entrar
 	tipoAndar: string,
 	inicioAndar: number,
 	quedasAndar: number,
@@ -86,7 +87,7 @@ type Run = {
 
 local runs: { [number]: Run } = {}
 local daRun: { [Player]: Run } = {}
-local filas: { [string]: { jogadores: { Player }, fim: number? } } = {}
+local filas: { [string]: { jogadores: { Player }, fim: number?, preparo: Run.Preparo } } = {}
 local naFila: { [Player]: string } = {}
 local embarques: { [Player]: { personagem: Model, destino: CFrame } } = {}
 local raiz: Folder
@@ -238,10 +239,13 @@ local function premiar(player: Player, run: Run, membro: Membro, concluiu: boole
 			end
 			local mult = (Run.MULT_NOTA[run.notaAndar or "B"] or 1)
 				* (1 + (membro.mods.fragmentos or 0))
+				* Run.multPreparo(run.preparo)
 			ganho = math.floor(Incursoes.fragmentosAndar(u, run.andar) * mult + 0.5)
 		end
 		if venceu then
-			ganho += Incursoes.bonusVitoria(u, (inc.concluidas[u] or 0) == 0)
+			ganho += Incursoes.bonusVitoria(u, (inc.concluidas[u] or 0) == 0) * (if run.preparo.pesadelo
+				then Run.PESADELO.recompensa
+				else 1)
 			inc.concluidas[u] = (inc.concluidas[u] or 0) + 1
 		end
 		inc.fragmentos = (inc.fragmentos or 0) + ganho
@@ -368,6 +372,26 @@ local function ativos(run: Run): number
 	return n
 end
 
+-- Pesadelo e Marcas mexem nos números do andar
+local function ajustarCfg(run: Run, cfg: Incursoes.Andar): Incursoes.Andar
+	local p = run.preparo
+	if p.pesadelo then
+		local f = Run.PESADELO.forca
+		cfg.vidaSombra = math.floor(cfg.vidaSombra * f + 0.5)
+		cfg.danoSombra = math.floor(cfg.danoSombra * f + 0.5)
+		cfg.vidaGuardiao = math.floor(cfg.vidaGuardiao * f + 0.5)
+		cfg.velocidadeSombra *= Run.PESADELO.velocidade
+	end
+	if p.marcas.densas then
+		cfg.sombras = math.ceil(cfg.sombras * 1.4)
+		cfg.reforcos = math.ceil(cfg.reforcos * 1.4)
+	end
+	if p.marcas.velozes then
+		cfg.velocidadeSombra *= 1.3
+	end
+	return cfg
+end
+
 local function novoInimigo(
 	run: Run,
 	pos: Vector3,
@@ -388,6 +412,15 @@ end
 -- Elite com 1–2 afixos (coroa, mais vida, loot de sequência)
 local function novaElite(run: Run, pos: Vector3, anunciar: boolean): Inimigos.Inimigo?
 	local afixos = Run.sortearAfixos(run.andar, sorteio)
+	if run.preparo.pesadelo or run.preparo.marcas.coroa then
+		-- Pesadelo/Coroa Dupla: mais um afixo
+		for _, id in { "veloz", "blindado", "vampirico", "explosivo" } do
+			if not table.find(afixos, id) and #afixos < 3 and sorteio() < 0.5 then
+				table.insert(afixos, id)
+				break
+			end
+		end
+	end
 	local i = novoInimigo(run, pos, false, Run.sortearArquetipo(run.andar, sorteio), afixos)
 	if i then
 		table.insert(run.elites, i)
@@ -412,10 +445,36 @@ local function elitesVivas(run: Run): number
 	return n
 end
 
+-- Recalcula os efeitos das Bênçãos (combate, vida máxima)
+local function aplicarBencaos(player: Player, membro: Membro, curar: boolean)
+	membro.mods = Run.modificadores(membro.bencaos)
+	Combate.definirModificadores(player, membro.mods)
+	membro.vidaMax =
+		math.max(20, math.floor(membro.vidaBase * (1 + (membro.mods.vidaMax or 0)) + 0.5))
+	local _, h = corpo(player)
+	if h and h.Health > 0 then
+		local fracao = h.Health / math.max(h.MaxHealth, 1)
+		h.MaxHealth = membro.vidaMax
+		h.Health = if curar then membro.vidaMax else math.max(1, membro.vidaMax * fracao)
+	end
+end
+
+-- Registra a Bênção escolhida (ou sorteada) e avisa o jogador
+local function escolherBencao(player: Player, membro: Membro, id: string)
+	membro.ofertas = nil
+	membro.bencaos[id] = true
+	aplicarBencaos(player, membro, id == "vigor")
+	local lista = {}
+	for bid in membro.bencaos do
+		table.insert(lista, bid)
+	end
+	enviar(player, { tipo = "bencaoAtiva", id = id, lista = lista })
+end
+
 local function iniciarAndar(run: Run, n: number)
 	limparAndar(run)
 	run.andar = n
-	run.cfg = Incursoes.andar(run.universo, n, ativos(run))
+	run.cfg = ajustarCfg(run, Incursoes.andar(run.universo, n, ativos(run)))
 	local tipo = if run.cfg.guardiao then "guardiao" else (run.tipos[n] or "purificacao")
 	run.tipoAndar = tipo
 	run.inicioAndar = os.clock()
@@ -432,10 +491,8 @@ local function iniciarAndar(run: Run, n: number)
 	for player, membro in run.membros do
 		local ofertas = membro.ofertas
 		if ofertas and #ofertas > 0 then
-			membro.bencaos[ofertas[rng:NextInteger(1, #ofertas)]] = true
-			membro.ofertas = nil
+			escolherBencao(player, membro, ofertas[rng:NextInteger(1, #ofertas)])
 		end
-		local _ = player
 	end
 	local nucleos = if tipo == "purificacao" or tipo == "guardiao"
 		then nil
@@ -473,7 +530,9 @@ local function iniciarAndar(run: Run, n: number)
 		run.restantes = 0
 	elseif tipo == "caca" then
 		-- Caçada: Elites espalhadas pelo andar
-		local quantas = 3 + math.floor((ativos(run) - 1) / 2)
+		local quantas = 3
+			+ math.floor((ativos(run) - 1) / 2)
+			+ (if run.preparo.marcas.coroa then 2 else 0)
 		local pontos = mapa.pontosSombra
 		for k = 1, quantas do
 			novaElite(run, pontos[(k * 3 - 1) % #pontos + 1], false)
@@ -616,7 +675,8 @@ local function lancar(
 	universo: string,
 	jogadores: { Player },
 	andar: number,
-	teste: boolean
+	teste: boolean,
+	preparo: Run.Preparo?
 ): boolean
 	local slot: number? = nil
 	for s = 1, SLOTS do
@@ -636,6 +696,7 @@ local function lancar(
 		universo = universo,
 		andar = 0,
 		tipos = Run.sortearAndares(Incursoes.ANDARES, sorteio),
+		preparo = preparo or Run.preparo(nil),
 		tipoAndar = "purificacao",
 		inicioAndar = os.clock(),
 		quedasAndar = 0,
@@ -648,7 +709,7 @@ local function lancar(
 		cofreProg = 0,
 		cofreAberto = false,
 		andaresConcluidos = 0,
-		vidas = Incursoes.vidas(#jogadores),
+		vidas = if preparo and preparo.marcas.semVidas then 0 else Incursoes.vidas(#jogadores),
 		estado = "andar",
 		membros = {},
 		pasta = pasta,
@@ -673,6 +734,9 @@ local function lancar(
 		local vidaMax = math.floor(
 			Incursoes.vidaMax(progressoDe(player)) * (1 + Artefatos.bonusVida(equipado)) + 0.5
 		)
+		if preparo and preparo.marcas.vidro then
+			vidaMax = math.floor(vidaMax * 0.7 + 0.5)
+		end
 		local m: Membro = {
 			vidaBase = vidaMax,
 			vidaMax = vidaMax,
@@ -708,6 +772,7 @@ local function lancar(
 	end
 	paraRun(run, {
 		tipo = "inicio",
+		preparo = Run.descreverPreparo(run.preparo),
 		universo = universo,
 		slot = run.slot,
 		vidas = run.vidas,
@@ -797,6 +862,9 @@ local function passoRun(run: Run, dt: number)
 	local centro = mapa.origem.Position
 	Inimigos.passo(run.inimigos, dt, alvos, centro, mapa.raio, function(pos)
 		novoInimigo(run, pos, false)
+	end, function(dados)
+		dados.universo = run.universo
+		paraRun(run, dados)
 	end)
 
 	local tipo = run.tipoAndar
@@ -855,7 +923,9 @@ local function passoRun(run: Run, dt: number)
 		end
 		-- Elite de surpresa (a partir do 2º andar, fora da Caçada)
 		if run.andar >= 2 and tipo ~= "caca" and agora >= run.proximaElite then
-			run.proximaElite = agora + (if tipo == "horda" then 16 else 26)
+			run.proximaElite = agora
+				+ (if tipo == "horda" then 16 else 26)
+					* (if run.preparo.marcas.coroa then 0.5 else 1)
 			novaElite(run, pontos[rng:NextInteger(1, #pontos)], true)
 		end
 	end
@@ -1029,6 +1099,7 @@ local function enviarFila(universo: string)
 			tipo = "fila",
 			universo = universo,
 			jogadores = #f.jogadores,
+			preparo = Run.descreverPreparo(f.preparo),
 			falta = if f.fim then math.max(0, math.ceil(f.fim - os.clock())) else nil,
 		})
 	end
@@ -1069,7 +1140,7 @@ local function passoFilas()
 			f.fim = f.fim or (os.clock() + Incursoes.ESPERA_FILA)
 			if os.clock() >= f.fim or #f.jogadores >= Incursoes.MAX_JOGADORES then
 				local grupo = table.clone(f.jogadores)
-				if lancar(universo, grupo, 1, false) then
+				if lancar(universo, grupo, 1, false, f.preparo) then
 					for _, p in grupo do
 						naFila[p] = nil
 					end
@@ -1096,7 +1167,12 @@ function Servico.ocupado(player: Player): boolean
 	return daRun[player] ~= nil or naFila[player] ~= nil or embarques[player] ~= nil
 end
 
-function Servico.iniciarTeste(player: Player, universo: string, andar: number): (boolean, string?)
+function Servico.iniciarTeste(
+	player: Player,
+	universo: string,
+	andar: number,
+	preparo: Run.Preparo?
+): (boolean, string?)
 	if player:GetAttribute("EmDueloArena") then
 		return false, "Conclua o duelo antes de entrar nas Incursões."
 	end
@@ -1113,13 +1189,13 @@ function Servico.iniciarTeste(player: Player, universo: string, andar: number): 
 	if not r or not h or h.Health <= 0 then
 		return false, "Aguarde seu personagem renascer."
 	end
-	if not lancar(universo, { player }, andar, true) then
+	if not lancar(universo, { player }, andar, true, preparo) then
 		return false, "Todas as fendas estão ocupadas. Tente novamente."
 	end
 	return true, nil
 end
 
-local function acaoFila(player: Player, universo: any): (boolean, string?)
+local function acaoFila(player: Player, universo: any, bruto: any): (boolean, string?)
 	if universo == "" or universo == nil then
 		tirarDaFila(player)
 		return true, "Você saiu da fila."
@@ -1142,8 +1218,13 @@ local function acaoFila(player: Player, universo: any): (boolean, string?)
 	if not Incursoes.liberado(progressoDe(player), universo) then
 		return false, "Conclua o universo anterior para abrir este."
 	end
+	local preparo = Run.preparo(bruto)
+	if preparo.pesadelo and ((progressoDe(player).concluidas or {})[universo] or 0) <= 0 then
+		return false,
+			"Vença " .. Incursoes.porId[universo].nome .. " no normal para liberar o Pesadelo."
+	end
 	if Dados.emTeste(player) then
-		return Servico.iniciarTeste(player, universo, 1)
+		return Servico.iniciarTeste(player, universo, 1, preparo)
 	end
 	if naFila[player] == universo then
 		return true, nil
@@ -1151,7 +1232,7 @@ local function acaoFila(player: Player, universo: any): (boolean, string?)
 	tirarDaFila(player)
 	local f = filas[universo]
 	if not f then
-		f = { jogadores = {}, fim = nil }
+		f = { jogadores = {}, fim = nil, preparo = preparo } -- quem abre a fila escolhe o preparo
 		filas[universo] = f
 	end
 	if #f.jogadores >= Incursoes.MAX_JOGADORES then
@@ -1270,20 +1351,6 @@ local function acaoGuarda(player: Player, ligar: any): (boolean, string?)
 	return Combate.guarda(player, ligar, ctx)
 end
 
--- Recalcula os efeitos das Bênçãos (combate, vida máxima)
-local function aplicarBencaos(player: Player, membro: Membro, curar: boolean)
-	membro.mods = Run.modificadores(membro.bencaos)
-	Combate.definirModificadores(player, membro.mods)
-	membro.vidaMax =
-		math.max(20, math.floor(membro.vidaBase * (1 + (membro.mods.vidaMax or 0)) + 0.5))
-	local _, h = corpo(player)
-	if h and h.Health > 0 then
-		local fracao = h.Health / math.max(h.MaxHealth, 1)
-		h.MaxHealth = membro.vidaMax
-		h.Health = if curar then membro.vidaMax else math.max(1, membro.vidaMax * fracao)
-	end
-end
-
 local function acaoBencao(player: Player, id: any): (boolean, string?)
 	local run = daRun[player]
 	local membro = run and run.membros[player]
@@ -1294,16 +1361,8 @@ local function acaoBencao(player: Player, id: any): (boolean, string?)
 	if not ofertas or not table.find(ofertas, id) then
 		return false, "Essa Bênção não está disponível."
 	end
-	membro.ofertas = nil
-	membro.bencaos[id] = true
-	aplicarBencaos(player, membro, id == "vigor")
-	local b = Run.bencaoPorId[id]
-	local lista = {}
-	for bid in membro.bencaos do
-		table.insert(lista, bid)
-	end
-	enviar(player, { tipo = "bencaoAtiva", id = id, lista = lista })
-	return true, b.nome .. "!"
+	escolherBencao(player, membro, id)
+	return true, Run.bencaoPorId[id].nome .. "!"
 end
 
 -- Abate feito por um jogador: sequência, cura da Lâmina Faminta, Elite derrubada

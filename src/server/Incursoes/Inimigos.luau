@@ -38,6 +38,11 @@ export type Inimigo = {
 	pavioEm: number?, -- Explosivo: quando explode
 	tiro: { para: Vector3, em: number }?, -- Atirador: disparo a caminho
 	-- só do Guardião
+	universo: string,
+	fase: number, -- 1, 2, 3 (muda aos 66% e 33% da vida)
+	enfurecido: boolean,
+	enfurecerEm: number,
+	proximaMecanica: number,
 	proximoGolpe: number,
 	golpeEm: number?,
 	invocou: number,
@@ -61,8 +66,29 @@ local DISTANCIA_SEGURA = 13 -- o Atirador recua se o jogador chegar mais perto
 -- (humanoide, dano, posição de quem atacou, inimigo) -> dano final
 Inimigos.defesa = nil :: ((Humanoid, number, Vector3, any) -> number)?
 
--- Explosões pendentes (morte de Explosivo/Instável): resolvidas no próximo passo, que conhece os alvos
-local explosoes: { { pos: Vector3, em: number, dano: number, lista: { Inimigo } } } = {}
+-- Explosões e zonas de ataque pendentes: resolvidas no passo da partida que estiver perto delas
+-- (cada partida fica num espaço próprio; a posição diz a qual partida pertence)
+type Zona = { pos: Vector3, raio: number, interno: number, em: number, dano: number }
+local zonas: { Zona } = {}
+local sorte = Random.new()
+
+-- Área de ataque com aviso: tudo entre interno e raio leva dano quando o tempo acabar
+local function zona(
+	pos: Vector3,
+	raio: number,
+	interno: number,
+	atraso: number,
+	dano: number,
+	avisar: (({ [string]: any }) -> ())?
+)
+	table.insert(
+		zonas,
+		{ pos = pos, raio = raio, interno = interno, em = os.clock() + atraso, dano = dano }
+	)
+	if avisar then
+		avisar({ tipo = "zona", pos = pos, raio = raio, interno = interno, tempo = atraso })
+	end
+end
 
 local function ferirJogador(a: Alvo, dano: number, origem: Vector3, i: any)
 	local final = dano
@@ -151,6 +177,11 @@ function Inimigos.novo(
 		deslocamento = parte.Position - pos,
 		pavioEm = nil,
 		tiro = nil,
+		universo = universo,
+		fase = 1,
+		enfurecido = false,
+		enfurecerEm = os.clock() + Run.ENFURECE_EM,
+		proximaMecanica = os.clock() + 6,
 		proximoGolpe = os.clock() + 4,
 		golpeEm = nil,
 		invocou = 0,
@@ -173,16 +204,13 @@ function Inimigos.empurrar(i: Inimigo, vetor: Vector3, atordoar: number?)
 	end
 end
 
-local function morrer(i: Inimigo, lista: { Inimigo }?)
+local function morrer(i: Inimigo)
 	i.parte:SetAttribute("Morreu", agoraServidor())
 	if i.explode and not i.guardiao then
 		-- Explosivo/Instável: aviso curto e explode onde caiu
 		i.parte:SetAttribute("GolpeRaio", RAIO_EXPLOSAO)
 		i.parte:SetAttribute("Golpe", agoraServidor() + 0.5)
-		table.insert(
-			explosoes,
-			{ pos = i.pos, em = os.clock() + 0.5, dano = i.dano, lista = lista or {} }
-		)
+		zona(i.pos, RAIO_EXPLOSAO, 0, 0.5, i.dano, nil)
 	end
 	local parte = i.parte
 	task.delay(if i.explode then 0.7 else 0.6, function()
@@ -216,7 +244,7 @@ function Inimigos.ferir(i: Inimigo, dano: number, origem: Vector3?): boolean
 	i.parte:SetAttribute("Vida", math.ceil(i.vida))
 	i.parte:SetAttribute("Ferido", agoraServidor())
 	if i.vida <= 0 then
-		morrer(i, nil)
+		morrer(i)
 		return true
 	end
 	return false
@@ -247,22 +275,23 @@ function Inimigos.passo(
 	alvos: { Alvo },
 	centro: Vector3,
 	raioAndar: number,
-	invocar: (Vector3) -> ()
+	invocar: (Vector3) -> (),
+	avisar: (({ [string]: any }) -> ())?
 )
 	local agora = os.clock()
-	-- explosões pendentes
-	for k = #explosoes, 1, -1 do
-		local e = explosoes[k]
-		if agora >= e.em then
-			table.remove(explosoes, k)
+	-- explosões e zonas pendentes desta partida
+	for k = #zonas, 1, -1 do
+		local z = zonas[k]
+		if agora >= z.em and horizontal(z.pos, centro) <= raioAndar + 20 then
+			table.remove(zonas, k)
 			for _, a in alvos do
-				if
-					a.humanoide.Health > 0
-					and horizontal(a.raiz.Position, e.pos) <= RAIO_EXPLOSAO
-				then
-					ferirJogador(a, e.dano, e.pos, nil)
+				local d = horizontal(a.raiz.Position, z.pos)
+				if a.humanoide.Health > 0 and d <= z.raio and d >= z.interno then
+					ferirJogador(a, z.dano, z.pos, nil)
 				end
 			end
+		elseif agora >= z.em + 5 then
+			table.remove(zonas, k) -- a partida já acabou
 		end
 	end
 	for idx, i in lista do
@@ -383,7 +412,7 @@ function Inimigos.passo(
 			if i.golpeEm then
 				if agora >= i.golpeEm then
 					i.golpeEm = nil
-					i.proximoGolpe = agora + GOLPE_INTERVALO
+					i.proximoGolpe = agora + GOLPE_INTERVALO * (if i.enfurecido then 0.6 else 1)
 					for _, a in alvos do
 						if
 							a.humanoide.Health > 0
@@ -400,11 +429,67 @@ function Inimigos.passo(
 				i.parte:SetAttribute("GolpeRaio", GOLPE_RAIO)
 			end
 			local fracao = i.vida / i.vidaMax
-			if (i.invocou == 0 and fracao < 0.66) or (i.invocou == 1 and fracao < 0.33) then
+			local fase = if fracao < Run.FASES_GUARDIAO[2]
+				then 3
+				elseif fracao < Run.FASES_GUARDIAO[1] then 2
+				else 1
+			if fase > i.fase then
+				-- muda de fase: onda de choque, reforços e a mecânica do universo começa
+				i.fase = fase
 				i.invocou += 1
+				i.parte:SetAttribute("Fase", fase)
+				i.parte:SetAttribute("GolpeRaio", 12)
+				i.parte:SetAttribute("Impacto", agoraServidor())
+				i.proximaMecanica = agora + 2.5
 				for k = 1, 3 do
 					local a = 2 * math.pi * k / 3
 					invocar(i.pos + Vector3.new(math.sin(a) * 8, 0, math.cos(a) * 8))
+				end
+				if avisar then
+					avisar({ tipo = "faseGuardiao", fase = fase })
+				end
+			end
+			if not i.enfurecido and agora >= i.enfurecerEm then
+				i.enfurecido = true
+				i.dano *= 1.6
+				i.velocidade *= 1.4
+				i.parte:SetAttribute("Enfurecido", true)
+				if avisar then
+					avisar({ tipo = "enfurecido" })
+				end
+			end
+			if i.fase >= 2 and agora >= i.proximaMecanica and not i.golpeEm then
+				local f3 = i.fase >= 3
+				if i.universo == "cinzas" then
+					-- Chuva de Brasas: círculos de fogo caem em cima dos jogadores
+					for _ = 1, if f3 then 7 else 4 do
+						local a = alvos[sorte:NextInteger(1, math.max(#alvos, 1))]
+						local base = if a then a.raiz.Position else i.pos
+						local p = base
+							+ Vector3.new(sorte:NextNumber(-5, 5), 0, sorte:NextNumber(-5, 5))
+						zona(Vector3.new(p.X, i.pos.Y, p.Z), 5, 0, 1.3, i.dano * 1.2, avisar)
+					end
+					i.proximaMecanica = agora + (if f3 then 3 else 4.5)
+				elseif i.universo == "mare" then
+					-- Maré Alta: onda em anel; o único lugar seguro é colado no Cavaleiro
+					zona(i.pos, 26, 6.5, 1.8, i.dano * 1.8, avisar)
+					i.proximaMecanica = agora + (if f3 then 5.5 else 8)
+				else
+					-- Eclipse: o Espectro some e reaparece; onde estava, a sombra explode
+					local antes = i.pos
+					zona(antes, 8, 0, 0.9, i.dano * 1.3, avisar)
+					local ang = sorte:NextNumber(0, math.pi * 2)
+					local dist = sorte:NextNumber(0, raioAndar * 0.55)
+					i.pos = Vector3.new(
+						centro.X + math.cos(ang) * dist,
+						i.pos.Y,
+						centro.Z + math.sin(ang) * dist
+					)
+					i.parte:SetAttribute("Piscou", agoraServidor())
+					if f3 then
+						invocar(antes)
+					end
+					i.proximaMecanica = agora + (if f3 then 4.5 else 7)
 				end
 			end
 		end

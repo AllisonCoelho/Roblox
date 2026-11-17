@@ -40,6 +40,42 @@
   - `src/client/UI/Telas/IncursoesRunUI.luau`: banner, nota, sequência, alerta de Elite e cartas.
   - `Visual.luau`: nomes sobre os inimigos e aviso do disparo do Atirador.
 
+## Fase B
+
+### Guardião em 3 fases
+O Guardião muda de fase aos 66% e aos 33% de vida. Em cada troca há uma onda de choque e 3 reforços, e a mecânica do universo começa:
+
+| Universo | Mecânica (fase 2 → fase 3 mais intensa) |
+|---|---|
+| Cinzas — Arauto das Brasas | **Chuva de Brasas:** 4 círculos de fogo com aviso caem em cima dos jogadores (7 na fase 3) |
+| Maré Morta — Cavaleiro Afogado | **Maré Alta:** onda em anel de raio 26; o único lugar seguro é colado nele (círculo verde) |
+| Crepúsculo Umbral — Espectro do Ocaso | **Eclipse:** a tela escurece; ele some e reaparece em outro ponto e a sombra explode onde estava; na fase 3 deixa um reforço |
+
+Depois de 3 minutos de luta o Guardião **enfurece**: +60% de dano, +40% de velocidade e golpe mais frequente.
+
+### Marcas da Fenda
+São escolhidas na Mesa dos Cartógrafos, no quadro "Preparo da Fenda". Quem abre a fila define o preparo do grupo, e o servidor valida tudo.
+
+| Marca | Efeito | Fragmentos |
+|---|---|---|
+| Hordas Densas | +40% de inimigos | +25% |
+| Sombras Velozes | Inimigos 30% mais rápidos | +20% |
+| Corpo de Vidro | Jogadores com 30% menos vida | +30% |
+| Coroa Dupla | Elites em dobro e com mais afixos | +30% |
+| Sem Reviver | O grupo não tem vidas extras | +50% |
+
+### Pesadelo
+- **Liberação:** depois de vencer o universo no normal.
+- **Dificuldade:** inimigos com ×1,8 de vida e dano e 12% mais rápidos; Elites com afixo extra.
+- **Recompensa:** Fragmentos ×2 e bônus de vitória ×2.
+
+O multiplicador final das Marcas e do Pesadelo aparece no painel antes de entrar.
+
+### Auditoria da fase A (corrigido)
+- Bênção sorteada automaticamente agora aplica os efeitos e aparece no HUD.
+- Explosões e zonas pendentes passam a pertencer à partida certa (por posição), em vez de uma lista global consumida por qualquer partida.
+- Eco do Golpe e Rastro de Brasas ganharam efeito visual.
+- Abate pelo rebote da guarda da Gear 5 agora conta na sequência e na cura.
+
 ## Próximas fases
-- **B:** Guardião em 3 fases com mecânica por universo, Marcas da Fenda (modificadores de risco) e Pesadelo.
 - **C:** Fenda do Dia com ranking diário, desafios semanais e reviver colega.

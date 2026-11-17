@@ -274,6 +274,9 @@ local function montar(parte: BasePart)
 			end)
 		end)
 	end)
+	aoMudar("Piscou", function()
+		Visual.onda((parte.CFrame * pivoLocal).Position, 6, corLuz, 0.4)
+	end)
 	aoMudar("Impacto", function()
 		local raio = parte:GetAttribute("GolpeRaio")
 		Visual.onda(
@@ -376,6 +379,60 @@ local CLIMA = {
 	},
 }
 local climaAtual: { Instance } = {}
+
+-- Zona de ataque do Guardião: anel vermelho que enche até o golpe. interno > 0: o meio é seguro
+function Visual.zona(pos: Vector3, raio: number, interno: number, tempo: number, cor: Color3)
+	if tempo <= 0 then
+		return
+	end
+	local function disco(r: number, c: Color3, transp: number, grossura: number): Part
+		local p = Instance.new("Part")
+		p.Shape = Enum.PartType.Cylinder
+		p.Anchored = true
+		p.CanCollide = false
+		p.CanQuery = false
+		p.CanTouch = false
+		p.CastShadow = false
+		p.Material = Enum.Material.Neon
+		p.Color = c
+		p.Transparency = transp
+		p.Size = Vector3.new(grossura, r * 2, r * 2)
+		p.CFrame = CFrame.new(pos + Vector3.new(0, 0.5, 0)) * CFrame.Angles(0, 0, math.rad(90))
+		p.Parent = efeitos
+		return p
+	end
+	local borda = disco(raio, Color3.fromHex("FF3344"), 0.7, 0.12)
+	local enche = disco(math.max(interno, 0.5), cor, 0.45, 0.14)
+	local seguro = if interno > 0 then disco(interno, Color3.fromHex("6BFFB0"), 0.55, 0.16) else nil
+	TweenService:Create(enche, TweenInfo.new(tempo, Enum.EasingStyle.Linear), {
+		Size = Vector3.new(0.14, raio * 2, raio * 2),
+	}):Play()
+	task.delay(tempo, function()
+		borda:Destroy()
+		enche:Destroy()
+		if seguro then
+			seguro:Destroy()
+		end
+		Visual.onda(pos, raio, cor, 0.35)
+	end)
+end
+
+-- Escuridão do Eclipse (Espectro do Ocaso a partir da fase 2)
+local eclipse: ColorCorrectionEffect? = nil
+function Visual.eclipse(ligado: boolean)
+	if ligado and not eclipse then
+		local e = Instance.new("ColorCorrectionEffect")
+		e.Name = "IncursaoEclipse"
+		e.Brightness = -0.18
+		e.Saturation = -0.35
+		e.TintColor = Color3.fromHex("C9B8FF")
+		e.Parent = Lighting
+		eclipse = e
+	elseif not ligado and eclipse then
+		eclipse:Destroy()
+		eclipse = nil
+	end
+end
 
 function Visual.clima(universo: string?)
 	for _, inst in climaAtual do
@@ -537,6 +594,7 @@ function Visual.definirPartida(slot: number?)
 		return
 	end
 	slotAtual = slot
+	Visual.eclipse(false)
 	table.clear(fila)
 	table.clear(naFila)
 	for _, v in table.clone(vivos) do

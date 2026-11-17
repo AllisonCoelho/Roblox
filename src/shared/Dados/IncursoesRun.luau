@@ -378,4 +378,102 @@ end
 -- Sequência de abates: janela para emendar o próximo
 Run.SEQUENCIA_JANELA = 3
 
+-- ---------------------------------------------------------------- fase B: Marcas e Pesadelo
+
+export type Marca = { id: string, nome: string, descricao: string, bonus: number }
+
+-- Modificadores de risco escolhidos antes de entrar: cada um soma Fragmentos
+Run.MARCAS = {
+	{ id = "densas", nome = "Hordas Densas", descricao = "+40% de inimigos.", bonus = 0.25 },
+	{
+		id = "velozes",
+		nome = "Sombras Velozes",
+		descricao = "Inimigos 30% mais rápidos.",
+		bonus = 0.2,
+	},
+	{
+		id = "vidro",
+		nome = "Corpo de Vidro",
+		descricao = "Vocês têm 30% menos vida.",
+		bonus = 0.3,
+	},
+	{
+		id = "coroa",
+		nome = "Coroa Dupla",
+		descricao = "Elites em dobro e com mais afixos.",
+		bonus = 0.3,
+	},
+	{
+		id = "semVidas",
+		nome = "Sem Reviver",
+		descricao = "O grupo não tem vidas extras.",
+		bonus = 0.5,
+	},
+} :: { Marca }
+
+Run.marcaPorId = {} :: { [string]: Marca }
+for _, m in Run.MARCAS do
+	Run.marcaPorId[m.id] = m
+end
+
+-- Pesadelo: liberado depois de vencer o universo no normal
+Run.PESADELO = {
+	forca = 1.8, -- vida e dano dos inimigos
+	velocidade = 1.12,
+	recompensa = 2, -- Fragmentos e bônus de vitória
+}
+
+export type Preparo = { pesadelo: boolean, marcas: { [string]: boolean } }
+
+-- Valida o que veio do cliente (tipos e ids conhecidos); devolve um preparo limpo
+function Run.preparo(bruto: any): Preparo
+	local limpo: Preparo = { pesadelo = false, marcas = {} }
+	if type(bruto) ~= "table" then
+		return limpo
+	end
+	limpo.pesadelo = bruto.pesadelo == true
+	if type(bruto.marcas) == "table" then
+		local n = 0
+		for k, v in bruto.marcas do
+			if type(k) == "string" and v == true and Run.marcaPorId[k] then
+				n += 1
+				if n > #Run.MARCAS then
+					break
+				end
+				limpo.marcas[k] = true
+			end
+		end
+	end
+	return limpo
+end
+
+-- Multiplicador de Fragmentos do preparo (Marcas somam; Pesadelo dobra)
+function Run.multPreparo(p: Preparo): number
+	local soma = 0
+	for id in p.marcas do
+		local m = Run.marcaPorId[id]
+		if m then
+			soma += m.bonus
+		end
+	end
+	return (1 + soma) * (if p.pesadelo then Run.PESADELO.recompensa else 1)
+end
+
+function Run.descreverPreparo(p: Preparo): string
+	local partes = {}
+	if p.pesadelo then
+		table.insert(partes, "PESADELO")
+	end
+	for _, m in Run.MARCAS do
+		if p.marcas[m.id] then
+			table.insert(partes, m.nome)
+		end
+	end
+	return if #partes > 0 then table.concat(partes, " · ") else "Normal"
+end
+
+-- Guardião: limiares das fases e quando enfurece
+Run.FASES_GUARDIAO = { 0.66, 0.33 }
+Run.ENFURECE_EM = 180 -- segundos de luta
+
 return Run
