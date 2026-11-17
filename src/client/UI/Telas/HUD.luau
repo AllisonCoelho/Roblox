@@ -5,6 +5,7 @@ local Shared = ReplicatedStorage.Shared
 local Auras = require(Shared.Dados.Auras)
 local Formato = require(Shared.Formato)
 local Perfil = require(Shared.Dados.Perfil)
+local Transcendencia = require(Shared.Dados.Transcendencia)
 local Cores = require(Shared.Tema).Orbita
 local Escala = require(script.Parent.Parent.Escala)
 local Kit = require(script.Parent.Parent.Kit)
@@ -20,7 +21,7 @@ export type Api = {
 	definirVisivel: (visivel: boolean) -> (),
 	definirPerfilTeste: (ativo: boolean) -> (),
 	atualizar: (estado: Perfil.Estado) -> (),
-	registrarResultado: (aura: Auras.Aura, nova: boolean, simulado: boolean) -> (),
+	registrarResultado: (aura: Auras.Aura, nova: boolean, simulado: boolean, chance: number) -> (),
 }
 
 type Opcoes = {
@@ -87,8 +88,8 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 	})
 	type Linha = { quadro: Frame, nome: TextLabel, chance: TextLabel, marca: TextLabel }
 	local linhas: { Linha } = {}
-	local recentes: { Auras.Aura } = {}
-	local recentesTeste: { Auras.Aura } = {}
+	local recentes: { { aura: Auras.Aura, chance: number } } = {}
+	local recentesTeste: { { aura: Auras.Aura, chance: number } } = {}
 	local emTeste = false
 	for i = 1, RECENTES do
 		local quadro = Kit.novo("Frame", {
@@ -378,12 +379,12 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 		feed.quadro.Visible = not Escala.compacto and #lista > 0
 		feed.quadro.Size = UDim2.fromOffset(258, 32 + 36 * #lista)
 		for i, linha in linhas do
-			local aura = lista[i]
-			linha.quadro.Visible = aura ~= nil
-			if aura then
-				linha.nome.Text = aura.nome
-				linha.chance.Text = "1/" .. Formato.chanceCurta(aura.chance)
-				linha.marca.TextColor3 = corTier(aura)
+			local giro = lista[i]
+			linha.quadro.Visible = giro ~= nil
+			if giro then
+				linha.nome.Text = giro.aura.nome
+				linha.chance.Text = "1/" .. Formato.chanceCurta(giro.chance)
+				linha.marca.TextColor3 = corTier(giro.aura)
 			end
 		end
 	end
@@ -495,7 +496,9 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 				then string.format(
 					"%s · 1 em %s",
 					Auras.Tiers[aura.tier].nome,
-					Formato.chance(aura.chance)
+					Formato.chance(
+						Auras.chanceEfetiva(aura, Transcendencia.sorte(estado.transcendencia.nivel))
+					)
 				)
 				else "Desperte uma aura"
 			raridade.TextColor3 = if aura then Kit.corLegivel(cor) else Cores.TextoSuave
@@ -514,9 +517,14 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 			valorIndice.Text = string.format("%d / %d", descobertas, #Auras.lista)
 			progresso.Size = UDim2.fromScale(descobertas / #Auras.lista, 1)
 		end,
-		registrarResultado = function(aura: Auras.Aura, nova: boolean, simulado: boolean)
+		registrarResultado = function(
+			aura: Auras.Aura,
+			nova: boolean,
+			simulado: boolean,
+			chance: number
+		)
 			local lista = if simulado then recentesTeste else recentes
-			table.insert(lista, 1, aura)
+			table.insert(lista, 1, { aura = aura, chance = chance })
 			if #lista > RECENTES then
 				table.remove(lista)
 			end
@@ -529,7 +537,7 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 				if simulado then "Teste · " else "",
 				if nova then "Nova · " else "",
 				aura.nome,
-				Formato.chance(aura.chance)
+				Formato.chance(chance)
 			)
 			resultado.definirCor(Cores.Painel, corTier(aura))
 			resultado.quadro.Visible = true

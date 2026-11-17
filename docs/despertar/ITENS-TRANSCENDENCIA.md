@@ -31,3 +31,33 @@ Os Fragmentos de Incursão mantêm os valores anteriores e passam a ser creditad
 - Jogue Cinzas solo e em grupo de 2–4. Confira em cada andar os ganhos individuais e compare o saldo com o cartão final.
 - Saia e reconecte após o primeiro andar. Confirme as recompensas e repita com morte e desconexão perto da purificação.
 - Vença o Guardião e valide o drop temático e os Fragmentos de Incursão. Repita com uma partida do Painel Dev e compare com o perfil real após sair da simulação.
+
+## Forja e Transcendência I
+
+Abra o **Altar da Ressonância**, a nordeste da praça. A aba **Forja** mostra o estoque ao lado de cada custo e pede confirmação antes de consumir materiais.
+
+| Receita | Ingredientes |
+|---|---|
+| Lasca Estável | 5 Estilhaços Brutos |
+| Coração da Fenda | 8 Estilhaços Brutos, 2 Lascas Estáveis e 1 Selo de Purificação |
+| Coração da Ressonância | 1 Coração da Fenda, 6 Estilhaços Brutos e 1 Cinza Persistente |
+
+Uma vitória em Cinzas garante os materiais do primeiro ciclo. As Lascas Estáveis vêm dos andares 2 e 4, então a forja de Lascas é opcional. Na aba **Transcender**, ofereça um Coração da Ressonância para ganhar o primeiro nível sem perder auras, giros ou relíquias. A confirmação visual aparece depois da confirmação dos dados.
+
+### Regra de sorte proposta para o playtest
+
+A Transcendência I multiplica por **1,05** a probabilidade base das auras Raras, Épicas, Lendárias, Míticas e Divinas. O peso adicional sai proporcionalmente das auras Comuns e Incomuns, incluindo a reserva. No nível 0, o catálogo mantém suas probabilidades base. O Índice, a aura equipada e os resultados mostram o denominador efetivo arredondado. A raridade nominal, o critério para anúncios e a duração dos rituais continuam definidos no catálogo.
+
+O catálogo das 67 auras originais está em um PR próprio. Sua entrada no sorteio e a chance base da Centelha do Nexo ainda requerem decisão e validação separada.
+
+### Playtest do Altar
+
+- Conclua Cinzas. No Altar, fabrique Coração da Fenda e Coração da Ressonância. Confirme os ingredientes descontados e o item recebido no Inventário.
+- Tente confirmar duas vezes, forjar sem ingredientes, oferecer sem Coração e interagir longe do Altar. Confira que as recusas preservam o saldo.
+- Transcenda e confira nível, bônus, Índice e resultado do giro. Pule a apresentação e confira o modo Movimento reduzido. Reconecte em ambiente de teste publicado e confirme o nível e os saldos.
+- Teste conexão instável e encerre a sessão durante uma oferta. Ao retornar, os ingredientes e o resultado devem corresponder à gravação recuperada.
+
+
+## Regra vigente de sorte (RNG V2 / PR #27)
+
+A implementacao de sorte por raridade usa **pesos normalizados** por expoente de tier, conforme `docs/despertar/PROBABILIDADES-V2.md`. O indice `1,05x` **nao significa 5% exatos para cada aura rara**, pois as probabilidades sao recalculadas para totalizar 100%. O motor do PR #27 e a fonte unica de verdade para o sorteio. As probabilidades exibidas no HUD/Indice/Revelacao devem coincidir com o servidor.

@@ -174,4 +174,10 @@ function Auras.contarDescobertas(colecao: { [string]: number }): number
 	return n
 end
 
+-- Compatibilidade com as telas de Forja: retorna o denominador efetivo 1 em N.
+-- Os sorteios continuam usando apenas a distribuicao normalizada por tier.
+function Auras.chanceEfetiva(aura: Aura, sorte: number?): number
+	return 1 / Auras.probabilidadeReal(aura.id, sorte)
+end
+
 return Auras

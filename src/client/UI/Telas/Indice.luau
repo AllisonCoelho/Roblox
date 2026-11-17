@@ -5,6 +5,7 @@ local Shared = ReplicatedStorage.Shared
 local Auras = require(Shared.Dados.Auras)
 local Formato = require(Shared.Formato)
 local Perfil = require(Shared.Dados.Perfil)
+local Transcendencia = require(Shared.Dados.Transcendencia)
 local Cores = require(Shared.Tema).Orbita
 local Escala = require(script.Parent.Parent.Escala)
 local Estado = require(script.Parent.Parent.Estado)
@@ -68,11 +69,11 @@ function Indice.montar(aoAviso: (string) -> ())
 		botao: TextButton,
 		nome: TextLabel,
 		quantidade: TextLabel,
+		chance: TextLabel,
 		situacao: TextLabel,
 		gema: Frame,
 		oculta: TextLabel,
 		cor: Color3,
-		chanceAtual: TextLabel,
 	}
 	local cartoes: { [string]: Cartao } = {}
 	for _, aura in Auras.lista do
@@ -111,28 +112,18 @@ function Indice.montar(aoAviso: (string) -> ())
 			Text = "???",
 			TextSize = 22,
 			TextWrapped = true,
-			Position = UDim2.fromOffset(10, 76),
-			Size = UDim2.new(1, -20, 0, 42),
+			Position = UDim2.fromOffset(10, 80),
+			Size = UDim2.new(1, -20, 0, 53),
 			Parent = conteudo,
 		})
-		Kit.texto({
-			Name = "ChanceBase",
+		local chance = Kit.texto({
+			Name = "Chance",
 			fonte = "mono",
-			Text = "Base: 1 em " .. Formato.chance(aura.chance),
-			TextSize = 13,
+			Text = "1 em " .. Formato.chance(aura.chance),
+			TextSize = 16,
 			TextColor3 = Cores.TextoSuave,
-			Position = UDim2.fromOffset(10, 118),
-			Size = UDim2.new(1, -20, 0, 20),
-			Parent = conteudo,
-		})
-		local chanceAtual = Kit.texto({
-			Name = "ChanceAtual",
-			fonte = "mono",
-			Text = "Atual: 1 em " .. Formato.chance(aura.chance),
-			TextSize = 13,
-			TextColor3 = Cores.Lilas,
-			Position = UDim2.fromOffset(10, 137),
-			Size = UDim2.new(1, -20, 0, 20),
+			Position = UDim2.fromOffset(10, 131),
+			Size = UDim2.new(1, -20, 0, 24),
 			Parent = conteudo,
 		})
 		local quantidade = Kit.texto({
@@ -179,26 +170,22 @@ function Indice.montar(aoAviso: (string) -> ())
 			botao = botao,
 			nome = nome,
 			quantidade = quantidade,
+			chance = chance,
 			situacao = situacao,
 			gema = gema,
 			oculta = oculta,
 			cor = cor,
-			chanceAtual = chanceAtual,
 		}
 	end
 
 	Estado.aoMudar(function(estado)
+		local sorte = Transcendencia.sorte(estado.transcendencia.nivel)
 		local descobertas = Auras.contarDescobertas(estado.auras)
 		contador.Text = string.format("%d / %d", descobertas, #Auras.lista)
 		progresso.Size = UDim2.fromScale(descobertas / #Auras.lista, 1)
-		local transcendencia = (estado :: any).transcendencia
-		local sorte = Auras.sorteTranscendencia(
-			if type(transcendencia) == "table" then transcendencia.nivel else nil
-		)
 		for _, aura in Auras.lista do
 			local c = cartoes[aura.id]
-			c.chanceAtual.Text = "Atual: 1 em "
-				.. Formato.chance(1 / Auras.probabilidadeReal(aura.id, sorte))
+			c.chance.Text = "1 em " .. Formato.chance(Auras.chanceEfetiva(aura, sorte))
 			local tem = Perfil.possui(estado, aura.id)
 			local equipada = tem and estado.equipada == aura.id
 			local cor = if tem then c.cor else Cores.Borda

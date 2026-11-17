@@ -8,6 +8,8 @@ ROOT = Path(__file__).resolve().parent.parent
 MODULOS = {
     "Formato": "src/shared/Formato.luau",
     "LootIncursoes": "src/shared/Dados/LootIncursoes.luau",
+    "Receitas": "src/shared/Dados/Receitas.luau",
+    "Transcendencia": "src/shared/Dados/Transcendencia.luau",
     "Itens": "src/shared/Dados/Itens.luau",
     "Perfil": "src/shared/Dados/Perfil.luau",
     "Probabilidades": "src/shared/Dados/Probabilidades.luau",

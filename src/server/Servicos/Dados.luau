@@ -12,6 +12,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Perfil = require(Shared.Dados.Perfil)
 local Itens = require(Shared.Dados.Itens)
+local Transcendencia = require(Shared.Dados.Transcendencia)
 local Remotos = require(Shared.Remotos)
 local Sessao = require(script.Parent.Sessao)
 
@@ -38,6 +39,9 @@ local estados: { [Player]: Estado } = {}
 local perfisTeste: { [Player]: Estado? } = {}
 -- Jogadores cujo carregamento falhou: nunca salvamos por cima do que está no DataStore
 local semSalvar: { [Player]: boolean } = {}
+local gravando: { [Player]: boolean } = {}
+local transacao: { [Player]: boolean } = {}
+local saindo: { [Player]: string } = {}
 local envioPendente: { [Player]: boolean } = {}
 -- Número da versão enviada ao cliente: ele ignora cópias mais velhas que a que já tem
 local revisao: { [Player]: number } = {}
@@ -189,6 +193,7 @@ function Dados.carregar(player: Player)
 		end
 	end
 	estado.inventario = Itens.normalizarInventario(estado.inventario)
+	estado.transcendencia = Transcendencia.normalizar(estado.transcendencia)
 	estados[player] = estado
 	for _, fn in aoCarregar do
 		local ok, erro = pcall(fn, player, estado)
@@ -208,11 +213,25 @@ end
 -- Salva o jogador. liberar = true (saída do jogo) também solta a trava da sessão.
 function Dados.salvar(player: Player, liberar: boolean?)
 	local estado = estados[player]
-	if not estado or not store or semSalvar[player] then
+	if not estado or not store or gravando[player] or (saindo[player] and not liberar) then
 		return
 	end
+	if semSalvar[player] then
+		if liberar then
+			-- Em caso de resposta ambígua, preserva a versão que efetivamente chegou ao store.
+			comTentativas(function()
+				return (store :: DataStore):UpdateAsync(chave(player), function(atual)
+					local registro = Sessao.normalizar(atual)
+					return Sessao.salvar(atual, JOB_ID, os.time(), registro.dados, true)
+				end)
+			end)
+		end
+		return
+	end
+	gravando[player] = true
 	estado.ultimaVez = os.time()
-	gravar(player, table.clone(estado), liberar == true)
+	gravar(player, Perfil.copiar(estado), liberar == true)
+	gravando[player] = nil
 end
 
 -- Cópia atual para o cliente que pediu (handshake de entrada). nil enquanto carrega.
@@ -229,6 +248,10 @@ function Dados.real(player: Player): Estado?
 end
 
 -- Um perfil de contingência nunca deve confirmar progresso que não pode ser salvo.
+function Dados.emTransacao(player: Player): boolean
+	return transacao[player] == true
+end
+
 function Dados.podeProgredir(player: Player): boolean
 	return Dados.de(player) ~= nil and (Dados.emTeste(player) or not semSalvar[player])
 end
@@ -269,6 +292,9 @@ function Dados.alterar(player: Player, fn: (Estado) -> (boolean, string?)): (boo
 	if not estado then
 		return false, "Carregando seus dados..."
 	end
+	if transacao[player] then
+		return false, "Aguarde a confirmação da operação no Altar."
+	end
 	local ok, msg = fn(estado)
 	if ok then
 		Dados.enviar(player)
@@ -276,7 +302,56 @@ function Dados.alterar(player: Player, fn: (Estado) -> (boolean, string?)): (boo
 	return ok, msg
 end
 
+-- Executa a mudança em uma cópia e só a torna visível após confirmação do DataStore.
+-- Retries gravam o mesmo snapshot; o callback de economia nunca é reexecutado pelo store.
+function Dados.alterarConfirmado(
+	player: Player,
+	fn: (Estado) -> (boolean, string?)
+): (boolean, string?)
+	if gravando[player] or saindo[player] then
+		return false, "Aguarde a gravação atual terminar."
+	end
+	if not Dados.podeProgredir(player) then
+		return false, "Seu perfil está indisponível. Reconecte para tentar de novo."
+	end
+	if not store or Dados.emTeste(player) then
+		return Dados.alterar(player, fn)
+	end
+	local copia = Perfil.copiar(estados[player])
+	local ok, msg = fn(copia)
+	if not ok then
+		return false, msg
+	end
+	gravando[player] = true
+	transacao[player] = true
+	copia.ultimaVez = os.time()
+	local salvo = gravar(player, copia, false)
+	if salvo then
+		estados[player] = copia
+		Dados.enviar(player)
+	else
+		-- A gravação pode ter chegado ao store sem resposta. Não sobrescreve com a cópia antiga.
+		semSalvar[player] = true
+	end
+	transacao[player] = nil
+	gravando[player] = nil
+	if not salvo then
+		return false, "Não deu para confirmar o salvamento. Reconecte antes de tentar de novo."
+	end
+	return true, msg
+end
+
 local function salvarSaida(player: Player)
+	if saindo[player] then
+		while saindo[player] == "salvando" do
+			task.wait()
+		end
+		return
+	end
+	saindo[player] = "salvando"
+	while gravando[player] do
+		task.wait()
+	end
 	for _, fn in aoSair do
 		local ok, erro = pcall(fn, player)
 		if not ok then
@@ -284,6 +359,7 @@ local function salvarSaida(player: Player)
 		end
 	end
 	Dados.salvar(player, true)
+	saindo[player] = "concluido"
 end
 
 function Dados.iniciar()
@@ -310,6 +386,7 @@ function Dados.iniciar()
 		semSalvar[player] = nil
 		envioPendente[player] = nil
 		revisao[player] = nil
+		saindo[player] = nil
 		ultimoObter[player] = nil
 	end)
 	game:BindToClose(function()

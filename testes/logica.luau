@@ -415,4 +415,47 @@ igual("andar inválido não é premiado", Loot.creditar(Loot.novo(), {}, "cinzas
 igual("universo inválido não é premiado", Loot.creditar(Loot.novo(), {}, "arena", 1, semBonus), nil)
 igual("membros não compartilham estoque", materiaisB.estilhaco_bruto, 3)
 
+local Receitas = req("Receitas")
+local Transcendencia = req("Transcendencia")
+local pT1 = Perfil.padrao()
+pT1.giros = 5
+pT1.incursoes.fragmentos = 23
+pT1.auras.faisca = 5
+local rT1 = Loot.novo()
+for andar = 1, 5 do
+	Loot.creditar(rT1, pT1.inventario.itens, "cinzas", andar, semBonus)
+end
+local estoqueT1 = pT1.inventario.itens
+igual("bloqueia receita desconhecida", Receitas.fabricar(estoqueT1, "invalida"), false)
+igual("conclusão de Cinzas permite fabricar Coração da Fenda", Receitas.fabricar(estoqueT1, "coracao_fenda"), true)
+igual("T1 permite Coração da Ressonância", Receitas.fabricar(estoqueT1, "coracao_ressonancia"), true)
+igual("uma única entrada não gera duas saídas", Receitas.fabricar(estoqueT1, "coracao_ressonancia"), false)
+igual("receita recusada mantém matéria-prima", estoqueT1.estilhaco_bruto, 1)
+igual("Transcende I", Transcendencia.oferecer(estoqueT1, pT1.transcendencia), true)
+igual("Transcendência consome exatamente um coração", estoqueT1.coracao_ressonancia, nil)
+igual("Transcendência não repete oferta", Transcendencia.oferecer(estoqueT1, pT1.transcendencia), false)
+igual("Transcendência persiste nível 1", pT1.transcendencia.nivel, 1)
+igual("Transcendência preserva auras", pT1.auras.faisca, 5)
+igual("Transcendência preserva giros", pT1.giros, 5)
+igual("Transcendência preserva fragmentos", pT1.incursoes.fragmentos, 23)
+igual("nível antigo é neutro", Transcendencia.normalizar(nil).nivel, 0)
+igual("nível inválido é neutro", Transcendencia.sorte(0/0), 1)
+for nivel = 0, 10 do
+	local sorte = Transcendencia.sorte(nivel)
+	local anterior = 0
+	for i = #Auras.lista, 1, -1 do
+		local aura = Auras.lista[i]
+		local chance = Auras.probabilidadeReal(aura.id, sorte)
+		igual("probabilidade positiva " .. aura.id .. "/" .. nivel, chance > 0, true)
+		igual("sorteio cai na faixa publicada " .. aura.id .. "/" .. nivel, Auras.sortear(function()
+			return anterior + chance / 2
+		end, sorte).id, aura.id)
+		anterior += chance
+	end
+	igual("sorte soma 1 no nível " .. nivel, math.abs(anterior - 1) < 1e-12, true)
+end
+local rara = "trovao_jovem"
+igual("T1 aumenta a probabilidade rara no RNG normalizado", Auras.probabilidadeReal(rara, 1.05) > Auras.probabilidadeReal(rara), true)
+igual("estoque cheio não consome ingredientes", Receitas.fabricar({ coracao_fenda = 999999, estilhaco_bruto = 8, lasca_estavel = 2, selo_purificacao = 1 }, "coracao_fenda"), false)
+
 print(string.format("%d testes, %d falhas", total, falhas))

@@ -1,5 +1,6 @@
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Itens = require(Shared.Dados.Itens)
+local Receitas = require(Shared.Dados.Receitas)
 local Cores = require(Shared.Tema).Orbita
 local Estado = require(script.Parent.Parent.Estado)
 local Kit = require(script.Parent.Parent.Kit)
@@ -107,6 +108,16 @@ local function atualizar()
 				lista,
 				Cores.TextoSuave
 			)
+			local receitas: { string } = {}
+			for _, receitaId in Receitas.ordem do
+				local receita = Receitas.porId[receitaId]
+				if receita.custo[id] then
+					table.insert(receitas, Itens.porId[receita.resultado].nome)
+				end
+			end
+			if #receitas > 0 then
+				linha("Receitas  ·  " .. table.concat(receitas, " · "), lista, Cores.TextoSuave)
+			end
 			Kit.botaoPlaca({
 				texto = if favoritos[id] then "Remover favorito" else "Favoritar",
 				tamanho = UDim2.fromOffset(180, 42),
