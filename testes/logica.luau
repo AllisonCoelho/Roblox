@@ -291,6 +291,61 @@ igual("inc vitoria vale mais", Inc.recompensa("cinzas", 5, true, true) > Inc.rec
 igual("inc andares limitados", Inc.recompensa("cinzas", 99, false, false), Inc.recompensa("cinzas", 5, false, false))
 igual("inc 3 universos", #Inc.UNIVERSOS, 3)
 
+-- Matematica do RNG, limite seguro de sorte e nova tabela de 67 originais.
+local Probabilidades = req("Probabilidades")
+local C67 = req("Catalogo67Probabilidades")
+igual("catalogo 67 entradas", #C67.lista, 67)
+igual("Musgo alterado para 1 em 6", C67.porId.musgo_luminoso.chance, 6)
+igual("Centelha mais comum", C67.porId.centelha_do_nexo.pBase > C67.porId.musgo_luminoso.pBase, true)
+igual("Centelha 20.9966%", math.abs(C67.PROBABILIDADE_RESERVA - 0.2099662279261313) < 1e-12, true)
+igual("sorte NaN segura", Probabilidades.sorteValida(0 / 0), 1)
+igual("sorte infinito segura", Probabilidades.sorteValida(math.huge), 1)
+igual("sorte negativa segura", Probabilidades.sorteValida(-1), 1)
+igual("limite superior de sorte 3", Probabilidades.sorteValida(10), 3)
+igual("transcendencia 0", Probabilidades.sorteTranscendencia(0), 1)
+igual("transcendencia X", Probabilidades.sorteTranscendencia(10), 1.5)
+igual("transcendencia maior que X", Probabilidades.sorteTranscendencia(20), 1.5)
+igual("perfil sem nivel segue sorte 1", Auras.sorteTranscendencia(nil), 1)
+local anteriorCoroa = 0
+local anteriorDivino = 0
+for nivel = 0, 10 do
+	local sorte = Probabilidades.sorteTranscendencia(nivel)
+	local pesos, z = Probabilidades.distribuicao(C67.lista, sorte)
+	local somaEfetiva = 0
+	for _, peso in pesos do
+		somaEfetiva += peso / z
+	end
+	igual("67 total no nivel " .. nivel, math.abs(somaEfetiva - 1) < 1e-10, true)
+	local coroa = Probabilidades.chanceEfetiva(C67.lista, "coroa_de_coral", sorte)
+	local divino = Probabilidades.chanceEfetiva(C67.lista, "soberania_do_vazio", sorte)
+	igual("67 Coroa cresce nivel " .. nivel, coroa >= anteriorCoroa, true)
+	igual("67 Soberania cresce nivel " .. nivel, divino >= anteriorDivino, true)
+	anteriorCoroa = coroa
+	anteriorDivino = divino
+end
+igual("67 Centelha no nivel X", math.abs(Probabilidades.chanceEfetiva(C67.lista, "centelha_do_nexo", 1.5) - 0.19779318528564926) < 1e-11, true)
+igual("67 Musgo no nivel X", math.abs(Probabilidades.chanceEfetiva(C67.lista, "musgo_luminoso", 1.5) - 0.15700396776446937) < 1e-11, true)
+igual("67 Soberania no nivel X", math.abs(Probabilidades.chanceEfetiva(C67.lista, "soberania_do_vazio", 1.5) - 1.954457110930131e-8) < 1e-16, true)
+local pesos3, z3 = Probabilidades.distribuicao(C67.lista, 3)
+local soma3 = 0
+for _, peso in pesos3 do
+	soma3 += peso / z3
+end
+igual("67 sorte 3 segue 100%", math.abs(soma3 - 1) < 1e-10, true)
+igual("67 RNG zero = divino", Probabilidades.sortear(C67.lista, 1.5, function()
+	return 0
+end).id, "soberania_do_vazio")
+igual("67 RNG alto = Centelha", Probabilidades.sortear(C67.lista, 1.5, function()
+	return 0.999999
+end).id, "centelha_do_nexo")
+igual("67 aura inexistente", Probabilidades.chanceEfetiva(C67.lista, "desconhecida", 1.5), 0)
+local somaAtual3 = 0
+for _, aura in Auras.lista do
+	somaAtual3 += Auras.probabilidadeReal(aura.id, 3)
+end
+igual("catalogo atual em 3x soma 100%", math.abs(somaAtual3 - 1) < 1e-10, true)
+igual("catalogo atual aumenta chance divina", Auras.probabilidadeReal("despertar_absoluto", 1.5) > Auras.probabilidadeReal("despertar_absoluto"), true)
+
 local Itens = req("Itens")
 local estoque = Itens.sanitizar({
 	estilhaco_bruto = 1000005,
@@ -400,7 +455,7 @@ for nivel = 0, 10 do
 	igual("sorte soma 1 no nível " .. nivel, math.abs(anterior - 1) < 1e-12, true)
 end
 local rara = "trovao_jovem"
-igual("T1 aumenta raros em exatamente 5%", Auras.probabilidadeReal(rara, 1.05), 1.05 * Auras.probabilidadeReal(rara))
+igual("T1 aumenta a probabilidade rara no RNG normalizado", Auras.probabilidadeReal(rara, 1.05) > Auras.probabilidadeReal(rara), true)
 igual("estoque cheio não consome ingredientes", Receitas.fabricar({ coracao_fenda = 999999, estilhaco_bruto = 8, lasca_estavel = 2, selo_purificacao = 1 }, "coracao_fenda"), false)
 
 print(string.format("%d testes, %d falhas", total, falhas))

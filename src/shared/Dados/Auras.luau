@@ -1,16 +1,18 @@
 -- Catálogo de auras do Despertar e lógica pura do sorteio (testada em testes/logica.luau).
 -- Este módulo não usa APIs do Roblox (cores ficam em hex) para rodar também no luau puro.
 --
--- Sorteio com UM número aleatório em [0, 1) e faixas acumuladas: cada aura (exceto a Faísca)
--- sai com probabilidade exata 1/chance. A Faísca é a aura de reserva e recebe o restante;
--- a chance dela é calculada ao carregar (veja CHANCE_RESERVA) para que o "1 em N" mostrado ao
--- jogador seja sempre a probabilidade real. A soma das outras precisa ficar abaixo de 100%.
+-- Sorte 1.00 preserva 1/chance; sorte superior usa pesos por raridade normalizados.
+-- A primeira aura e reserva: recebe a probabilidade que sobra das demais.
+local Probabilidades = require(script.Parent.Probabilidades)
 local Auras = {}
 
 export type Aura = {
 	id: string,
 	nome: string,
-	chance: number, -- "1 em chance": probabilidade exata de sair = 1 / chance
+	chance: number, -- chance BASE 1 em N (rank e ressonancia)
+	pBase: number,
+	tierNome: string,
+	reserva: boolean,
 	cores: { string }, -- { principal, secundária } em hex
 	estilo: string, -- "brilho" | "chama" | "nevoa"
 	tier: number, -- índice em Auras.Tiers
@@ -97,6 +99,9 @@ for i, d in DEFINICOES do
 		id = d[1],
 		nome = d[2],
 		chance = d[3],
+		pBase = 1 / d[3],
+		tierNome = Auras.Tiers[Auras.tierDe(d[3])].nome,
+		reserva = i == 1,
 		cores = { d[4], d[5] },
 		estilo = d[6],
 		tier = Auras.tierDe(d[3]),
@@ -106,51 +111,44 @@ for i, d in DEFINICOES do
 	Auras.porId[aura.id] = aura
 end
 
--- Raro ou superior recebe o bônus. O restante cede massa proporcionalmente à chance base.
--- A reserva continua participando da mesma distribuição das auras comuns.
-local somaRara = 0
-for _, aura in Auras.lista do
-	if aura.tier >= 3 then
-		somaRara += 1 / aura.chance
-	end
+-- Tabelas dos 11 niveis de Transcendencia em cache, montadas uma vez.
+-- Fontes futuras de sorte podem usar ate 3.00 sem provocar overflow de probabilidades.
+Probabilidades.validarCatalogo(Auras.lista)
+local precalculadas: { [number]: { pesos: { number }, total: number } } = {}
+for nivel = 0, Probabilidades.MAX_NIVEL do
+	local sorte = Probabilidades.sorteTranscendencia(nivel)
+	local pesos, total = Probabilidades.distribuicao(Auras.lista, sorte)
+	precalculadas[nivel] = { pesos = pesos, total = total }
 end
 
-local function multiplicadores(sorte: number?): (number, number)
-	local s = sorte or 1
-	if s ~= s then
-		s = 1
+local function pesosPara(sorte: number?): ({ number }, number)
+	local s = Probabilidades.sorteValida(sorte)
+	local nivel = math.floor((s - 1) / 0.05 + 0.5)
+	local pronta = precalculadas[nivel]
+	if pronta and math.abs(s - Probabilidades.sorteTranscendencia(nivel)) < 1e-9 then
+		return pronta.pesos, pronta.total
 	end
-	local raro = math.clamp(s, 1, math.min(1.5, 1 / somaRara))
-	local comum = math.max(0, (1 - raro * somaRara) / (1 - somaRara))
-	return raro, comum
+	return Probabilidades.distribuicao(Auras.lista, s)
 end
 
+function Auras.sorteTranscendencia(nivel: any): number
+	return Probabilidades.sorteTranscendencia(nivel)
+end
+
+-- Sorte por peso normalizado: 1.00 preserva as chances-base; sorte alta nao satura.
 function Auras.sortear(aleatorio: () -> number, sorte: number?): Aura
-	local raro, comum = multiplicadores(sorte)
-	local u = aleatorio()
-	local acumulado = 0
-	for i = #Auras.lista, 2, -1 do
-		local aura = Auras.lista[i]
-		acumulado += (if aura.tier >= 3 then raro else comum) / aura.chance
-		if u < acumulado then
-			return aura
-		end
-	end
-	return Auras.lista[1]
+	local pesos, total = pesosPara(sorte)
+	return Probabilidades.sortearPesos(Auras.lista, pesos, total, aleatorio) :: Aura
 end
 
--- Usa exatamente as mesmas faixas do sorteio.
+-- A chance BASE e a efetiva usam a mesma distribuicao que o servidor sorteia.
 function Auras.probabilidadeReal(id: string, sorte: number?): number
 	local aura = Auras.porId[id]
 	if not aura then
 		return 0
 	end
-	local raro, comum = multiplicadores(sorte)
-	return (if aura.tier >= 3 then raro else comum) / aura.chance
-end
-
-function Auras.chanceEfetiva(aura: Aura, sorte: number?): number
-	return 1 / Auras.probabilidadeReal(aura.id, sorte)
+	local pesos, total = pesosPara(sorte)
+	return pesos[aura.ordem] / total
 end
 
 -- A aura mais rara de uma coleção { [id] = quantidade }
@@ -174,6 +172,12 @@ function Auras.contarDescobertas(colecao: { [string]: number }): number
 		end
 	end
 	return n
+end
+
+-- Compatibilidade com as telas de Forja: retorna o denominador efetivo 1 em N.
+-- Os sorteios continuam usando apenas a distribuicao normalizada por tier.
+function Auras.chanceEfetiva(aura: Aura, sorte: number?): number
+ return 1 / Auras.probabilidadeReal(aura.id, sorte)
 end
 
 return Auras

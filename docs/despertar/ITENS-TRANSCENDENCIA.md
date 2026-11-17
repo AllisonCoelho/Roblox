@@ -56,3 +56,8 @@ O catálogo das 67 auras originais está em um PR próprio. Sua entrada no sorte
 - Tente confirmar duas vezes, forjar sem ingredientes, oferecer sem Coração e interagir longe do Altar. Confira que as recusas preservam o saldo.
 - Transcenda e confira nível, bônus, Índice e resultado do giro. Pule a apresentação e confira o modo Movimento reduzido. Reconecte em ambiente de teste publicado e confirme o nível e os saldos.
 - Teste conexão instável e encerre a sessão durante uma oferta. Ao retornar, os ingredientes e o resultado devem corresponder à gravação recuperada.
+
+
+## Regra vigente de sorte (RNG V2 / PR #27)
+
+A implementacao de sorte por raridade usa **pesos normalizados** por expoente de tier, conforme `docs/despertar/PROBABILIDADES-V2.md`. O indice `1,05x` **nao significa 5% exatos para cada aura rara**, pois as probabilidades sao recalculadas para totalizar 100%. O motor do PR #27 e a fonte unica de verdade para o sorteio. As probabilidades exibidas no HUD/Indice/Revelacao devem coincidir com o servidor.
