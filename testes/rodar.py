@@ -8,6 +8,8 @@ MODULOS = {
     "Formato": "src/shared/Formato.luau",
     "Itens": "src/shared/Dados/Itens.luau",
     "Perfil": "src/shared/Dados/Perfil.luau",
+    "Probabilidades": "src/shared/Dados/Probabilidades.luau",
+    "Catalogo67Probabilidades": "src/shared/Dados/Catalogo67Probabilidades.luau",
     "Auras": "src/shared/Dados/Auras.luau",
     "Apresentacao": "src/shared/Dados/Apresentacao.luau",
     "Trilha": "src/shared/Dados/Trilha.luau",
@@ -24,6 +26,8 @@ end
 """]
 for nome, caminho in MODULOS.items():
     fonte = (ROOT / caminho).read_text(encoding="utf-8").replace("export type", "type")
+    if nome in ("Auras", "Catalogo67Probabilidades"):
+        fonte = fonte.replace("require(script.Parent.Probabilidades)", 'req("Probabilidades")')
     codigo.append('MODULOS["' + nome + '"] = function()\n' + fonte + '\nend\n')
 codigo.append((ROOT / "testes/logica.luau").read_text(encoding="utf-8"))
 saida = ROOT / "dist" / "testes.luau"
