@@ -24,7 +24,7 @@ local TEXTURAS = {
 -- Aura que está aplicada em cada jogador ("" = nenhuma), para só refazer quando mudar
 local aplicada: { [Player]: string } = {}
 -- Só no Studio: aura de VFX mostrada como prévia (não é posse, não salva, não sorteia)
-local previa: { [Player]: string } = {}
+local previa: { [Player]: string? } = {}
 
 local function emissor(pai: Instance, props: { [string]: any }): ParticleEmitter
 	local e = Instance.new("ParticleEmitter")
@@ -175,18 +175,21 @@ local function aplicar(player: Player, forcar: boolean?)
 	end
 end
 
--- Studio: liga/desliga a prévia de uma aura de VFX no próprio personagem (Alt+G no cliente)
+function AuraVisual.definirPrevia(player: Player, id: any): (boolean, string?)
+	if type(id) ~= "string" or (id ~= "" and not AurasVfx[id]) then
+		return false, "Prévia inválida"
+	end
+	previa[player] = if id == "" then nil else id
+	aplicar(player)
+	return true, if previa[player] then "Prévia ligada: " .. id else "Prévia desligada"
+end
+
+-- Os atalhos no Studio alternam a prévia. O painel seleciona um efeito explicitamente.
 local function alternarPrevia(player: Player, id: any): (boolean, string?)
 	if type(id) ~= "string" or not AurasVfx[id] then
 		return false, "Prévia inválida"
 	end
-	if previa[player] == id then
-		previa[player] = nil
-	else
-		previa[player] = id
-	end
-	aplicar(player)
-	return true, if previa[player] then "Prévia ligada: " .. id else "Prévia desligada"
+	return AuraVisual.definirPrevia(player, if previa[player] == id then "" else id)
 end
 
 local function aoCarregar(player: Player, _estado: Perfil.Estado)

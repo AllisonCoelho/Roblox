@@ -22,6 +22,42 @@ igual("equipada vazia", p.equipada, nil)
 igual("auto desligado", p.configuracoes.giroAutomatico, false)
 igual("perfis independentes", Perfil.padrao().auras ~= Perfil.padrao().auras, true)
 
+local salvarReal = Perfil.padrao()
+salvarReal.auras.faisca = 3
+salvarReal.progressoExtra = { andares = { 1 } }
+local perfilTeste = Perfil.copiar(salvarReal)
+Perfil.registrarGiro(perfilTeste, "faisca")
+perfilTeste.configuracoes.animacoes = false
+perfilTeste.progressoExtra.andares[1] = 5
+igual("cópia preserva as auras reais", salvarReal.auras.faisca, 3)
+igual("cópia preserva os giros reais", salvarReal.giros, 0)
+igual("cópia preserva as configurações reais", salvarReal.configuracoes.animacoes, true)
+igual("cópia isola dados aninhados", salvarReal.progressoExtra.andares[1], 1)
+
+local Dev = req("PermissaoDev")
+local universoTeste, lugarTeste = 10771776655, 112360499723635
+igual("dev dono do teste privado", Dev.autoriza(universoTeste, lugarTeste, false, 42, 42), true)
+igual(
+	"dev visitante do teste privado",
+	Dev.autoriza(universoTeste, lugarTeste, false, 42, 43),
+	false
+)
+igual("dev rejeita outro lugar", Dev.autoriza(universoTeste, 730, false, 42, 42), false)
+igual("dev rejeita outro universo", Dev.autoriza(730, lugarTeste, true, 42, 42), false)
+igual(
+	"dev rejeita identidade ausente",
+	Dev.autoriza(universoTeste, lugarTeste, false, nil, 42),
+	false
+)
+igual(
+	"dev rejeita ID de simulação publicado",
+	Dev.autoriza(universoTeste, lugarTeste, false, 42, -1),
+	false
+)
+igual("dev primeiro cliente do Studio", Dev.autoriza(0, 0, true, nil, -1), true)
+igual("dev segundo cliente do Studio", Dev.autoriza(0, 0, true, nil, -2), false)
+igual("dev IDs vazios fora do Studio", Dev.autoriza(0, 0, false, nil, 42), false)
+
 local Sessao = req("Sessao")
 local t = 1000
 local r = Sessao.travar(nil, "A", t)

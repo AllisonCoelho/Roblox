@@ -19,6 +19,7 @@ local Ajustes = require(Telas.Ajustes)
 local Avisos = require(Telas.Avisos)
 local HUD = require(Telas.HUD)
 local Indice = require(Telas.Indice)
+local PainelDev = require(Telas.PainelDev)
 local Revelacao = require(Telas.Revelacao)
 local Mundo = script.Parent.Parent:WaitForChild("Mundo")
 local Despertar = require(Mundo:WaitForChild("Despertar"))
@@ -46,6 +47,7 @@ local function podeGirar(): boolean
 	local agora = os.clock()
 	return Estado.atual ~= nil
 		and Navegacao.aberto() == nil
+		and not PainelDev.pendente()
 		and not girando
 		and not Revelacao.ativa()
 		and agora >= proximoGiro
@@ -58,6 +60,7 @@ end
 local function apresentar(aura: Auras.Aura, dados: { [string]: any })
 	local quantidade = if type(dados.quantidade) == "number" then dados.quantidade else 1
 	local teste = dados.teste == true
+	local simulado = dados.simulado == true
 	local nova = quantidade <= 1 and not teste
 	local prefs = preferencias()
 	local cat = Despertar.categoria(aura, not nova and not teste, prefs)
@@ -68,10 +71,11 @@ local function apresentar(aura: Auras.Aura, dados: { [string]: any })
 		-- (o cooldown do servidor, em proximoGiro, continua valendo)
 		ocupadoAte = 0
 		if not teste then
-			hud.registrarResultado(aura, nova)
+			hud.registrarResultado(aura, nova, simulado)
 			-- O anúncio de quem girou só aparece agora, para não entregar o resultado antes
 			local jogador = Players.LocalPlayer
-			Avisos.anunciar(jogador.DisplayName, jogador.UserId, aura)
+			local nome = if simulado then "[Teste] " .. jogador.DisplayName else jogador.DisplayName
+			Avisos.anunciar(nome, jogador.UserId, aura)
 		end
 		if comCartao then
 			local estado = Estado.atual
@@ -226,6 +230,18 @@ function App.iniciar()
 	Avisos.montar(raiz)
 	Indice.montar(Avisos.toast)
 	Ajustes.montar(Avisos.toast)
+	PainelDev.iniciar(hud.quadro, {
+		podeAbrir = function()
+			return not girando and not Revelacao.ativa() and os.clock() >= ocupadoAte
+		end,
+		aoRitual = function(id, dados)
+			local aura = Auras.porId[id]
+			if aura then
+				proximoGiro = math.max(proximoGiro, os.clock() + INTERVALO)
+				apresentar(aura, dados)
+			end
+		end,
+	})
 	Navegacao.ajustar()
 
 	EfeitosAlheios.iniciar()
@@ -240,6 +256,12 @@ function App.iniciar()
 			ocultarEfeitosAlheios = c.ocultarEfeitosAlheios == true,
 		})
 	end)
+	local jogador = Players.LocalPlayer
+	local function atualizarPerfilTeste()
+		hud.definirPerfilTeste(jogador:GetAttribute("PerfilDeTeste") == true)
+	end
+	jogador:GetAttributeChangedSignal("PerfilDeTeste"):Connect(atualizarPerfilTeste)
+	atualizarPerfilTeste()
 	Estado.iniciar()
 	Remotos.evento("Despertou").OnClientEvent:Connect(aoDespertou)
 

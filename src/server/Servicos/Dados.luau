@@ -33,6 +33,8 @@ local usarDataStore = not (RunService:IsStudio() and Config.ModoTeste)
 local store = if usarDataStore then DataStoreService:GetDataStore(NOME_STORE) else nil
 
 local estados: { [Player]: Estado } = {}
+-- Perfis temporários do painel. A rotina de gravação lê sempre a tabela estados.
+local perfisTeste: { [Player]: Estado? } = {}
 -- Jogadores cujo carregamento falhou: nunca salvamos por cima do que está no DataStore
 local semSalvar: { [Player]: boolean } = {}
 local envioPendente: { [Player]: boolean } = {}
@@ -207,11 +209,25 @@ end
 
 -- Cópia atual para o cliente que pediu (handshake de entrada). nil enquanto carrega.
 function Dados.instantaneo(player: Player): (Estado?, number)
-	return estados[player], revisao[player] or 0
+	return Dados.de(player), revisao[player] or 0
 end
 
 function Dados.de(player: Player): Estado?
+	return perfisTeste[player] or estados[player]
+end
+
+function Dados.real(player: Player): Estado?
 	return estados[player]
+end
+
+function Dados.emTeste(player: Player): boolean
+	return perfisTeste[player] ~= nil
+end
+
+function Dados.definirPerfilTeste(player: Player, estado: Estado?)
+	perfisTeste[player] = estado
+	player:SetAttribute("PerfilDeTeste", estado ~= nil)
+	Dados.enviar(player)
 end
 
 -- Envia o estado ao cliente no fim do quadro (várias mudanças seguidas viram 1 envio)
@@ -222,7 +238,7 @@ function Dados.enviar(player: Player)
 	envioPendente[player] = true
 	task.defer(function()
 		envioPendente[player] = nil
-		local estado = estados[player]
+		local estado = Dados.de(player)
 		if estado and player.Parent then
 			local rev = (revisao[player] or 0) + 1
 			revisao[player] = rev
@@ -236,7 +252,7 @@ end
 
 -- Altera o estado e já agenda o envio. fn recebe o estado e devolve (ok, mensagem?)
 function Dados.alterar(player: Player, fn: (Estado) -> (boolean, string?)): (boolean, string?)
-	local estado = estados[player]
+	local estado = Dados.de(player)
 	if not estado then
 		return false, "Carregando seus dados..."
 	end
@@ -267,6 +283,7 @@ function Dados.iniciar()
 	Players.PlayerRemoving:Connect(function(player)
 		Dados.salvar(player, true)
 		estados[player] = nil
+		perfisTeste[player] = nil
 		semSalvar[player] = nil
 		envioPendente[player] = nil
 		revisao[player] = nil

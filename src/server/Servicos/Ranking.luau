@@ -40,7 +40,12 @@ end
 
 function Ranking.iniciar()
 	Dados.quandoCarregar(criar)
-	Dados.quandoMudar(atualizar)
+	Dados.quandoMudar(function(player)
+		local real = Dados.real(player)
+		if real then
+			atualizar(player, real)
+		end
+	end)
 end
 
 return Ranking
