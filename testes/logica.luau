@@ -1209,4 +1209,39 @@ do
 	igual("gear 5: volta à altura de apoio no contato", contato, 0)
 end
 
+-- Gear 5: Haki do Rei sincronizado com a animação parada
+do
+	local M = req("Gear5Movimento")
+	local T = M.TEMPO_PARADO
+	local eventos = {}
+	local t = 0
+	while t < T * 4 do
+		local e = M.hakiParado(t, t + 1 / 60)
+		if e then
+			table.insert(eventos, { e, t + 1 / 60 })
+		end
+		t += 1 / 60
+	end
+	igual("haki: 4 eventos em 4 ciclos parados", #eventos, 4)
+	igual("haki: primeiro são faíscas no repouso", eventos[1][1], "fraco")
+	igual(
+		"haki: faíscas no quadro do repouso",
+		math.abs(eventos[1][2] - M.HAKI_RELAXADO) < 0.02,
+		true
+	)
+	igual("haki: estouro forte no auge da risada", eventos[2][1], "forte")
+	igual(
+		"haki: forte no segundo ciclo",
+		math.abs(eventos[2][2] - (T + M.HAKI_RISADA)) < 0.02,
+		true
+	)
+	igual("haki: ciclos alternados", eventos[3][1] .. eventos[4][1], "fracoforte")
+	igual("haki: nada ao começar a ficar parado", M.hakiParado(0, 0.3), nil)
+	igual("haki: um quadro longo não perde o evento", M.hakiParado(T + 0.3, T + 0.4), "forte")
+	igual("haki: queda baixa só borracha", M.hakiPouso(-20), nil)
+	igual("haki: queda forte estoura", M.hakiPouso(-45), 1)
+	igual("haki: intensidade do pouso limitada", M.hakiPouso(-500), 1.6)
+	igual("haki: queda média tem mínimo", M.hakiPouso(-31), 0.8)
+end
+
 print(string.format("%d testes, %d falhas", total, falhas))

@@ -34,3 +34,17 @@ Cada uma receberá controladores de: pose idle, caminhada/corrida, salto, reaç�
 4. Iniciar Incursão e lançar combos/guarda: as poses de combate têm prioridade e retornam ao idle ao terminar.
 5. Testar `qualidadeBaixa`, `movimentoReduzido`, ocultar efeitos dos outros e celulares.
 6. Confirmar que não cria peças permanentemente e não interfere com o RNG, a economia ou o salvamento.
+
+## Fase 1.5 — Haki do Rei da Gear 5
+- **Malhas próprias do Blender** (`assets/gear5/source/generate_haki.py`): 3 raios em zigue-zague com galhos, onda de pressão serrilhada e rachadura em estrela.
+- **Montagem em runtime** (`Gear5Haki.luau`, via MalhaNuvem): núcleo preto com casca vermelha neon. Sem EditableMesh, usa um bloco fino como reserva.
+- **Sincronização com a animação parada** (`Gear5Movimento.hakiParado`). Os ciclos se alternam:
+  - **faíscas:** no meio da pose de repouso, 4 raios curtos;
+  - **estouro forte:** no auge da risada, ciclo sim, ciclo não. Tem 9 raios piscando em 3 quadros, silhueta escura com contorno vermelho, onda de pressão, rachadura e, para o dono da aura, a tela perde cor e treme.
+- **Corrida:** faíscas a cada 8 pisadas.
+- **Pouso de queda alta (< -30 studs/s):** estouro proporcional à queda (`hakiPouso`).
+- **Limites:** no máximo 3 estouros ao mesmo tempo; tudo some sozinho em até cerca de 1,8 s; nada colide.
+  - `qualidadeBaixa`: menos raios e sem rachadura.
+  - `movimentoReduzido`: 1 quadro de raio e sem tremor de câmera.
+- Não usa rede, remotes nem DataStore: cada cliente calcula a partir da pose.
+- **Prévias:** `assets/gear5/previews/haki_rei.png` (Blender) e `haki_linha_do_tempo.png`.
