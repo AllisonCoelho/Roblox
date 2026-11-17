@@ -171,6 +171,80 @@ local function acaoCartao(pai: Instance, texto: string, aoClicar: () -> ()): Kit
 	return botao
 end
 
+-- Preparo da Fenda (Marcas e Pesadelo): escolhido aqui, vale para a fila que você abrir
+local preparo = { pesadelo = false, marcas = {} :: { [string]: boolean? } }
+local atualizarPreparo: () -> () = function() end
+
+local function montarPreparo(pai: Instance, altura: number)
+	local cartao = Kit.placa({
+		nome = "Preparo",
+		tamanho = UDim2.new(1, 0, 0, altura),
+		borda = Cores.Lilas,
+		pai = pai,
+		ordem = 0,
+	}).conteudo
+	textoCartao(cartao, "Preparo da Fenda", 26, 5, 36, Cores.Lilas, "titulo")
+	local resumo = textoCartao(cartao, "", 16, 40, 24, Cores.TextoSuave)
+	local grade = Kit.novo("Frame", {
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(14, 70),
+		Size = UDim2.new(1, -28, 1, -80),
+		Parent = cartao,
+	})
+	Kit.novo("UIGridLayout", {
+		CellSize = UDim2.new(0.5, -6, 0, 50),
+		CellPadding = UDim2.fromOffset(12, 10),
+		Parent = grade,
+	})
+	local botoes: { { botao: TextButton, ligado: () -> boolean } } = {}
+	local function chave(rotulo: string, ligado: () -> boolean, alternar: () -> (), ordem: number)
+		local b = Kit.novo("TextButton", {
+			Text = rotulo,
+			FontFace = Tema.FonteNegrito,
+			TextSize = 17,
+			TextWrapped = true,
+			TextColor3 = Cores.Texto,
+			AutoButtonColor = true,
+			BackgroundColor3 = Cores.Painel,
+			LayoutOrder = ordem,
+			Parent = grade,
+		})
+		Kit.novo("UICorner", { CornerRadius = UDim.new(0, 10), Parent = b })
+		Kit.novo("UIStroke", { Color = Cores.Borda, Thickness = 2, Parent = b })
+		b.Activated:Connect(function()
+			alternar()
+			atualizarPreparo()
+		end)
+		table.insert(botoes, { botao = b, ligado = ligado })
+	end
+	chave("☠ Pesadelo (x2)", function()
+		return preparo.pesadelo
+	end, function()
+		preparo.pesadelo = not preparo.pesadelo
+	end, 0)
+	for i, m in Run.MARCAS do
+		chave(string.format("%s (+%d%%)", m.nome, math.floor(m.bonus * 100 + 0.5)), function()
+			return preparo.marcas[m.id] == true
+		end, function()
+			preparo.marcas[m.id] = if preparo.marcas[m.id] then nil else true
+		end, i)
+	end
+	atualizarPreparo = function()
+		for _, b in botoes do
+			local on = b.ligado()
+			b.botao.BackgroundColor3 = if on then Cores.Lilas else Cores.Painel
+			b.botao.TextColor3 = if on then Cores.Painel else Cores.Texto
+		end
+		local p = Run.preparo(preparo)
+		resumo.Text = string.format(
+			"%s  ·  Fragmentos x%.2f  ·  vale para a fila que você abrir",
+			Run.descreverPreparo(p),
+			Run.multPreparo(p)
+		)
+	end
+	atualizarPreparo()
+end
+
 local function montarPainel()
 	local painel = Navegacao.criarPainel("Incursoes", { titulo = "Incursões", icone = "✦" })
 	local c = painel.conteudo
@@ -183,6 +257,8 @@ local function montarPainel()
 	local listaReliquias = coluna(rolagem, "Reliquias")
 	local alturaUniverso = 222
 	local alturaReliquia = 160
+	local alturaPreparo = 290
+	montarPreparo(listaUniversos, alturaPreparo)
 	for i, u in Dados.UNIVERSOS do
 		local cor = Color3.fromHex(u.cor)
 		local cartao = Kit.placa({
@@ -204,7 +280,7 @@ local function montarPainel()
 			Cores.TextoSuave
 		)
 		local botao = acaoCartao(cartao, "Entrar na fila", function()
-			pedir("IncursaoFila", if naFila == u.id then "" else u.id)
+			pedir("IncursaoFila", if naFila == u.id then "" else u.id, preparo)
 		end)
 		table.insert(cartoes, { botao = botao, info = info, cadeado = cadeado, universo = u })
 	end
@@ -236,7 +312,7 @@ local function montarPainel()
 
 	Escala.aoMudar(function()
 		local compacto = Escala.tamanho.X < 780
-		local hUniversos = #Dados.UNIVERSOS * (alturaUniverso + 10) - 10
+		local hUniversos = #Dados.UNIVERSOS * (alturaUniverso + 10) - 10 + alturaPreparo + 10
 		local hReliquias = #Dados.RELIQUIAS * (alturaReliquia + 10) + 38
 		listaUniversos.Size = UDim2.new(if compacto then 1 else 0.56, -12, 0, hUniversos)
 		listaReliquias.Size = UDim2.new(if compacto then 1 else 0.44, -12, 0, hReliquias)
@@ -485,7 +561,9 @@ local function aoEvento(d: any)
 				if type(d.falta) == "number"
 					then "partida em " .. d.falta .. "s"
 					else "esperando..."
-			)
+			) .. (if type(d.preparo) == "string" and d.preparo ~= "Normal"
+				then "  ·  " .. d.preparo
+				else "")
 		end
 		atualizarPainel()
 	elseif d.tipo == "inicio" and u then
@@ -495,6 +573,9 @@ local function aoEvento(d: any)
 		Visual.definirPartida(if type(d.slot) == "number" then d.slot else nil)
 		definirPartida(u.id)
 		atualizarPainel()
+		if type(d.preparo) == "string" and d.preparo ~= "Normal" then
+			aviso("Preparo: " .. d.preparo)
+		end
 	elseif d.tipo == "andar" and u then
 		definirPartida(u.id)
 		local nome = if type(d.titulo) == "string" then d.titulo else nil
@@ -548,6 +629,35 @@ local function aoEvento(d: any)
 		end
 	elseif d.tipo == "pulso" and typeof(d.origem) == "Vector3" and type(d.raio) == "number" then
 		Visual.pulso(d.origem, d.raio, emPartida)
+	elseif
+		d.tipo == "zona"
+		and typeof(d.pos) == "Vector3"
+		and type(d.raio) == "number"
+		and type(d.tempo) == "number"
+	then
+		Visual.zona(
+			d.pos,
+			d.raio,
+			if type(d.interno) == "number" then d.interno else 0,
+			d.tempo,
+			if u then Color3.fromHex(u.corVeio) else Color3.new(1, 1, 1)
+		)
+	elseif d.tipo == "faseGuardiao" and type(d.fase) == "number" and u then
+		local textos = {
+			cinzas = "Chuva de Brasas! Saiam dos círculos de fogo.",
+			mare = "Maré Alta! Quando a onda vier, fiquem colados no Cavaleiro.",
+			umbral = "Eclipse! O Espectro some e reaparece — cuidado onde ele estava.",
+		}
+		RunUI.banner(
+			string.format("%s · fase %d", u.guardiao, d.fase),
+			(textos[u.id] or "O Guardião ficou mais forte!")
+				.. (if d.fase >= 3 then " Agora mais rápido e com reforços." else "")
+		)
+		if u.id == "umbral" then
+			Visual.eclipse(true)
+		end
+	elseif d.tipo == "enfurecido" then
+		RunUI.elite("O GUARDIÃO ENFURECEU! Dano e velocidade aumentados")
 	elseif d.tipo == "nota" and type(d.nota) == "string" then
 		RunUI.nota(d.nota, d.mult, d.tempo, d.quedas)
 	elseif d.tipo == "bencaos" and type(d.cartas) == "table" then
