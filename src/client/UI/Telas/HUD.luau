@@ -27,6 +27,7 @@ type Opcoes = {
 	aoDespertar: () -> (),
 	aoAlternarAuto: () -> (),
 	aoAbrirIndice: () -> (),
+	aoAbrirInventario: () -> (),
 	aoAbrirAjustes: () -> (),
 }
 
@@ -136,6 +137,15 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 	ajustes.placa.quadro.AnchorPoint = Vector2.new(1, 0)
 	ajustes.placa.quadro.Position = UDim2.new(1, -22, 0, 16)
 	ajustes.botao.Text = "Ajustes"
+
+	local inventario = Kit.botaoPlaca({
+		texto = "Inventário",
+		tamanho = UDim2.fromOffset(146, 50),
+		tamanhoTexto = 18,
+		pai = hud,
+		aoClicar = op.aoAbrirInventario,
+	})
+	inventario.placa.quadro.AnchorPoint = Vector2.new(1, 0)
 
 	local placaAura = Kit.placa({
 		nome = "AuraEquipada",
@@ -405,6 +415,7 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 		local larguraAura = if estreito then 202 elseif compacto then 230 else 292
 		placaAura.quadro.Size = UDim2.fromOffset(larguraAura, if compacto then 112 else 96)
 		placaAura.quadro.Position = UDim2.new(1, -14, 0, 84)
+		inventario.placa.quadro.Position = UDim2.new(1, -14, 0, if compacto then 202 else 186)
 		local textoX = if estreito then 46 else 70
 		iconeAura.Size = UDim2.fromOffset(if estreito then 30 else 48, if estreito then 30 else 48)
 		iconeAura.Position = UDim2.new(0, 10, 0.5, 0)

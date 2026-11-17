@@ -11,6 +11,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Perfil = require(Shared.Dados.Perfil)
+local Itens = require(Shared.Dados.Itens)
 local Remotos = require(Shared.Remotos)
 local Sessao = require(script.Parent.Sessao)
 
@@ -187,6 +188,7 @@ function Dados.carregar(player: Player)
 			return
 		end
 	end
+	estado.inventario = Itens.normalizarInventario(estado.inventario)
 	estados[player] = estado
 	for _, fn in aoCarregar do
 		local ok, erro = pcall(fn, player, estado)

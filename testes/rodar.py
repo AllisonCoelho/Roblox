@@ -6,6 +6,7 @@ import sys
 ROOT = Path(__file__).resolve().parent.parent
 MODULOS = {
     "Formato": "src/shared/Formato.luau",
+    "Itens": "src/shared/Dados/Itens.luau",
     "Perfil": "src/shared/Dados/Perfil.luau",
     "Probabilidades": "src/shared/Dados/Probabilidades.luau",
     "Catalogo67Probabilidades": "src/shared/Dados/Catalogo67Probabilidades.luau",
