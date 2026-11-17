@@ -291,4 +291,53 @@ igual("inc vitoria vale mais", Inc.recompensa("cinzas", 5, true, true) > Inc.rec
 igual("inc andares limitados", Inc.recompensa("cinzas", 99, false, false), Inc.recompensa("cinzas", 5, false, false))
 igual("inc 3 universos", #Inc.UNIVERSOS, 3)
 
+local Itens = req("Itens")
+local estoque = Itens.sanitizar({
+	estilhaco_bruto = 1000005,
+	cinza_persistente = 0 / 0,
+	sal_mare_morta = math.huge,
+	po_umbral = -8,
+	lasca_estavel = 2.5,
+	brasa_arauto = 4,
+	faisca = 4,
+})
+igual("estoque respeita limite", estoque.estilhaco_bruto, 999999)
+igual("estoque preserva saldo válido", estoque.brasa_arauto, 4)
+for _, id in { "cinza_persistente", "sal_mare_morta", "po_umbral", "lasca_estavel", "faisca" } do
+	igual("estoque rejeita " .. id, estoque[id], nil)
+end
+igual(
+	"save antigo sem inventário recebe estado vazio",
+	next(Itens.normalizarInventario(nil).itens),
+	nil
+)
+igual("preencher inventário antigo preserva fragmentos", salvarReal.incursoes.fragmentos, 0)
+igual(
+	"normaliza slot sem posse",
+	Itens.normalizarInventario({ equipados = { artefato = "emblema_guardiao" } }).equipados.artefato,
+	nil
+)
+igual(
+	"inventários novos independentes",
+	Perfil.padrao().inventario.itens ~= Perfil.padrao().inventario.itens,
+	true
+)
+igual("pilha cheia não credita", Itens.conceder(estoque, "estilhaco_bruto", 10), 0)
+igual("crédito aceita item", Itens.conceder(estoque, "po_umbral", 1), 1)
+igual("crédito rejeita id da aura", Itens.conceder(estoque, "faisca", 1), 0)
+igual("crédito rejeita quantidade inválida", Itens.conceder(estoque, "po_umbral", -1), 0)
+igual("consumo insuficiente", Itens.consumir(estoque, "po_umbral", 2), false)
+igual(
+	"consumo remove pilha vazia",
+	Itens.consumir(estoque, "po_umbral", 1) and estoque.po_umbral,
+	nil
+)
+local totalItens = 0
+for id, item in Itens.porId do
+	totalItens += 1
+	igual("id do item " .. id, item.id, id)
+	igual("raridade do item " .. id, Itens.Tiers[item.raridade] ~= nil, true)
+end
+igual("catálogo inicial de itens", totalItens, 16)
+
 print(string.format("%d testes, %d falhas", total, falhas))

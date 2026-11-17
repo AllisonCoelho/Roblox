@@ -19,6 +19,7 @@ local Ajustes = require(Telas.Ajustes)
 local Avisos = require(Telas.Avisos)
 local HUD = require(Telas.HUD)
 local Indice = require(Telas.Indice)
+local Inventario = require(Telas.Inventario)
 local PainelDev = require(Telas.PainelDev)
 local IncursoesUI = require(Telas.Incursoes)
 local Revelacao = require(Telas.Revelacao)
@@ -214,6 +215,7 @@ function App.iniciar()
 			alternarConfiguracao("giroAutomatico")
 		end,
 		aoAbrirIndice = Indice.abrir,
+		aoAbrirInventario = Inventario.abrir,
 		aoAbrirAjustes = Ajustes.abrir,
 	})
 	Revelacao.montar(raiz, {
@@ -232,6 +234,7 @@ function App.iniciar()
 	})
 	Avisos.montar(raiz)
 	Indice.montar(Avisos.toast)
+	Inventario.montar()
 	Ajustes.montar(Avisos.toast)
 	PainelDev.iniciar(hud.quadro, {
 		podeAbrir = function()
