@@ -7,6 +7,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Auras = require(Shared.Dados.Auras)
+local Itens = require(ReplicatedStorage.Shared.Dados.Itens)
 local Dados = require(Shared.Dados.Incursoes)
 local Remotos = require(Shared.Remotos)
 local Tema = require(Shared.Tema)
@@ -14,6 +15,10 @@ local Kit = require(script.Parent.Parent.Kit)
 local Escala = require(script.Parent.Parent.Escala)
 local Navegacao = require(script.Parent.Parent.Navegacao)
 local Estado = require(script.Parent.Parent.Estado)
+local Combate = require(script.Parent.IncursoesCombate)
+local RunUI = require(script.Parent.IncursoesRunUI)
+local Run = require(Shared.Dados.IncursoesRun)
+local Desafios = require(Shared.Dados.IncursoesDesafios)
 local Visual = require(
 	script.Parent.Parent.Parent
 		:WaitForChild("Mundo")
@@ -71,11 +76,15 @@ local cartoes: { Cartao } = {}
 local linhas: { Linha } = {}
 local cabecalho: TextLabel
 
+-- Fenda do Dia e Desafios da Semana (montados em montarDiaria)
+local atualizarDiaria: (any) -> () = function() end
+
 local function atualizarPainel()
 	local estado = Estado.atual
 	local inc = if estado and type((estado :: any).incursoes) == "table"
 		then (estado :: any).incursoes
 		else Dados.padrao()
+	atualizarDiaria(inc)
 	local melhor = if estado then Auras.melhorDe(estado.auras) else nil
 	cabecalho.Text = string.format(
 		"FRAGMENTOS: %d   ·   RESSONÂNCIA: %.2fx (aura mais rara)",
@@ -167,6 +176,186 @@ local function acaoCartao(pai: Instance, texto: string, aoClicar: () -> ()): Kit
 	return botao
 end
 
+-- Preparo da Fenda (Marcas e Pesadelo): escolhido aqui, vale para a fila que você abrir
+local preparo = { pesadelo = false, marcas = {} :: { [string]: boolean? } }
+local atualizarPreparo: () -> () = function() end
+
+local function montarPreparo(pai: Instance, altura: number)
+	local cartao = Kit.placa({
+		nome = "Preparo",
+		tamanho = UDim2.new(1, 0, 0, altura),
+		borda = Cores.Lilas,
+		pai = pai,
+		ordem = 0,
+	}).conteudo
+	textoCartao(cartao, "Preparo da Fenda", 26, 5, 36, Cores.Lilas, "titulo")
+	local resumo = textoCartao(cartao, "", 16, 40, 24, Cores.TextoSuave)
+	local grade = Kit.novo("Frame", {
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(14, 70),
+		Size = UDim2.new(1, -28, 1, -80),
+		Parent = cartao,
+	})
+	Kit.novo("UIGridLayout", {
+		CellSize = UDim2.new(0.5, -6, 0, 50),
+		CellPadding = UDim2.fromOffset(12, 10),
+		Parent = grade,
+	})
+	local botoes: { { botao: TextButton, ligado: () -> boolean } } = {}
+	local function chave(rotulo: string, ligado: () -> boolean, alternar: () -> (), ordem: number)
+		local b = Kit.novo("TextButton", {
+			Text = rotulo,
+			FontFace = Tema.FonteNegrito,
+			TextSize = 17,
+			TextWrapped = true,
+			TextColor3 = Cores.Texto,
+			AutoButtonColor = true,
+			BackgroundColor3 = Cores.Painel,
+			LayoutOrder = ordem,
+			Parent = grade,
+		})
+		Kit.novo("UICorner", { CornerRadius = UDim.new(0, 10), Parent = b })
+		Kit.novo("UIStroke", { Color = Cores.Borda, Thickness = 2, Parent = b })
+		b.Activated:Connect(function()
+			alternar()
+			atualizarPreparo()
+		end)
+		table.insert(botoes, { botao = b, ligado = ligado })
+	end
+	chave("☠ Pesadelo (x2)", function()
+		return preparo.pesadelo
+	end, function()
+		preparo.pesadelo = not preparo.pesadelo
+	end, 0)
+	for i, m in Run.MARCAS do
+		chave(string.format("%s (+%d%%)", m.nome, math.floor(m.bonus * 100 + 0.5)), function()
+			return preparo.marcas[m.id] == true
+		end, function()
+			preparo.marcas[m.id] = if preparo.marcas[m.id] then nil else true
+		end, i)
+	end
+	atualizarPreparo = function()
+		for _, b in botoes do
+			local on = b.ligado()
+			b.botao.BackgroundColor3 = if on then Cores.Lilas else Cores.Painel
+			b.botao.TextColor3 = if on then Cores.Painel else Cores.Texto
+		end
+		local p = Run.preparo(preparo)
+		resumo.Text = string.format(
+			"%s  ·  Fragmentos x%.2f  ·  vale para a fila que você abrir",
+			Run.descreverPreparo(p),
+			Run.multPreparo(p)
+		)
+	end
+	atualizarPreparo()
+end
+
+local function montarDiaria(pai: Instance, alturaDia: number, alturaSemana: number)
+	-- Fenda do Dia
+	local dia = Kit.placa({
+		nome = "FendaDoDia",
+		tamanho = UDim2.new(1, 0, 0, alturaDia),
+		borda = Color3.fromHex("FFD36B"),
+		pai = pai,
+		ordem = -2,
+	}).conteudo
+	textoCartao(dia, "Fenda do Dia", 26, 5, 36, Color3.fromHex("FFD36B"), "titulo")
+	local infoDia = textoCartao(dia, "", 16, 40, 44, Cores.TextoSuave)
+	local recorde = textoCartao(dia, "", 16, 84, 24, Cores.Texto, "mono")
+	local ranking = textoCartao(dia, "", 15, 108, alturaDia - 170, Cores.TextoSuave, "mono")
+	acaoCartao(dia, "Entrar na Fenda do Dia", function()
+		pedir("IncursaoFila", if naFila == "diaria" then "" else "diaria")
+	end)
+	-- Desafios da Semana
+	local semana = Kit.placa({
+		nome = "DesafiosSemana",
+		tamanho = UDim2.new(1, 0, 0, alturaSemana),
+		borda = Cores.Menta,
+		pai = pai,
+		ordem = -1,
+	}).conteudo
+	textoCartao(semana, "Desafios da Semana", 26, 5, 36, Cores.Menta, "titulo")
+	local linhasSemana = textoCartao(semana, "", 17, 44, alturaSemana - 54, Cores.Texto)
+
+	local rankingTexto = "Ranking do servidor: ninguém ainda."
+	local ultimoPedido = 0
+	atualizarDiaria = function(inc: any)
+		local agora = os.time()
+		local fd = Desafios.fendaDoDia(Desafios.dia(agora))
+		local nomesMarcas = {}
+		for _, m in Run.MARCAS do
+			if fd.marcas[m.id] then
+				table.insert(nomesMarcas, m.nome)
+			end
+		end
+		local u = Dados.porId[fd.universo]
+		infoDia.Text = string.format(
+			"Hoje: %s  ·  %s\nMesmos andares para todos · 1ª vitória do dia: +%d Fragmentos",
+			if u then u.nome else fd.universo,
+			table.concat(nomesMarcas, " · "),
+			Desafios.recompensaDia(if u then u.nivel else 1)
+		)
+		local d = if type(inc) == "table" then inc.diaria else nil
+		local meu = if type(d) == "table" and d.dia == fd.dia then d else nil
+		recorde.Text = if meu
+			then string.format(
+				"Seu recorde hoje: %d pts%s",
+				meu.melhor or 0,
+				if meu.vitoria then "  ·  vitória ✓" else ""
+			)
+			else "Seu recorde hoje: —"
+		ranking.Text = rankingTexto
+		-- desafios
+		local sem = Desafios.semana(agora)
+		local estadoSemana = Desafios.semanaDe(if type(inc) == "table" then inc else nil, sem)
+		local linhas = {}
+		for _, id in Desafios.desafiosDaSemana(sem) do
+			local def = Desafios.desafioPorId[id]
+			local feito = estadoSemana.feitos[id] == true
+			table.insert(
+				linhas,
+				string.format(
+					"%s %s  —  %d/%d  (+%d)",
+					if feito then "✓" else "•",
+					def.nome,
+					math.min(estadoSemana.progresso[id] or 0, def.meta),
+					def.meta,
+					def.recompensa
+				)
+			)
+		end
+		linhasSemana.Text = table.concat(linhas, "\n")
+		-- ranking do servidor (no máximo a cada 10 s)
+		if os.clock() - ultimoPedido > 10 then
+			ultimoPedido = os.clock()
+			task.spawn(function()
+				local ok, _, dados = Estado.pedir("IncursaoRanking")
+				if ok and dados and type(dados.ranking) == "table" then
+					local partes = {}
+					for k, r in dados.ranking do
+						if k > 5 then
+							break
+						end
+						table.insert(
+							partes,
+							string.format(
+								"%d. %s  %d",
+								k,
+								tostring(r.nome),
+								tonumber(r.pontos) or 0
+							)
+						)
+					end
+					rankingTexto = if #partes > 0
+						then "Ranking do servidor hoje:\n" .. table.concat(partes, "\n")
+						else "Ranking do servidor: ninguém ainda."
+					ranking.Text = rankingTexto
+				end
+			end)
+		end
+	end
+end
+
 local function montarPainel()
 	local painel = Navegacao.criarPainel("Incursoes", { titulo = "Incursões", icone = "✦" })
 	local c = painel.conteudo
@@ -179,6 +368,11 @@ local function montarPainel()
 	local listaReliquias = coluna(rolagem, "Reliquias")
 	local alturaUniverso = 222
 	local alturaReliquia = 160
+	local alturaPreparo = 290
+	montarPreparo(listaUniversos, alturaPreparo)
+	local alturaDia = 300
+	local alturaSemana = 170
+	montarDiaria(listaReliquias, alturaDia, alturaSemana)
 	for i, u in Dados.UNIVERSOS do
 		local cor = Color3.fromHex(u.cor)
 		local cartao = Kit.placa({
@@ -200,7 +394,7 @@ local function montarPainel()
 			Cores.TextoSuave
 		)
 		local botao = acaoCartao(cartao, "Entrar na fila", function()
-			pedir("IncursaoFila", if naFila == u.id then "" else u.id)
+			pedir("IncursaoFila", if naFila == u.id then "" else u.id, preparo)
 		end)
 		table.insert(cartoes, { botao = botao, info = info, cadeado = cadeado, universo = u })
 	end
@@ -232,8 +426,12 @@ local function montarPainel()
 
 	Escala.aoMudar(function()
 		local compacto = Escala.tamanho.X < 780
-		local hUniversos = #Dados.UNIVERSOS * (alturaUniverso + 10) - 10
-		local hReliquias = #Dados.RELIQUIAS * (alturaReliquia + 10) + 38
+		local hUniversos = #Dados.UNIVERSOS * (alturaUniverso + 10) - 10 + alturaPreparo + 10
+		local hReliquias = #Dados.RELIQUIAS * (alturaReliquia + 10)
+			+ 38
+			+ alturaDia
+			+ alturaSemana
+			+ 20
 		listaUniversos.Size = UDim2.new(if compacto then 1 else 0.56, -12, 0, hUniversos)
 		listaReliquias.Size = UDim2.new(if compacto then 1 else 0.44, -12, 0, hReliquias)
 		listaReliquias.Position = if compacto
@@ -391,8 +589,8 @@ local function montarHud(raiz: Frame)
 		Text = "",
 		TextSize = 24,
 		TextWrapped = true,
-		Position = UDim2.fromOffset(30, 90),
-		Size = UDim2.new(1, -60, 0, 90),
+		Position = UDim2.fromOffset(20, 72),
+		Size = UDim2.new(1, -40, 0, 138),
 		ZIndex = 21,
 		Parent = resultado,
 	})
@@ -427,7 +625,8 @@ local function montarHud(raiz: Frame)
 		textoPulso.TextSize = if compacto then 22 else 26
 		local ySair = if largura < 980 then 182 else 24
 		sairBotao.placa.quadro.Position = UDim2.new(1, -14, 0, ySair)
-		resultado.Size = UDim2.fromOffset(math.min(620, borda), 260)
+		resultado.Size = UDim2.fromOffset(math.min(620, borda), 292)
+		resultadoTexto.TextSize = if compacto then 15 else 20
 		resultadoTitulo.TextSize = if compacto then 32 else 46
 	end)
 end
@@ -439,6 +638,7 @@ local function definirPartida(universo: string?)
 	end
 	emPartida = universo
 	hud.Visible = universo ~= nil
+	Combate.definirPartida(universo ~= nil)
 	if mudou then
 		aoPartida(universo ~= nil)
 		if universo then
@@ -447,24 +647,45 @@ local function definirPartida(universo: string?)
 	end
 end
 
+local function textoItens(ganhos: any): string
+	local nomes = {}
+	if type(ganhos) == "table" then
+		for id, qtd in ganhos do
+			local item = Itens.porId[id]
+			if item and type(qtd) == "number" and qtd > 0 then
+				local tier = Itens.Tiers[item.raridade]
+				table.insert(nomes, string.format("%s +%d %s", tier.icone, qtd, item.nome))
+			end
+		end
+	end
+	table.sort(nomes)
+	return table.concat(nomes, "  ·  ")
+end
+
 local function aoEvento(d: any)
 	if type(d) ~= "table" then
 		return
 	end
 	local u = if type(d.universo) == "string" then Dados.porId[d.universo] else nil
 	if d.tipo == "fila" then
-		naFila = if u then u.id else nil
+		naFila = if u then (if d.diaria then "diaria" else u.id) else nil
 		filaBanner.Visible = u ~= nil
 		if u then
-			filaBanner.Text = string.format(
-				"FILA: %s  ·  %d/%d jogador(es)  ·  %s",
-				string.upper(u.nome),
-				d.jogadores or 1,
-				Dados.MAX_JOGADORES,
-				if type(d.falta) == "number"
-					then "partida em " .. d.falta .. "s"
-					else "esperando..."
-			)
+			filaBanner.Text = (if d.diaria then "FENDA DO DIA · " else "")
+				.. string.format(
+					"FILA: %s  ·  %d/%d jogador(es)  ·  %s",
+					string.upper(u.nome),
+					d.jogadores or 1,
+					Dados.MAX_JOGADORES,
+					if type(d.falta) == "number"
+						then "partida em " .. d.falta .. "s"
+						else "esperando..."
+				)
+				.. (
+					if type(d.preparo) == "string" and d.preparo ~= "Normal"
+						then "  ·  " .. d.preparo
+						else ""
+				)
 		end
 		atualizarPainel()
 	elseif d.tipo == "inicio" and u then
@@ -474,13 +695,19 @@ local function aoEvento(d: any)
 		Visual.definirPartida(if type(d.slot) == "number" then d.slot else nil)
 		definirPartida(u.id)
 		atualizarPainel()
+		if type(d.preparo) == "string" and d.preparo ~= "Normal" then
+			aviso("Preparo: " .. d.preparo)
+		end
 	elseif d.tipo == "andar" and u then
 		definirPartida(u.id)
 		local nome = if type(d.titulo) == "string" then d.titulo else nil
-		aviso(
-			if nome
-				then "Andar final: " .. nome .. " espera por vocês!"
-				else string.format("%s — andar %d", u.nome, d.andar)
+		RunUI.banner(
+			string.format(
+				"Andar %d · %s",
+				tonumber(d.andar) or 1,
+				if nome then nome else tostring(d.nomeAndar or "Purificação")
+			),
+			tostring(d.descricao or "")
 		)
 	elseif d.tipo == "estado" and u then
 		if not emPartida then
@@ -497,7 +724,11 @@ local function aoEvento(d: any)
 		if (d.nucleosTotal or 0) > 0 then
 			table.insert(partes, string.format("Núcleos %d/%d", d.nucleos or 0, d.nucleosTotal))
 		end
-		table.insert(partes, string.format("Sombras %d", d.sombras or 0))
+		local objetivo = RunUI.objetivo(d)
+		if objetivo then
+			table.insert(partes, objetivo)
+		end
+		table.insert(partes, string.format("Inimigos %d", d.sombras or 0))
 		table.insert(partes, string.format("Vidas do grupo %d", d.vidas or 0))
 		if d.fenda then
 			table.insert(
@@ -520,9 +751,75 @@ local function aoEvento(d: any)
 		end
 	elseif d.tipo == "pulso" and typeof(d.origem) == "Vector3" and type(d.raio) == "number" then
 		Visual.pulso(d.origem, d.raio, emPartida)
+	elseif
+		d.tipo == "zona"
+		and typeof(d.pos) == "Vector3"
+		and type(d.raio) == "number"
+		and type(d.tempo) == "number"
+	then
+		Visual.zona(
+			d.pos,
+			d.raio,
+			if type(d.interno) == "number" then d.interno else 0,
+			d.tempo,
+			if u then Color3.fromHex(u.corVeio) else Color3.new(1, 1, 1)
+		)
+	elseif d.tipo == "faseGuardiao" and type(d.fase) == "number" and u then
+		local textos = {
+			cinzas = "Chuva de Brasas! Saiam dos círculos de fogo.",
+			mare = "Maré Alta! Quando a onda vier, fiquem colados no Cavaleiro.",
+			umbral = "Eclipse! O Espectro some e reaparece — cuidado onde ele estava.",
+		}
+		RunUI.banner(
+			string.format("%s · fase %d", u.guardiao, d.fase),
+			(textos[u.id] or "O Guardião ficou mais forte!")
+				.. (if d.fase >= 3 then " Agora mais rápido e com reforços." else "")
+		)
+		if u.id == "umbral" then
+			Visual.eclipse(true)
+		end
+	elseif d.tipo == "enfurecido" then
+		RunUI.elite("O GUARDIÃO ENFURECEU! Dano e velocidade aumentados")
+	elseif d.tipo == "diaria" and type(d.pontos) == "number" then
+		aviso(
+			string.format(
+				"Fenda do Dia: %d pts (recorde %d)%s",
+				d.pontos,
+				tonumber(d.melhor) or d.pontos,
+				if (tonumber(d.bonus) or 0) > 0
+					then string.format("  ·  +%d Fragmentos!", d.bonus)
+					else ""
+			)
+		)
+		atualizarPainel()
+	elseif d.tipo == "nota" and type(d.nota) == "string" then
+		RunUI.nota(d.nota, d.mult, d.tempo, d.quedas)
+	elseif d.tipo == "bencaos" and type(d.cartas) == "table" then
+		RunUI.bencaos(d.cartas)
+	elseif d.tipo == "bencaoAtiva" and type(d.lista) == "table" then
+		local nomes = {}
+		for _, id in d.lista do
+			local b = Run.bencaoPorId[id]
+			if b then
+				table.insert(nomes, b.nome)
+			end
+		end
+		RunUI.bencaosAtivas(nomes)
+	elseif d.tipo == "sequencia" and type(d.n) == "number" then
+		RunUI.sequencia(d.n)
+	elseif d.tipo == "elite" and type(d.texto) == "string" then
+		RunUI.elite(d.texto)
+	elseif d.tipo == "combate" or d.tipo == "combateEstado" or d.tipo == "guardaQuebrou" then
+		Combate.evento(d)
 	elseif d.tipo == "aviso" and type(d.texto) == "string" then
 		aviso(d.texto)
+	elseif d.tipo == "loot" then
+		local itens = textoItens(d.itens)
+		if itens ~= "" then
+			aviso(itens)
+		end
 	elseif d.tipo == "fim" then
+		RunUI.limpar()
 		definirPartida(nil)
 		Visual.definirPartida(nil)
 		resultado.Visible = true
@@ -532,11 +829,12 @@ local function aoEvento(d: any)
 			else (if d.motivo == "saiu" then "VOCÊ SAIU" else "A INCURSÃO CAIU")
 		resultadoTitulo.TextColor3 = if venceu then Cores.Menta else Cores.Aviso
 		resultadoTexto.Text = string.format(
-			"%s  ·  andares concluídos: %d/%d\n+%d fragmentos",
+			"%s  ·  andares concluídos: %d/%d\n+%d Fragmentos de Incursão\n%s",
 			if u then u.nome else "",
 			d.andares or 0,
 			Dados.ANDARES,
-			d.fragmentos or 0
+			d.fragmentos or 0,
+			textoItens(d.itens)
 		)
 	end
 end
@@ -546,6 +844,8 @@ function IncursoesUI.montar(raiz: Frame, aoAviso: (string) -> (), aoMudarPartida
 	aoPartida = aoMudarPartida
 	montarPainel()
 	montarHud(raiz)
+	Combate.montar(hud)
+	RunUI.montar(hud, aviso)
 	Remotos.evento("Incursao").OnClientEvent:Connect(aoEvento)
 	task.spawn(Visual.iniciar)
 	UserInputService.InputBegan:Connect(function(input, processado)
@@ -557,6 +857,10 @@ function IncursoesUI.montar(raiz: Frame, aoAviso: (string) -> (), aoMudarPartida
 		local falta = math.clamp((proximoPulso - os.clock()) / Dados.PULSO_ESPERA, 0, 1)
 		anelPulso.Size = UDim2.fromScale(1 - falta, 1 - falta)
 	end)
+end
+
+function IncursoesUI.definirQualidade(qualidadeBaixa: boolean, movimentoReduzido: boolean)
+	Combate.definirQualidade(qualidadeBaixa, movimentoReduzido)
 end
 
 function IncursoesUI.abrir()

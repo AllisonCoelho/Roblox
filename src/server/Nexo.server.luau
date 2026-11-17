@@ -10,11 +10,18 @@ local Dados = require(script.Parent.Servicos.Dados)
 local Nexo = require(script.Parent.Mundo.Nexo)
 local PrimeiroSoberano = require(script.Parent.NPCs.PrimeiroSoberano)
 
+local Arena = require(script.Parent.Arena.Servico)
+
 local INTERVALO = 4
 local LINHAS = 5
 
 local pasta = Nexo.construir()
-PrimeiroSoberano.iniciar(pasta) -- o NPC nasce sentado no trono da Arena
+PrimeiroSoberano.iniciar(pasta)
+local soberano = pasta:WaitForChild("PrimeiroSoberano")
+Arena.montar(
+	soberano:WaitForChild("Raiz") :: BasePart,
+	soberano:WaitForChild("Conversa") :: BasePart
+)
 local painel = pasta:WaitForChild("PainelRanking")
 local texto = painel:WaitForChild("Ranking"):WaitForChild("Texto") :: TextLabel
 

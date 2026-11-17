@@ -18,11 +18,9 @@ local Nexo = require(script.Parent.Parent.Mundo.Nexo)
 local ServicoIncursoes = require(script.Parent.Parent.Incursoes.Servico)
 
 local PainelDev = {}
-local NOME_CONTA_DEV = "umrnoobzz"
 local studioTeste = RunService:IsStudio() and Config.ModoTeste
 local privada = PermissaoDev.experienciaPrivada(game.GameId, game.PlaceId)
 local dono: number? = if game.CreatorType == Enum.CreatorType.User then game.CreatorId else nil
-local contaDev: number? = nil
 local renascendo: { [Player]: boolean } = {}
 
 local function autorizado(player: Player): boolean
@@ -33,7 +31,7 @@ local function autorizado(player: Player): boolean
 			studioTeste,
 			dono,
 			player.UserId,
-			contaDev
+			PermissaoDev.contaDeTeste(player.Name, player.UserId)
 		)
 end
 
@@ -241,6 +239,12 @@ local function executar(player: Player, nome: any, ...: any): (boolean, string?,
 	if not comando then
 		return false, "Comando desconhecido"
 	end
+	if Dados.emTransacao(player) then
+		return false, "Aguarde a confirmação no Altar."
+	end
+	if player:GetAttribute("EmDueloArena") then
+		return false, "Encerre o duelo antes de usar o Painel Dev."
+	end
 	if nome ~= "previa" and ServicoIncursoes.ocupado(player) then
 		return false, "Saia da fila ou aguarde o retorno ao Bastião para usar este comando."
 	end
@@ -248,10 +252,6 @@ local function executar(player: Player, nome: any, ...: any): (boolean, string?,
 end
 
 local function marcar(player: Player)
-	-- A conta de teste é vinculada ao UserId do Player autenticado pelo Roblox.
-	if privada and string.lower(player.Name) == NOME_CONTA_DEV and player.UserId > 0 then
-		contaDev = player.UserId
-	end
 	if autorizado(player) then
 		player:SetAttribute("PainelDev", true)
 	end

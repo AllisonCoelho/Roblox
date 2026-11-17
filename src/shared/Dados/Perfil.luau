@@ -11,6 +11,8 @@ export type Estado = {
 	-- Incursões (Dados/Incursoes.luau): fragmentos, melhor andar, vitórias e relíquias.
 	-- Dados antigos ganham o padrão ao carregar (Dados.completar).
 	incursoes: { [string]: any },
+	inventario: { itens: { [string]: number }, equipados: { artefato: string? } },
+	transcendencia: { nivel: number, totalRealizadas: number },
 }
 
 Perfil.VERSAO = 1
@@ -46,6 +48,8 @@ function Perfil.padrao(): Estado
 			pularRepetidas = false,
 		},
 		incursoes = { fragmentos = 0, melhor = {}, concluidas = {}, reliquias = {} },
+		inventario = { itens = {}, equipados = {} },
+		transcendencia = { nivel = 0, totalRealizadas = 0 },
 	}
 end
 

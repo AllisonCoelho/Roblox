@@ -6,9 +6,7 @@
 -- desses atributos (src/client/Mundo/NPCs/PrimeiroSoberano.luau), como o kit do Nexo.
 -- Se o visual falhar num cliente, as peças de reserva daqui continuam visíveis.
 --
--- Nesta fase ele só fica sentado, reage a quem chega e conversa. NÃO existe duelo, coroação,
--- título nem recompensa: a fala diz isso. Os estados futuros já têm nome (ESTADOS) para o
--- sistema do rei se encaixar depois, mas só NPC_OCUPANTE é usado.
+-- Fora do duelo, fica sentado, reage a quem chega e conversa. A Arena controla o duelo.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -16,22 +14,19 @@ local Workspace = game:GetService("Workspace")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Remotos = require(Shared.Remotos)
 local Pecas = require(Shared.Dados.SoberanoPecas)
+local ArenaCena = require(Shared.Dados.ArenaCena)
 
 local PrimeiroSoberano = {}
 
 PrimeiroSoberano.ESTADOS = {
 	NPC_OCUPANTE = "NPC_OCUPANTE",
-	-- futuros (não implementados): DESAFIO_EM_ANDAMENTO, JOGADOR_REI, RETORNO_DO_NPC
 }
--- Animações futuras, só os nomes: Levantar, Desembainhar, Desafiar, Derrota,
--- RetornoPeloPortal, Sentar.
 
 local FALAS = {
 	"O trono não pertence a quem o deseja. Pertence a quem consegue defendê-lo.",
-	"Quando a Arena despertar, venha reivindicar seu lugar.",
+	"Quando estiver pronto, venha me desafiar.",
 	"Os reis passam. A coroa permanece.",
 }
-local AVISO = "Duelos por turnos — em desenvolvimento."
 
 local RAIO_PRESENCA = 30 -- studs: a partir daqui ele acompanha o visitante com a cabeça
 local DISTANCIA_CONVERSA = 16
@@ -119,6 +114,24 @@ function PrimeiroSoberano.iniciar(pasta: Instance)
 		p:SetAttribute("ReservaNPC", true)
 	end
 
+	local reservaDuelo = Instance.new("Folder")
+	reservaDuelo.Name = "ReservaDuelo"
+	reservaDuelo.Parent = modelo
+	for _, d in
+		{
+			{ CFrame.new(0, 5.3, 0), Vector3.new(3.2, 3.1, 1.65) },
+			{ CFrame.new(0, 7.4, 0), Vector3.new(1.55, 1.45, 1.45) },
+			{ CFrame.new(1.92, 4.9, 0), Vector3.new(0.9, 2.2, 1.1) },
+			{ CFrame.new(-1.92, 4.9, 0), Vector3.new(0.9, 2.2, 1.1) },
+			{ CFrame.new(0.83, 1.8, 0), Vector3.new(1.3, 3.6, 1.4) },
+			{ CFrame.new(-0.83, 1.8, 0), Vector3.new(1.3, 3.6, 1.4) },
+			{ CFrame.new(2.5, 2.65, -0.5), Vector3.new(0.6, 5.2, 0.32) },
+		} :: { { any } }
+	do
+		local parte = bloco(reservaDuelo, "Reserva", ArenaCena.soberano * d[1], d[2], false, false)
+		parte:SetAttribute("ReservaNPC", true)
+	end
+
 	-- Nome sobre a cabeça
 	local topo = bloco(modelo, "Nome", origem * CFrame.new(0, 9.2, -0.2), Vector3.one, false, false)
 	local gui = Instance.new("BillboardGui")
@@ -155,6 +168,21 @@ function PrimeiroSoberano.iniciar(pasta: Instance)
 	prompt.MaxActivationDistance = DISTANCIA_CONVERSA
 	prompt.RequiresLineOfSight = false
 	prompt.Parent = ponto
+	raiz:GetAttributeChangedSignal("Estado"):Connect(function()
+		local sentado = raiz:GetAttribute("Estado") == PrimeiroSoberano.ESTADOS.NPC_OCUPANTE
+		gui.Enabled = sentado
+		prompt.Enabled = sentado
+		for _, parte in modelo:GetChildren() do
+			if parte:IsA("BasePart") and parte:GetAttribute("ReservaNPC") then
+				parte.Transparency = if sentado then 0 else 1
+			end
+		end
+		for _, parte in reservaDuelo:GetChildren() do
+			if parte:IsA("BasePart") then
+				parte.Transparency = if sentado then 1 else 0
+			end
+		end
+	end)
 
 	local ultimaConversa: { [Player]: number } = {}
 	local proximaFala: { [Player]: number } = {}
@@ -180,7 +208,7 @@ function PrimeiroSoberano.iniciar(pasta: Instance)
 		proximaFala[jogador] = i % #FALAS + 1
 		Remotos.evento("Aviso"):FireClient(jogador, {
 			tipo = "npc",
-			texto = "“" .. FALAS[i] .. "” " .. AVISO,
+			texto = "“" .. FALAS[i] .. "”",
 		})
 		-- gesto compartilhado (mão no braço do trono), no máximo um a cada ESPERA_ALERTA
 		if agora - ultimoAlerta >= ESPERA_ALERTA then

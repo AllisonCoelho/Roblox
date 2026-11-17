@@ -624,18 +624,12 @@ local function construirAltar(pasta: Instance)
 	end
 	local mesa =
 		cilindroLocal(pasta, olhar, 0, 3, 0, 2, 2.8, { Name = "AltarMesa", Color = COR.pedra })
-	interacao(
-		mesa,
-		"em_construcao",
-		"Em construção",
-		"Altar da Ressonância",
-		"O Altar da Ressonância ainda está em construção."
-	)
+	interacao(mesa, "altar", "Abrir Forja e Transcendência", "Altar da Ressonância")
 	placa(
 		pasta,
 		(olhar * CFrame.new(0, 24, 0)).Position,
 		"Altar da Ressonância",
-		"Em construção",
+		"Forja e Transcendência",
 		COR.violeta
 	)
 end
@@ -745,7 +739,7 @@ local function construirArena(pasta: Instance)
 		pasta,
 		(olhar * CFrame.new(0, 26, 19)).Position,
 		"Arena do Trono",
-		"Duelos por turnos — em desenvolvimento",
+		"Duelos por turnos",
 		COR.selo
 	)
 end

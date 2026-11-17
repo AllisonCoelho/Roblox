@@ -8,10 +8,13 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Apresentacao = require(Shared.Dados.Apresentacao)
 local Auras = require(Shared.Dados.Auras)
 local Config = require(Shared.Config)
+local Monetizacao = require(Shared.Dados.Monetizacao)
 local Perfil = require(Shared.Dados.Perfil)
 local Remotos = require(Shared.Remotos)
+local Transcendencia = require(Shared.Dados.Transcendencia)
 local Acoes = require(script.Parent.Acoes)
 local Dados = require(script.Parent.Dados)
+local Passes = require(script.Parent.Passes)
 
 local Sorteio = {}
 
@@ -19,12 +22,19 @@ local Sorteio = {}
 local TOLERANCIA = 0.1
 local rng = Random.new()
 local ultimoGiro: { [Player]: number } = {}
+-- Sem o passe "Pular Animação", o próximo giro só vale depois do ritual do anterior
+local liberadoEm: { [Player]: number } = {}
+local FOLGA_ANIMACAO = 0.25
 
 local function aleatorio(): number
 	return rng:NextNumber()
 end
 
-local function entregar(player: Player, aura: Auras.Aura): (boolean, string?, { [string]: any }?)
+local function entregar(
+	player: Player,
+	aura: Auras.Aura,
+	sorte: number?
+): (boolean, string?, { [string]: any }?)
 	local quantidade = 0
 	local equipou = false
 	local simulado = Dados.emTeste(player)
@@ -46,6 +56,7 @@ local function entregar(player: Player, aura: Auras.Aura): (boolean, string?, { 
 		return false, mensagem
 	end
 
+	local chance = Auras.chanceEfetiva(aura, sorte)
 	-- Em teste, só o dono recebe o evento para ver a reação do Núcleo e a revelação local.
 	if aura.chance >= Auras.ANUNCIO_MINIMO then
 		local evento = Remotos.evento("Despertou")
@@ -53,6 +64,7 @@ local function entregar(player: Player, aura: Auras.Aura): (boolean, string?, { 
 			jogador = player.DisplayName,
 			userId = player.UserId,
 			aura = aura.id,
+			chance = chance,
 		}
 		if simulado then
 			evento:FireClient(player, dados)
@@ -60,27 +72,45 @@ local function entregar(player: Player, aura: Auras.Aura): (boolean, string?, { 
 			evento:FireAllClients(dados)
 		end
 	end
-	return true, aura.id, { quantidade = quantidade, equipou = equipou, simulado = simulado }
+	return true,
+		aura.id,
+		{ quantidade = quantidade, equipou = equipou, simulado = simulado, chance = chance }
 end
 
 local function despertar(player: Player): (boolean, string?, { [string]: any }?)
+	if player:GetAttribute("EmDueloArena") then
+		return false, "O giro volta assim que o duelo terminar."
+	end
 	local agora = os.clock()
 	local ultimo = ultimoGiro[player]
 	if ultimo and agora - ultimo < Config.CooldownGiro - TOLERANCIA then
 		return false, "Aguarde um instante..."
 	end
-	if not Dados.de(player) then
-		return false, "Carregando seus dados..."
+	local estado = Dados.de(player)
+	if not estado or not Dados.podeProgredir(player) then
+		return false, "Seu perfil ainda não está disponível."
 	end
+	if agora < (liberadoEm[player] or 0) then
+		return false, nil -- a animação ainda está correndo (pular é um passe)
+	end
+	local sorte = Transcendencia.sorte(estado.transcendencia.nivel)
 	ultimoGiro[player] = agora
-	return entregar(player, Auras.sortear(aleatorio))
+	local aura = Auras.sortear(aleatorio, sorte)
+	local ok, id, dados = entregar(player, aura, sorte)
+	if ok and not Passes.tem(player, "pularAnimacao") then
+		local cat = Apresentacao.de(aura.chance)
+		liberadoEm[player] = agora + Apresentacao.tempoAteRevelacao(cat) - FOLGA_ANIMACAO
+	end
+	return ok, id, dados
 end
 
 function Sorteio.simular(player: Player, aura: Auras.Aura?): (boolean, string?, { [string]: any }?)
 	if not Dados.emTeste(player) then
 		return false, "Abra uma sessão de teste"
 	end
-	return entregar(player, aura or Auras.sortear(aleatorio))
+	local estado = Dados.de(player)
+	local sorte = Transcendencia.sorte(if estado then estado.transcendencia.nivel else 0)
+	return entregar(player, aura or Auras.sortear(aleatorio, sorte), sorte)
 end
 
 -- Encena uma categoria sem alterar o perfil, pelo atalho do Studio ou pelo painel autorizado.
@@ -103,6 +133,9 @@ end
 
 -- auraId nil ou "" desequipa
 local function equipar(player: Player, auraId: any): (boolean, string?)
+	if player:GetAttribute("EmDueloArena") then
+		return false, "A aura fica equipada até o duelo terminar."
+	end
 	if auraId ~= nil and type(auraId) ~= "string" then
 		return false, "Pedido inválido"
 	end
@@ -125,13 +158,49 @@ local function configurar(player: Player, chave: any, valor: any): (boolean, str
 	if type(chave) ~= "string" or not Perfil.CONFIGURACOES[chave] or type(valor) ~= "boolean" then
 		return false, "Pedido inválido"
 	end
+	local passe = Monetizacao.passeNecessario(chave, valor, function(id)
+		return Passes.tem(player, id)
+	end)
+	if passe then
+		local produto = Monetizacao.porId[passe]
+		return false, string.format("%s é um passe de %d Robux.", produto.nome, produto.preco)
+	end
 	return Dados.alterar(player, function(estado)
 		estado.configuracoes[chave] = valor
 		return true
 	end)
 end
 
+-- Desliga configurações pagas de quem não tem (ou perdeu) o passe
+local function corrigirConfiguracoes(player: Player)
+	if not Passes.verificado(player) or not Dados.de(player) then
+		return
+	end
+	local estado = Dados.de(player) :: Perfil.Estado
+	local precisa = false
+	for chave, regra in Monetizacao.CONFIGURACOES_PAGAS do
+		if estado.configuracoes[chave] == regra.exige and not Passes.tem(player, regra.passe) then
+			precisa = true
+		end
+	end
+	if not precisa then
+		return
+	end
+	Dados.alterar(player, function(e)
+		for chave, regra in Monetizacao.CONFIGURACOES_PAGAS do
+			if e.configuracoes[chave] == regra.exige and not Passes.tem(player, regra.passe) then
+				e.configuracoes[chave] = not regra.exige
+			end
+		end
+		return true
+	end)
+end
+
 function Sorteio.iniciar()
+	Passes.aoMudar(corrigirConfiguracoes)
+	Dados.quandoCarregar(function(player)
+		corrigirConfiguracoes(player)
+	end)
 	Acoes.registrar("Despertar", despertar)
 	Acoes.registrar("Equipar", equipar)
 	Acoes.registrar("Configurar", configurar)
@@ -142,6 +211,7 @@ function Sorteio.iniciar()
 	end
 	Players.PlayerRemoving:Connect(function(player)
 		ultimoGiro[player] = nil
+		liberadoEm[player] = nil
 	end)
 end
 

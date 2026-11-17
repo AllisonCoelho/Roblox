@@ -8,6 +8,7 @@ Remotos.Eventos = {
 	"Estado", -- estado do perfil atualizado pelo servidor
 	"Aviso", -- mensagens curtas para um jogador
 	"Despertou", -- servidor -> todos: aura 1 em 1.000 ou mais rara (ritual abreviado + anúncio)
+	"Arena", -- servidor -> desafiante: turno, golpes e resultado
 	"Incursao", -- servidor -> jogador: fila, andar, estado da partida, Pulso e resultado
 }
 Remotos.Funcoes = {
