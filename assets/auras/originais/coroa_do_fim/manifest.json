@@ -1,0 +1,27 @@
+{
+  "auraId": "coroa_do_fim",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/coroa_do_fim",
+  "templateFile": "assets/roblox/auras_originais/coroa_do_fim.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "ponta",
+      "triangles": 48,
+      "sizeStuds": [
+        0.6,
+        2.0,
+        0.3401
+      ],
+      "centerFromPivot": [
+        0.0,
+        0.4,
+        0.11
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 5
+}

@@ -1,0 +1,57 @@
+{
+  "auraId": "eclipse_de_mil_olhos",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/eclipse_de_mil_olhos",
+  "templateFile": "assets/roblox/auras_originais/eclipse_de_mil_olhos.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "olho_grande",
+      "triangles": 160,
+      "sizeStuds": [
+        1.5045,
+        0.88,
+        0.571
+      ],
+      "centerFromPivot": [
+        0.0171,
+        0.0097,
+        0.0413
+      ],
+      "meshId": null
+    },
+    {
+      "name": "olho",
+      "triangles": 100,
+      "sizeStuds": [
+        0.4957,
+        0.2719,
+        0.267
+      ],
+      "centerFromPivot": [
+        -0.0052,
+        0.0053,
+        0.0376
+      ],
+      "meshId": null
+    },
+    {
+      "name": "anel_eclipse",
+      "triangles": 468,
+      "sizeStuds": [
+        3.7096,
+        3.1563,
+        0.1554
+      ],
+      "centerFromPivot": [
+        -0.0069,
+        -0.0006,
+        -0.0
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 8
+}

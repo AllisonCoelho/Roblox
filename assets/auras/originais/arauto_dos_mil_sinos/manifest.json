@@ -1,0 +1,57 @@
+{
+  "auraId": "arauto_dos_mil_sinos",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/arauto_dos_mil_sinos",
+  "templateFile": "assets/roblox/auras_originais/arauto_dos_mil_sinos.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "halo",
+      "triangles": 908,
+      "sizeStuds": [
+        2.4519,
+        0.958,
+        2.3442
+      ],
+      "centerFromPivot": [
+        -0.0032,
+        -0.421,
+        -0.0032
+      ],
+      "meshId": null
+    },
+    {
+      "name": "onda",
+      "triangles": 420,
+      "sizeStuds": [
+        1.2304,
+        0.0432,
+        1.2294
+      ],
+      "centerFromPivot": [
+        0.0024,
+        0.0,
+        0.0012
+      ],
+      "meshId": null
+    },
+    {
+      "name": "sino",
+      "triangles": 132,
+      "sizeStuds": [
+        0.6182,
+        1.2965,
+        0.6182
+      ],
+      "centerFromPivot": [
+        0.0,
+        0.3017,
+        -0.0
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 2
+}

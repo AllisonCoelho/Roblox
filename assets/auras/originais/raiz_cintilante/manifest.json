@@ -1,0 +1,57 @@
+{
+  "auraId": "raiz_cintilante",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/raiz_cintilante",
+  "templateFile": "assets/roblox/auras_originais/raiz_cintilante.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "cipo",
+      "triangles": 328,
+      "sizeStuds": [
+        1.419,
+        2.6936,
+        1.3811
+      ],
+      "centerFromPivot": [
+        -0.0273,
+        -1.6253,
+        -0.0296
+      ],
+      "meshId": null
+    },
+    {
+      "name": "semente",
+      "triangles": 12,
+      "sizeStuds": [
+        0.2111,
+        0.32,
+        0.1961
+      ],
+      "centerFromPivot": [
+        0.004,
+        0.04,
+        -0.0127
+      ],
+      "meshId": null
+    },
+    {
+      "name": "arvore",
+      "triangles": 242,
+      "sizeStuds": [
+        1.8432,
+        2.2999,
+        1.8512
+      ],
+      "centerFromPivot": [
+        0.059,
+        1.14,
+        0.0249
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 6
+}

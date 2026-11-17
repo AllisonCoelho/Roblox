@@ -1,0 +1,42 @@
+{
+  "auraId": "vento_de_papel",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/vento_de_papel",
+  "templateFile": "assets/roblox/auras_originais/vento_de_papel.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "passaro",
+      "triangles": 60,
+      "sizeStuds": [
+        1.0508,
+        0.2071,
+        0.87
+      ],
+      "centerFromPivot": [
+        0.0,
+        0.0735,
+        0.085
+      ],
+      "meshId": null
+    },
+    {
+      "name": "tira",
+      "triangles": 112,
+      "sizeStuds": [
+        0.408,
+        1.2529,
+        0.5896
+      ],
+      "centerFromPivot": [
+        -0.0029,
+        0.5826,
+        0.019
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 5
+}

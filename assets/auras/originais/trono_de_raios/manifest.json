@@ -1,0 +1,42 @@
+{
+  "auraId": "trono_de_raios",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/trono_de_raios",
+  "templateFile": "assets/roblox/auras_originais/trono_de_raios.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "relampago",
+      "triangles": 40,
+      "sizeStuds": [
+        0.54,
+        3.2,
+        0.1
+      ],
+      "centerFromPivot": [
+        0.05,
+        0.0,
+        -0.0
+      ],
+      "meshId": null
+    },
+    {
+      "name": "aro",
+      "triangles": 492,
+      "sizeStuds": [
+        2.6233,
+        0.2,
+        2.734
+      ],
+      "centerFromPivot": [
+        -0.055,
+        0.0,
+        -0.0018
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 5
+}

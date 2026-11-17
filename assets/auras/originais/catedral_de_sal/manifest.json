@@ -1,0 +1,27 @@
+{
+  "auraId": "catedral_de_sal",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/catedral_de_sal",
+  "templateFile": "assets/roblox/auras_originais/catedral_de_sal.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "arco",
+      "triangles": 264,
+      "sizeStuds": [
+        1.957,
+        3.3013,
+        0.1854
+      ],
+      "centerFromPivot": [
+        -0.0012,
+        0.2494,
+        0.0154
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 5
+}

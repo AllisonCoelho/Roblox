@@ -1,0 +1,42 @@
+{
+  "auraId": "prisma_do_silencio",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/prisma_do_silencio",
+  "templateFile": "assets/roblox/auras_originais/prisma_do_silencio.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "octaedro",
+      "triangles": 240,
+      "sizeStuds": [
+        1.2624,
+        1.5499,
+        1.2624
+      ],
+      "centerFromPivot": [
+        0.0,
+        0.0,
+        -0.0
+      ],
+      "meshId": null
+    },
+    {
+      "name": "placa_som",
+      "triangles": 16,
+      "sizeStuds": [
+        0.7,
+        0.24,
+        0.04
+      ],
+      "centerFromPivot": [
+        0.0,
+        0.0,
+        -0.0
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 5
+}

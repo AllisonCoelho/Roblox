@@ -1,0 +1,42 @@
+{
+  "auraId": "aurora_do_mar_profundo",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/aurora_do_mar_profundo",
+  "templateFile": "assets/roblox/auras_originais/aurora_do_mar_profundo.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "umbrela",
+      "triangles": 280,
+      "sizeStuds": [
+        2.8,
+        1.035,
+        2.8
+      ],
+      "centerFromPivot": [
+        -0.0,
+        0.3825,
+        -0.0
+      ],
+      "meshId": null
+    },
+    {
+      "name": "tentaculo",
+      "triangles": 140,
+      "sizeStuds": [
+        0.3368,
+        2.6297,
+        0.3183
+      ],
+      "centerFromPivot": [
+        0.0167,
+        -1.2875,
+        0.0175
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 7
+}

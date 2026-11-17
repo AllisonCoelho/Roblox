@@ -13,6 +13,91 @@ igual("negativo", Formato.inteiro(-1500), "-1.500")
 igual("abreviado", Formato.curto(15000), "15 mil")
 igual("tempo", Formato.tempo(42), "0:42")
 
+-- Catálogo das 67 auras originais (separado do sorteio em uso)
+do
+	local V2 = req("AurasOriginaisV2")
+	local AurasAtuais = req("Auras")
+	igual("v2: 67 auras", #V2.lista, 67)
+	local ids, contagem, colide = 0, {}, 0
+	for i, a in V2.lista do
+		igual("v2: numeração " .. a.id, a.numero, i)
+		if V2.porId[a.id] == a then
+			ids += 1
+		end
+		contagem[a.tier] = (contagem[a.tier] or 0) + 1
+		if AurasAtuais.porId[a.id] then
+			colide += 1
+		end
+		local tier = AurasAtuais.Tiers[AurasAtuais.tierDe(math.floor(a.chance))].nome
+		igual("v2: raridade bate com a chance " .. a.id, a.tier, tier)
+		if i > 2 then -- a reserva (nº 1) fica de fora: a chance dela é o que sobra
+			igual("v2: ordem crescente " .. a.id, a.chance > V2.lista[i - 1].chance, true)
+		end
+	end
+	igual("v2: ids únicos", ids, 67)
+	igual("v2: nenhum id igual ao catálogo atual", colide, 0)
+	for tier, n in
+		{
+			Comum = 4,
+			Incomum = 10,
+			Raro = 15,
+			["Épico"] = 15,
+			["Lendário"] = 12,
+			["Mítico"] = 7,
+			Divino = 4,
+		}
+	do
+		igual("v2: quantidade " .. tier, contagem[tier], n)
+	end
+	igual("v2: soma das explícitas", math.abs(V2.SOMA_EXPLICITAS - 0.823367) < 1e-6, true)
+	igual("v2: reserva ~1 em 5,66", math.floor(V2.porId.centelha_do_nexo.chance * 100), 566)
+	local total = 0
+	for _, a in V2.lista do
+		total += 1 / a.chance
+	end
+	igual("v2: probabilidades somam 100%", math.abs(total - 1) < 1e-9, true)
+	igual("v2: lote inicial existe", #V2.LOTE_INICIAL, 7)
+	for _, id in V2.LOTE_INICIAL do
+		igual("v2: prévia de VFX " .. id, req("AurasVfx")[id], true)
+	end
+	for _, id in V2.LOTE_INICIAL do
+		igual("v2: lote " .. id, V2.porId[id] ~= nil, true)
+	end
+end
+
+-- Efeitos das 67: todas têm receita, presets existem e nenhuma receita repete outra
+do
+	local V2 = req("AurasOriginaisV2")
+	local E = req("EfeitosOriginais")
+	local assinaturas, repetidas, semReceita, presetFaltando = {}, 0, 0, 0
+	for _, a in V2.lista do
+		local r = E.AURAS[a.id]
+		if not r then
+			semReceita += 1
+			continue
+		end
+		local partes = {}
+		for _, c in r.camadas do
+			if not E.PRESETS[c[1]] then
+				presetFaltando += 1
+			end
+			table.insert(partes, c[1] .. ":" .. c[2])
+		end
+		table.sort(partes)
+		local chave = table.concat(partes, "|")
+		if assinaturas[chave] then
+			repetidas += 1
+			print("receita repetida: " .. a.id .. " = " .. assinaturas[chave])
+		end
+		assinaturas[chave] = a.id
+		igual("efeitos: 2+ camadas " .. a.id, #r.camadas >= 2, true)
+		igual("efeitos: prévia " .. a.id, req("AurasVfx")[a.id], true)
+	end
+	igual("efeitos: todas as 67 têm receita", semReceita, 0)
+	igual("efeitos: presets existem", presetFaltando, 0)
+	igual("efeitos: receitas únicas", repetidas, 0)
+end
+
 -- Senbonzakura: efeito de prévia, nunca entra no sorteio sem autorização do dono
 igual("senbonzakura como prévia de VFX", req("AurasVfx").senbonzakura, true)
 igual("senbonzakura fora do catálogo sorteável", req("Auras").porId.senbonzakura, nil)

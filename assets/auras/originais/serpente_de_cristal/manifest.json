@@ -1,0 +1,42 @@
+{
+  "auraId": "serpente_de_cristal",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/serpente_de_cristal",
+  "templateFile": "assets/roblox/auras_originais/serpente_de_cristal.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "corpo",
+      "triangles": 230,
+      "sizeStuds": [
+        6.953,
+        2.3893,
+        1.9294
+      ],
+      "centerFromPivot": [
+        -0.4235,
+        0.0286,
+        -0.0549
+      ],
+      "meshId": null
+    },
+    {
+      "name": "olho",
+      "triangles": 20,
+      "sizeStuds": [
+        0.2155,
+        0.2419,
+        0.215
+      ],
+      "centerFromPivot": [
+        0.0076,
+        -0.0072,
+        0.0022
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 2
+}

@@ -1,0 +1,42 @@
+{
+  "auraId": "fio_das_parcas",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/fio_das_parcas",
+  "templateFile": "assets/roblox/auras_originais/fio_das_parcas.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "tear",
+      "triangles": 184,
+      "sizeStuds": [
+        2.9127,
+        2.4019,
+        0.1377
+      ],
+      "centerFromPivot": [
+        0.0,
+        0.3333,
+        -0.0
+      ],
+      "meshId": null
+    },
+    {
+      "name": "fio",
+      "triangles": 160,
+      "sizeStuds": [
+        0.5324,
+        3.6322,
+        0.4414
+      ],
+      "centerFromPivot": [
+        -0.0016,
+        0.0006,
+        -0.0013
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 4
+}

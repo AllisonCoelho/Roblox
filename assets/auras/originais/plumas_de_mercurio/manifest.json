@@ -1,0 +1,27 @@
+{
+  "auraId": "plumas_de_mercurio",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/plumas_de_mercurio",
+  "templateFile": "assets/roblox/auras_originais/plumas_de_mercurio.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "asa",
+      "triangles": 324,
+      "sizeStuds": [
+        2.435,
+        2.7514,
+        0.1831
+      ],
+      "centerFromPivot": [
+        0.9875,
+        0.613,
+        0.0279
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 2
+}

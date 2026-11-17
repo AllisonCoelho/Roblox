@@ -1,0 +1,57 @@
+{
+  "auraId": "centelha_do_nexo",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/centelha_do_nexo",
+  "templateFile": "assets/roblox/auras_originais/centelha_do_nexo.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "nucleo",
+      "triangles": 16,
+      "sizeStuds": [
+        0.5937,
+        1.1,
+        0.5909
+      ],
+      "centerFromPivot": [
+        0.0374,
+        0.07,
+        -0.0381
+      ],
+      "meshId": null
+    },
+    {
+      "name": "lasca",
+      "triangles": 10,
+      "sizeStuds": [
+        0.194,
+        0.7606,
+        0.178
+      ],
+      "centerFromPivot": [
+        -0.0095,
+        0.163,
+        -0.0015
+      ],
+      "meshId": null
+    },
+    {
+      "name": "halo",
+      "triangles": 468,
+      "sizeStuds": [
+        4.6528,
+        0.1572,
+        4.6688
+      ],
+      "centerFromPivot": [
+        -0.0547,
+        0.0604,
+        -0.0077
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 5
+}
