@@ -6,6 +6,7 @@ local Workspace = game:GetService("Workspace")
 
 local Poses = require(script.Parent.Parent.Incursoes.Poses)
 local Movimento = require(script.Parent.Gear5Movimento)
+local Quadros = require(script.Parent.Gear5Poses)
 
 local Presenca = {}
 
@@ -13,6 +14,7 @@ type Junta = Motor6D | AnimationConstraint
 type Vinculo = {
 	junta: Junta,
 	baseR6: CFrame,
+	canal: string,
 	anterior: CFrame?,
 	aplicado: CFrame?,
 }
@@ -21,15 +23,16 @@ type Ativa = {
 	personagem: Model,
 	raiz: BasePart,
 	humanoide: Humanoid,
-	fase: number,
-	misturaIdle: number,
-	contatoIdle: boolean,
+	fasePasso: number,
+	tempoIdle: number,
+	misturaPasso: number,
+	misturaAr: number,
+	contatoPasso: string?,
 	juntas: { [string]: Vinculo },
 	relerJuntas: boolean,
 	conexoes: { RBXScriptConnection },
 	noAr: boolean,
 	velocidadeQueda: number,
-	proximoPasso: number,
 	ultimoImpacto: number,
 	visivel: boolean,
 }
@@ -96,7 +99,7 @@ local function baseNoChao(posicao: Vector3, normal: Vector3): CFrame
 	return CFrame.fromMatrix(posicao, direita, normal, tras)
 end
 
-local function marcarChao(a: Ativa, intensidade: number, camera: Vector3)
+local function marcarChao(a: Ativa, intensidade: number, camera: Vector3, pe: BasePart?)
 	if (a.raiz.Position - camera).Magnitude > DISTANCIA_EFEITO then
 		return
 	end
@@ -107,8 +110,8 @@ local function marcarChao(a: Ativa, intensidade: number, camera: Vector3)
 		table.insert(excluir, pasta)
 	end
 	params.FilterDescendantsInstances = excluir
-	local hit =
-		Workspace:Raycast(a.raiz.Position + Vector3.new(0, 1, 0), Vector3.new(0, -9, 0), params)
+	local origem = if pe then pe.Position else a.raiz.Position
+	local hit = Workspace:Raycast(origem + Vector3.new(0, 2, 0), Vector3.new(0, -10, 0), params)
 	if not hit or hit.Normal.Y < 0.6 then
 		return
 	end
@@ -175,6 +178,8 @@ local NOMES_JUNTAS: { [string]: string } = {
 	["Left Hip"] = "quadrilE",
 	RightKnee = "joelhoD",
 	LeftKnee = "joelhoE",
+	RightAnkle = "tornozeloD",
+	LeftAnkle = "tornozeloE",
 }
 
 local function lerJuntas(personagem: Model, a: Ativa)
@@ -185,6 +190,7 @@ local function lerJuntas(personagem: Model, a: Ativa)
 		if nome and (obj:IsA("Motor6D") or obj:IsA("AnimationConstraint")) then
 			a.juntas[nome] = {
 				junta = obj,
+				canal = if r6 and Quadros.risada[nome .. "R6"] then nome .. "R6" else nome,
 				baseR6 = if r6 and obj:IsA("Motor6D") then obj.C1.Rotation else CFrame.identity,
 			}
 		end
@@ -212,24 +218,15 @@ function Presenca.antesDaAnimacao()
 	end
 end
 
-local function posar(
-	vinculo: Vinculo?,
-	x: number,
-	y: number,
-	z: number,
-	peso: number,
-	altura: number?
-)
-	if not vinculo or not vinculo.junta.Parent then
+local function posar(vinculo: Vinculo, pose: CFrame, peso: number, altura: number)
+	local junta = vinculo.junta
+	if not junta.Parent then
 		return
 	end
-	local junta = vinculo.junta
-	local pose = CFrame.Angles(math.rad(x), math.rad(y), math.rad(z))
 	local baseR6 = vinculo.baseR6
 	local anterior = junta.Transform
 	local orientacao = anterior:Lerp(baseR6:Inverse() * pose * baseR6, peso)
-	local aplicado = CFrame.new(anterior.Position + Vector3.new(0, altura or 0, 0))
-		* orientacao.Rotation
+	local aplicado = CFrame.new(anterior.Position + Vector3.new(0, altura, 0)) * orientacao.Rotation
 	junta.Transform = aplicado
 	vinculo.anterior = anterior
 	vinculo.aplicado = aplicado
@@ -246,103 +243,51 @@ function Presenca.simular(dt: number)
 			or (jogador and jogador:GetAttribute("EmDueloArena"))
 			or Poses.ocupada(personagem)
 		then
-			a.fase = 0
-			a.misturaIdle = 0
-			a.contatoIdle = false
+			a.misturaPasso = 0
+			a.misturaAr = 0
+			a.contatoPasso = nil
 			continue
 		end
 		if a.relerJuntas then
 			lerJuntas(personagem, a)
 		end
 
-		local velocidade = a.raiz.AssemblyLinearVelocity
-		local rapidez = Vector3.new(velocidade.X, 0, velocidade.Z).Magnitude
+		local v = a.raiz.AssemblyLinearVelocity
+		local rapidez = Vector3.new(v.X, 0, v.Z).Magnitude
 		local noChao = a.humanoide.FloorMaterial ~= Enum.Material.Air
-		local parado = noChao and rapidez < 2 and a.humanoide.MoveDirection.Magnitude < 0.1
-		local escala = if movimentoReduzido then 0.24 else 1
-		local mistura = 1 - math.exp(-14 * dt)
-		local alvoIdle = if parado then 1 else 0
-		a.misturaIdle += (alvoIdle - a.misturaIdle) * mistura
-
-		if parado and not movimentoReduzido then
-			local proxima, contato = Movimento.avancar(a.fase, dt)
-			a.fase = proxima
-			a.contatoIdle = (a.contatoIdle or contato) and a.juntas.raiz ~= nil
-		elseif a.misturaIdle < 0.02 or movimentoReduzido then
-			a.fase = 0
+		local andando = noChao and rapidez > 0.65
+		local mistura = 1 - math.exp(-12 * dt)
+		local alvoPasso = if andando then 1 else 0
+		local alvoAr = if noChao then 0 else 1
+		a.misturaPasso += (alvoPasso - a.misturaPasso) * mistura
+		a.misturaAr += (alvoAr - a.misturaAr) * mistura
+		if andando then
+			local fase, pe = Movimento.passo(a.fasePasso, dt, rapidez)
+			a.fasePasso = fase
+			a.contatoPasso = pe or a.contatoPasso
+			if a.misturaPasso > 0.95 then
+				a.tempoIdle = 0
+			end
+		elseif noChao then
+			a.tempoIdle += dt
 		end
 
-		local altura, compressao = Movimento.amostrar(a.fase)
-		local suspenso = math.max(0, altura)
-		local idle = a.misturaIdle
-		local voo = if noChao then 0 else 1
-		local peso = math.max(idle, 0.48 + 0.26 * voo)
-		local oscilar = math.sin(os.clock() * 8)
-		local mover = (1 - idle) * (1 - voo)
-		local salto = (1 - idle) * voo
-		local quique = if noChao and not movimentoReduzido then altura * idle else 0
-		local abaixar = if movimentoReduzido then 0 else compressao
-		local juntas = a.juntas
-		local tronco = (-21 + 27 * abaixar) * idle - 15 * salto + 8 * mover
+		local relaxar, flutuar = Movimento.parado(a.tempoIdle)
+		local esquerda, indice, t, quique = Movimento.corrida(a.fasePasso)
+		local passos = if esquerda then Quadros.passoE else Quadros.passoD
+		local escala = if movimentoReduzido then 0.26 else 1
+		local alturaIdle = 0.21 + 0.14 * relaxar + flutuar
+		local alturaPasso = quique * math.clamp(0.62 + rapidez * 0.025, 0.62, 1)
+		local altura = (alturaIdle + (alturaPasso - alturaIdle) * a.misturaPasso)
+			* (1 - a.misturaAr)
+			* escala
 
-		posar(
-			juntas.raiz,
-			tronco * (if juntas.cintura then 0.28 else 0.78),
-			0,
-			-8 * idle,
-			peso * escala,
-			quique
-		)
-		posar(juntas.cintura, tronco, -9 * idle, -10 * idle, peso * escala)
-		posar(juntas.pescoco, (-8 + 15 * abaixar) * idle, 7 * idle, 10 * idle, peso * escala)
-		-- Mão direita sobre a testa, braço esquerdo aberto e pernas assimétricas.
-		posar(
-			juntas.ombroD,
-			(114 + 17 * suspenso - 16 * abaixar) * idle + 32 * salto + 34 * mover,
-			0,
-			-22 * idle + 28 * salto,
-			peso * escala
-		)
-		posar(
-			juntas.ombroE,
-			(20 + 12 * abaixar) * idle + 35 * salto - 22 * oscilar * mover,
-			0,
-			(-60 - 15 * suspenso) * idle - 42 * salto - 18 * mover,
-			peso * escala
-		)
-		posar(juntas.cotoveloD, -48 * idle - 35 * salto - 40 * mover, 0, 0, peso * escala)
-		posar(juntas.cotoveloE, -18 * idle - 16 * salto - 15 * mover, 0, 0, peso * escala)
-		-- Na corrida, mantenha a passada do Animator. Dê forma às pernas no quique e no ar.
-		local pesoPernas = (idle + salto * 0.65) * escala
-		if pesoPernas > 0.02 then
-			posar(
-				juntas.quadrilD,
-				(-20 - 44 * abaixar - 22 * suspenso) * idle - 34 * salto,
-				0,
-				10 * idle,
-				pesoPernas
-			)
-			posar(
-				juntas.quadrilE,
-				(11 - 42 * abaixar - 29 * suspenso) * idle + 12 * salto,
-				0,
-				-12 * idle,
-				pesoPernas
-			)
-			posar(
-				juntas.joelhoD,
-				(20 + 68 * abaixar + 40 * suspenso) * idle + 46 * salto,
-				0,
-				0,
-				pesoPernas
-			)
-			posar(
-				juntas.joelhoE,
-				(14 + 62 * abaixar + 46 * suspenso) * idle + 62 * salto,
-				0,
-				0,
-				pesoPernas
-			)
+		for nome, vinculo in a.juntas do
+			local canal = vinculo.canal
+			local idle = Quadros.risada[canal]:Lerp(Quadros.relaxado[canal], relaxar)
+			local passo = passos[indice][canal]:Lerp(passos[indice + 1][canal], t)
+			local pose = idle:Lerp(passo, a.misturaPasso):Lerp(Quadros.salto[canal], a.misturaAr)
+			posar(vinculo, pose, escala, if nome == "raiz" then altura else 0)
 		end
 	end
 end
@@ -375,15 +320,15 @@ function Presenca.definir(personagem: Model, id: string?)
 		personagem = personagem,
 		raiz = raiz,
 		humanoide = humanoide,
-		fase = 0,
-		misturaIdle = 0,
-		contatoIdle = false,
+		fasePasso = 0,
+		tempoIdle = 0,
+		misturaPasso = 0,
+		misturaAr = 0,
 		juntas = {},
 		relerJuntas = true,
 		conexoes = {},
 		noAr = humanoide.FloorMaterial == Enum.Material.Air,
 		velocidadeQueda = 0,
-		proximoPasso = os.clock() + 0.25,
 		ultimoImpacto = 0,
 		visivel = true,
 	}
@@ -416,9 +361,8 @@ function Presenca.atualizar(_dt: number, camera: Vector3)
 		a.visivel = distancia <= DISTANCIA_POSE
 		local ar = a.humanoide.FloorMaterial == Enum.Material.Air
 		local v = a.raiz.AssemblyLinearVelocity
-		local rapidez = Vector3.new(v.X, 0, v.Z).Magnitude
-		local contatoIdle = a.contatoIdle
-		a.contatoIdle = false
+		local contatoPasso = a.contatoPasso
+		a.contatoPasso = nil
 
 		if
 			not a.visivel
@@ -442,12 +386,12 @@ function Presenca.atualizar(_dt: number, camera: Vector3)
 		if ar or pousou or movimentoReduzido or qualidadeBaixa or Poses.ocupada(personagem) then
 			continue
 		end
-		if contatoIdle and rapidez < 2 and agora - a.ultimoImpacto > 0.35 then
-			marcarChao(a, 0.8, camera)
+		if contatoPasso and agora - a.ultimoImpacto > 0.14 then
+			local nome = if contatoPasso == "D" then "Right" else "Left"
+			local pe = personagem:FindFirstChild(nome .. "Foot")
+				or personagem:FindFirstChild(nome .. " Leg")
+			marcarChao(a, 0.64, camera, if pe and pe:IsA("BasePart") then pe else nil)
 			a.ultimoImpacto = agora
-		elseif rapidez > 5 and agora >= a.proximoPasso then
-			marcarChao(a, 0.42, camera)
-			a.proximoPasso = agora + 0.65
 		end
 	end
 	animarChao()
