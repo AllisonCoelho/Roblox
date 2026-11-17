@@ -16,6 +16,7 @@ local Remotos = require(Shared.Remotos)
 local Servicos = script.Parent.Parent:WaitForChild("Servicos")
 local Acoes = require(Servicos:WaitForChild("Acoes"))
 local Dados = require(Servicos:WaitForChild("Dados"))
+local Combate = require(script.Parent.Combate)
 local Inimigos = require(script.Parent.Inimigos)
 local Mapa = require(script.Parent.Mapa)
 
@@ -170,6 +171,13 @@ local function progressoDe(player: Player): any
 		else Incursoes.padrao()
 end
 
+-- Cor do kit genérico de combate: a cor principal da aura equipada
+local function corDe(player: Player): Color3
+	local estado = Dados.de(player)
+	local aura = if estado and estado.equipada then Auras.porId[estado.equipada] else nil
+	return if aura then Color3.fromHex(aura.cores[1]) else Color3.fromHex("C9B8FF")
+end
+
 local function ressonanciaDe(player: Player): number
 	local estado = Dados.de(player)
 	local melhor = if estado then Auras.melhorDe(estado.auras) else nil
@@ -253,6 +261,7 @@ local function desligar(player: Player, run: Run)
 	run.membros[player] = nil
 	daRun[player] = nil
 	embarques[player] = nil
+	Combate.sair(player)
 end
 
 -- Um jogador sai da partida (saiu, caiu sem vidas ou desconectou): leva o que já ganhou
@@ -518,6 +527,11 @@ local function lancar(
 		}
 		run.membros[player] = m
 		daRun[player] = run
+		Combate.entrar(
+			player,
+			if player.Character then player.Character:GetAttribute("AuraVfx") else nil,
+			corDe(player)
+		)
 		table.insert(
 			m.conexoes,
 			player.CharacterAdded:Connect(function(personagem)
@@ -891,6 +905,61 @@ local function acaoPulso(player: Player): (boolean, string?)
 	return true, nil
 end
 
+-- Contexto de combate: só dentro da partida, vivo, no andar e fora do embarque
+local function contextoCombate(player: Player): Combate.Contexto?
+	local run = daRun[player]
+	if not run or run.estado ~= "andar" then
+		return nil
+	end
+	local m = run.membros[player]
+	local r, h = corpo(player)
+	local mapa = run.mapa
+	if not m or not r or not h or h.Health <= 0 or not mapa or embarques[player] then
+		return nil
+	end
+	local distancia = r.Position - mapa.origem.Position
+	if distancia.Magnitude >= 200 or math.abs(distancia.Y) > 30 then
+		return nil
+	end
+	Combate.atualizarKit(player, (player.Character :: Model):GetAttribute("AuraVfx"))
+	return {
+		raiz = r,
+		humanoide = h,
+		inimigos = run.inimigos,
+		ressonancia = m.ressonancia,
+		paraRun = function(dados)
+			paraRun(run, dados)
+		end,
+		enviar = function(dados)
+			enviar(player, dados)
+		end,
+	}
+end
+
+local function acaoTecnica(player: Player, id: any, dir: any): (boolean, string?)
+	local ctx = contextoCombate(player)
+	if not ctx then
+		return false, nil
+	end
+	return Combate.tecnica(player, id, dir, ctx)
+end
+
+local function acaoEsquiva(player: Player, dir: any): (boolean, string?)
+	local ctx = contextoCombate(player)
+	if not ctx then
+		return false, nil
+	end
+	return Combate.esquiva(player, dir, ctx)
+end
+
+local function acaoGuarda(player: Player, ligar: any): (boolean, string?)
+	local ctx = contextoCombate(player)
+	if not ctx then
+		return false, nil
+	end
+	return Combate.guarda(player, ligar, ctx)
+end
+
 local function acaoReliquia(player: Player, id: any): (boolean, string?)
 	if type(id) ~= "string" or not Incursoes.reliquiaPorId[id] then
 		return false, "Relíquia inválida."
@@ -926,6 +995,10 @@ function Servico.iniciar()
 	Acoes.registrar("IncursaoSair", acaoSair)
 	Acoes.registrar("IncursaoPulso", acaoPulso)
 	Acoes.registrar("IncursaoReliquia", acaoReliquia)
+	Acoes.registrar("IncursaoTecnica", acaoTecnica)
+	Acoes.registrar("IncursaoEsquiva", acaoEsquiva)
+	Acoes.registrar("IncursaoGuarda", acaoGuarda)
+	Combate.iniciar()
 
 	Dados.quandoSair(function(player)
 		embarques[player] = nil
@@ -944,6 +1017,7 @@ function Servico.iniciar()
 		end
 		local passo = math.min(acumulado, 0.2)
 		acumulado = 0
+		Combate.passo()
 		for _, run in runs do
 			local ok, erro = pcall(passoRun, run, passo)
 			if not ok then

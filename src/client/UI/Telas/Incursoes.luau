@@ -15,6 +15,7 @@ local Kit = require(script.Parent.Parent.Kit)
 local Escala = require(script.Parent.Parent.Escala)
 local Navegacao = require(script.Parent.Parent.Navegacao)
 local Estado = require(script.Parent.Parent.Estado)
+local Combate = require(script.Parent.IncursoesCombate)
 local Visual = require(
 	script.Parent.Parent.Parent
 		:WaitForChild("Mundo")
@@ -441,6 +442,7 @@ local function definirPartida(universo: string?)
 	end
 	emPartida = universo
 	hud.Visible = universo ~= nil
+	Combate.definirPartida(universo ~= nil)
 	if mudou then
 		aoPartida(universo ~= nil)
 		if universo then
@@ -537,6 +539,8 @@ local function aoEvento(d: any)
 		end
 	elseif d.tipo == "pulso" and typeof(d.origem) == "Vector3" and type(d.raio) == "number" then
 		Visual.pulso(d.origem, d.raio, emPartida)
+	elseif d.tipo == "combate" or d.tipo == "combateEstado" or d.tipo == "guardaQuebrou" then
+		Combate.evento(d)
 	elseif d.tipo == "aviso" and type(d.texto) == "string" then
 		aviso(d.texto)
 	elseif d.tipo == "loot" then
@@ -569,6 +573,7 @@ function IncursoesUI.montar(raiz: Frame, aoAviso: (string) -> (), aoMudarPartida
 	aoPartida = aoMudarPartida
 	montarPainel()
 	montarHud(raiz)
+	Combate.montar(hud)
 	Remotos.evento("Incursao").OnClientEvent:Connect(aoEvento)
 	task.spawn(Visual.iniciar)
 	UserInputService.InputBegan:Connect(function(input, processado)
@@ -580,6 +585,10 @@ function IncursoesUI.montar(raiz: Frame, aoAviso: (string) -> (), aoMudarPartida
 		local falta = math.clamp((proximoPulso - os.clock()) / Dados.PULSO_ESPERA, 0, 1)
 		anelPulso.Size = UDim2.fromScale(1 - falta, 1 - falta)
 	end)
+end
+
+function IncursoesUI.definirQualidade(qualidadeBaixa: boolean, movimentoReduzido: boolean)
+	Combate.definirQualidade(qualidadeBaixa, movimentoReduzido)
 end
 
 function IncursoesUI.abrir()

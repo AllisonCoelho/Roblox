@@ -22,8 +22,27 @@ MODULOS = {
     "PermissaoDev": "src/server/Servicos/PermissaoDev.luau",
     "Arena": "src/shared/Dados/Arena.luau",
     "Incursoes": "src/shared/Dados/Incursoes.luau",
+    "Combate": "src/shared/Dados/Combate.luau",
 }
 codigo = ["""
+-- Vector3 mínimo (o luau puro não tem): só para a geometria do combate nos testes
+local Vector3 = {}
+Vector3.__index = function(v, k)
+    if k == "Magnitude" then return math.sqrt(v.X * v.X + v.Y * v.Y + v.Z * v.Z)
+    elseif k == "Unit" then
+        local m = math.sqrt(v.X * v.X + v.Y * v.Y + v.Z * v.Z)
+        return Vector3.new(v.X / m, v.Y / m, v.Z / m)
+    elseif k == "Dot" then return function(a, b) return a.X * b.X + a.Y * b.Y + a.Z * b.Z end
+    end
+    return nil
+end
+function Vector3.new(x, y, z) return setmetatable({ X = x or 0, Y = y or 0, Z = z or 0 }, Vector3) end
+Vector3.__add = function(a, b) return Vector3.new(a.X + b.X, a.Y + b.Y, a.Z + b.Z) end
+Vector3.__sub = function(a, b) return Vector3.new(a.X - b.X, a.Y - b.Y, a.Z - b.Z) end
+Vector3.__mul = function(a, b)
+    if type(a) == "number" then a, b = b, a end
+    return Vector3.new(a.X * b, a.Y * b, a.Z * b)
+end
 local MODULOS, CACHE = {}, {}
 local function req(nome)
     if CACHE[nome] == nil then CACHE[nome] = MODULOS[nome]() end
