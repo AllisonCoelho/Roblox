@@ -1,0 +1,27 @@
+{
+  "auraId": "jiboia_de_fumaca",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/jiboia_de_fumaca",
+  "templateFile": "assets/roblox/auras_originais/jiboia_de_fumaca.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "corpo",
+      "triangles": 600,
+      "sizeStuds": [
+        5.3945,
+        2.9687,
+        5.0298
+      ],
+      "centerFromPivot": [
+        -0.1389,
+        0.3794,
+        0.197
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 2
+}

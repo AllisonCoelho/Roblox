@@ -270,17 +270,6 @@ local function tocarRitual(personagem: Model, aura: Auras.Aura, op: Opcoes): () 
 	local corTier = Color3.fromHex(Auras.Tiers[aura.tier].cor)
 	local c1 = Color3.fromHex(aura.cores[1])
 	local c2 = Color3.fromHex(aura.cores[2])
-	-- Ritual Personalizado (cosmético): as cores do estilo equipado puxam as da aura
-	local dono = game:GetService("Players"):GetPlayerFromCharacter(personagem)
-	local estilo1 = dono and dono:GetAttribute("CosRitualCor")
-	local estilo2 = dono and dono:GetAttribute("CosRitualCor2")
-	if type(estilo1) == "string" and string.match(estilo1, "^%x%x%x%x%x%x$") then
-		local e2 = if type(estilo2) == "string" and string.match(estilo2, "^%x%x%x%x%x%x$")
-			then estilo2
-			else estilo1
-		c1 = c1:Lerp(Color3.fromHex(estilo1), 0.6)
-		c2 = c2:Lerp(Color3.fromHex(e2), 0.6)
-	end
 	-- Toda raridade tem pose: um gesto curto nas comuns e o "rasgar" nas altas
 	local comPose = not op.movimentoReduzido
 	local rasga = cat.rachaduras > 0

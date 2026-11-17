@@ -1,0 +1,42 @@
+{
+  "auraId": "correntes_do_vazio",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/correntes_do_vazio",
+  "templateFile": "assets/roblox/auras_originais/correntes_do_vazio.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "corrente",
+      "triangles": 1080,
+      "sizeStuds": [
+        0.3489,
+        3.2686,
+        0.344
+      ],
+      "centerFromPivot": [
+        -0.0004,
+        -1.4007,
+        -0.002
+      ],
+      "meshId": null
+    },
+    {
+      "name": "nucleo",
+      "triangles": 80,
+      "sizeStuds": [
+        0.7721,
+        0.7966,
+        0.7997
+      ],
+      "centerFromPivot": [
+        0.009,
+        -0.029,
+        0.0168
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 7
+}

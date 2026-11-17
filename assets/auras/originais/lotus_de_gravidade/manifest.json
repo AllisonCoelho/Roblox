@@ -1,0 +1,42 @@
+{
+  "auraId": "lotus_de_gravidade",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/lotus_de_gravidade",
+  "templateFile": "assets/roblox/auras_originais/lotus_de_gravidade.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "lotus",
+      "triangles": 304,
+      "sizeStuds": [
+        1.3868,
+        0.7762,
+        1.3868
+      ],
+      "centerFromPivot": [
+        0.0,
+        -0.2005,
+        -0.0
+      ],
+      "meshId": null
+    },
+    {
+      "name": "petala_solta",
+      "triangles": 16,
+      "sizeStuds": [
+        0.28,
+        0.55,
+        0.05
+      ],
+      "centerFromPivot": [
+        0.0,
+        0.275,
+        -0.0
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 6
+}

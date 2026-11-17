@@ -1,0 +1,57 @@
+{
+  "auraId": "mare_de_quartzo",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/mare_de_quartzo",
+  "templateFile": "assets/roblox/auras_originais/mare_de_quartzo.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "fita",
+      "triangles": 276,
+      "sizeStuds": [
+        4.6456,
+        2.8604,
+        2.068
+      ],
+      "centerFromPivot": [
+        0.0046,
+        -0.1972,
+        1.0207
+      ],
+      "meshId": null
+    },
+    {
+      "name": "concha",
+      "triangles": 112,
+      "sizeStuds": [
+        0.8175,
+        0.4601,
+        0.117
+      ],
+      "centerFromPivot": [
+        0.0,
+        0.1954,
+        0.0435
+      ],
+      "meshId": null
+    },
+    {
+      "name": "bolha",
+      "triangles": 12,
+      "sizeStuds": [
+        0.3091,
+        0.32,
+        0.3027
+      ],
+      "centerFromPivot": [
+        -0.0071,
+        0.0,
+        0.0139
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 5
+}

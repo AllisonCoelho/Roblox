@@ -1,0 +1,42 @@
+{
+  "auraId": "orquestra_das_estrelas",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/orquestra_das_estrelas",
+  "templateFile": "assets/roblox/auras_originais/orquestra_das_estrelas.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "harpa",
+      "triangles": 444,
+      "sizeStuds": [
+        2.1075,
+        2.3592,
+        0.116
+      ],
+      "centerFromPivot": [
+        -0.0031,
+        0.1748,
+        -0.0
+      ],
+      "meshId": null
+    },
+    {
+      "name": "nota",
+      "triangles": 40,
+      "sizeStuds": [
+        0.3804,
+        0.3618,
+        0.06
+      ],
+      "centerFromPivot": [
+        0.0,
+        0.0191,
+        -0.0
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 5
+}

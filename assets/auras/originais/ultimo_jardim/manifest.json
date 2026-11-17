@@ -1,0 +1,42 @@
+{
+  "auraId": "ultimo_jardim",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/ultimo_jardim",
+  "templateFile": "assets/roblox/auras_originais/ultimo_jardim.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "arvore",
+      "triangles": 468,
+      "sizeStuds": [
+        2.5733,
+        3.9619,
+        2.5379
+      ],
+      "centerFromPivot": [
+        0.0111,
+        0.2117,
+        0.052
+      ],
+      "meshId": null
+    },
+    {
+      "name": "flor_galaxia",
+      "triangles": 132,
+      "sizeStuds": [
+        0.8551,
+        0.8337,
+        0.1679
+      ],
+      "centerFromPivot": [
+        0.0,
+        0.0217,
+        0.0519
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 6
+}

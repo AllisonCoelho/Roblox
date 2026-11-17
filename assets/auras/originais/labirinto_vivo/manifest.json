@@ -1,0 +1,57 @@
+{
+  "auraId": "labirinto_vivo",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/labirinto_vivo",
+  "templateFile": "assets/roblox/auras_originais/labirinto_vivo.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "cubo",
+      "triangles": 192,
+      "sizeStuds": [
+        1.2707,
+        1.2707,
+        1.2707
+      ],
+      "centerFromPivot": [
+        0.0,
+        0.0,
+        -0.0
+      ],
+      "meshId": null
+    },
+    {
+      "name": "escada",
+      "triangles": 100,
+      "sizeStuds": [
+        0.6434,
+        1.2588,
+        1.7
+      ],
+      "centerFromPivot": [
+        0.0217,
+        0.5894,
+        0.72
+      ],
+      "meshId": null
+    },
+    {
+      "name": "arco_pedra",
+      "triangles": 120,
+      "sizeStuds": [
+        1.865,
+        2.1197,
+        0.25
+      ],
+      "centerFromPivot": [
+        0.0075,
+        -0.0901,
+        -0.0
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 4
+}

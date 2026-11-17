@@ -1,0 +1,42 @@
+{
+  "auraId": "esporos_de_safira",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/esporos_de_safira",
+  "templateFile": "assets/roblox/auras_originais/esporos_de_safira.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "cogumelo",
+      "triangles": 138,
+      "sizeStuds": [
+        0.8114,
+        1.0586,
+        0.8114
+      ],
+      "centerFromPivot": [
+        0.0,
+        -0.0793,
+        -0.0
+      ],
+      "meshId": null
+    },
+    {
+      "name": "esporo_cubo",
+      "triangles": 12,
+      "sizeStuds": [
+        0.198,
+        0.2202,
+        0.2415
+      ],
+      "centerFromPivot": [
+        0.0,
+        0.0,
+        -0.0
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 7
+}

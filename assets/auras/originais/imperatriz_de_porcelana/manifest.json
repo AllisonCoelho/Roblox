@@ -1,0 +1,42 @@
+{
+  "auraId": "imperatriz_de_porcelana",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/imperatriz_de_porcelana",
+  "templateFile": "assets/roblox/auras_originais/imperatriz_de_porcelana.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "leque",
+      "triangles": 580,
+      "sizeStuds": [
+        3.3807,
+        1.7835,
+        1.545
+      ],
+      "centerFromPivot": [
+        0.0,
+        0.8531,
+        0.755
+      ],
+      "meshId": null
+    },
+    {
+      "name": "caco",
+      "triangles": 96,
+      "sizeStuds": [
+        0.8,
+        0.78,
+        0.0742
+      ],
+      "centerFromPivot": [
+        0.0,
+        0.01,
+        0.0071
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 4
+}

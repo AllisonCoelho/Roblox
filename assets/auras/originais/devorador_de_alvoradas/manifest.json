@@ -1,0 +1,57 @@
+{
+  "auraId": "devorador_de_alvoradas",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/devorador_de_alvoradas",
+  "templateFile": "assets/roblox/auras_originais/devorador_de_alvoradas.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "sol_negro",
+      "triangles": 320,
+      "sizeStuds": [
+        1.8634,
+        1.8471,
+        0.9241
+      ],
+      "centerFromPivot": [
+        -0.0402,
+        0.0059,
+        -0.0008
+      ],
+      "meshId": null
+    },
+    {
+      "name": "mandibula",
+      "triangles": 288,
+      "sizeStuds": [
+        2.5931,
+        1.0211,
+        0.2365
+      ],
+      "centerFromPivot": [
+        0.001,
+        0.8511,
+        -0.0
+      ],
+      "meshId": null
+    },
+    {
+      "name": "anel_brasas",
+      "triangles": 112,
+      "sizeStuds": [
+        3.5,
+        3.4122,
+        0.1617
+      ],
+      "centerFromPivot": [
+        0.0,
+        0.0,
+        0.0005
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 4
+}

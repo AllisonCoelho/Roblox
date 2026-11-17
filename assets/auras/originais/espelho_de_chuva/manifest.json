@@ -1,0 +1,42 @@
+{
+  "auraId": "espelho_de_chuva",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/espelho_de_chuva",
+  "templateFile": "assets/roblox/auras_originais/espelho_de_chuva.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "espelho",
+      "triangles": 60,
+      "sizeStuds": [
+        0.99,
+        1.29,
+        0.09
+      ],
+      "centerFromPivot": [
+        0.0,
+        0.0,
+        -0.0
+      ],
+      "meshId": null
+    },
+    {
+      "name": "gota_espelho",
+      "triangles": 108,
+      "sizeStuds": [
+        0.1061,
+        0.3,
+        0.1061
+      ],
+      "centerFromPivot": [
+        0.0,
+        0.045,
+        -0.0
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 7
+}

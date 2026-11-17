@@ -13,19 +13,19 @@ ou a recompensa das Incursões.
 | **Giro Automático** | 49 | Liga o giro automático de auras | 🔥 | ✅ ativo (falta o ID) |
 | **Pular Animação** | 39 | Pular o ritual, desligar animações e encurtar repetidas | 🔥 | ✅ ativo (falta o ID) |
 | **Pacote do Iniciante** | 49 | Título "Despertado", distintivo 🌱, Rastro de Faíscas | 🔥 Alta | ✅ ativo (falta o ID) |
-| **Auto Inteligente** | 79 | O auto-giro para sozinho em aura rara (limiar) ou nova | 🔥 Alta | ✅ ativo (falta o ID) |
-| **Presets de Auras** | 49 | 5 presets de aura + cosméticos | Alta | ✅ ativo (falta o ID) |
-| **Ritual Personalizado** | 99 | 3 estilos de cor do ritual (Solar, Abismo, Aurora) | 🔥 Alta | ✅ ativo (falta o ID) |
+| Auto Inteligente | 79 | Configurações avançadas para o giro automático | 🔥 Alta | planejado |
+| Presets de Auras | 49 | Salvar combinações de apresentação e aura | Alta | planejado |
+| Ritual Personalizado | 99 | Novo efeito visual para o despertar | 🔥 Alta | planejado |
 | **VIP do Nexo** | 199 | Título "VIP do Nexo", 👑, Rastro Real, nome dourado no chat, +10% XP da Temporada | 🔥 Alta | ✅ ativo (falta o ID) |
-| **Pacote Fundador** | 149 | Título, distintivo ✧ e rastro Fundador | Alta | ✅ ativo (falta o ID) |
-| **Títulos Especiais** | 39–79 | 3 títulos avulsos (Developer Products) | Média | ✅ ativo (faltam os IDs) |
-| **Trilhas de Movimento** | 49–99 | 3 rastros avulsos | Média | ✅ ativo (faltam os IDs) |
-| **Aura: Aparência Alternativa** | 99–199 | 3 recolorações da aura equipada | 🔥 Alta | ✅ ativo (faltam os IDs) |
-| **Emotes de Vitória** | 49–99 | 3 celebrações ao vencer na Arena | Média | ✅ ativo (faltam os IDs) |
-| **Finalizações Especiais** | 99–149 | 2 efeitos no Soberano derrotado | Média | ✅ ativo (faltam os IDs) |
+| Pacote Fundador | 149 | Cosméticos comemorativos e distintivo permanente | Alta | planejado |
+| Títulos Especiais | 39–79 | Títulos visíveis no mundo | Média | planejado |
+| Trilhas de Movimento | 49–99 | Efeitos visuais ao correr e saltar | Média | planejado |
+| Aura: Aparência Alternativa | 99–199 | Variação cosmética de uma aura obtida | 🔥 Alta | planejado |
+| Emotes de Vitória | 49–99 | Celebrações na Arena | Média | planejado |
+| Finalizações Especiais | 99–149 | Animação visual de vitória na Arena | Média | planejado |
 | **Passe de Temporada** | 299 | Trilha premium da Temporada 1 (14 cosméticos) | 🔥 Alta | ✅ ativo (falta o ID) |
-| **Assinatura do Nexo** | 99/mês | Título Membro (enquanto ativa) + 1 cosmético permanente por mês | Baixa | ✅ ativo (falta o ID) |
-| **Servidor Privado** | 49/mês | Servidor do Roblox; dono com 🏠 no chat | Média | ✅ ativo (ligar no Creator Hub) |
+| Assinatura do Nexo | 99/mês | Cosméticos mensais e conveniência | Baixa no lançamento | planejado |
+| Servidor Privado | 49/mês | Espaço para jogar com amigos | Média | planejado |
 
 ## Como ativar um passe (dono)
 1. No Creator Hub, abra a experiência → **Monetização → Passes** → **Criar passe**.
@@ -57,17 +57,3 @@ ou a recompensa das Incursões.
   - O resgate é validado no servidor (nível, trilha e passe).
   - Quando a temporada acaba, o XP para de subir, mas o que já foi alcançado continua resgatável.
   - Na próxima temporada o progresso zera (novo `Temporada.ID`) e os itens obtidos continuam com o jogador.
-
-## Segundo lote (todos os 14 ativos)
-- **Itens avulsos** (Títulos, Trilhas, Aparências, Emotes, Finalizações) são **Developer Products**:
-  - O dono cria cada um em Creator Hub → Monetização → Produtos de desenvolvedor, com o preço do item em `Dados/Cosmeticos.luau`.
-  - O dono preenche o `developerProductId` do item.
-  - A entrega acontece só em `Servicos/Compras.luau` (ProcessReceipt).
-  - Cada `PurchaseId` é salvo no perfil, com confirmação do DataStore antes de responder ao Roblox. Assim uma compra nunca é entregue duas vezes nem perdida.
-  - Em sessão de teste, a entrega fica para depois.
-- **Assinatura do Nexo** é uma Roblox Subscription:
-  - O dono cria em Creator Hub → Monetização → Assinaturas (99/mês).
-  - O dono coloca o id `EXP-...` em `subscriptionId`.
-- **Servidor Privado**: não tem produto no código. Ligar em Creator Hub → Acesso ao servidor → Servidores privados, com preço de 49/mês.
-- **Auto Inteligente**: a parada é decidida pelo servidor (`Dados/Conveniencia.luau`).
-- **Aparência Alternativa**: recolore as partículas da aura padrão. As auras com VFX próprio (Gear 5, Monarca, Caudas) recebem só o atributo `AuraAparencia`, ainda não aplicado no visual 3D.

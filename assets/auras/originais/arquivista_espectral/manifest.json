@@ -1,0 +1,57 @@
+{
+  "auraId": "arquivista_espectral",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/arquivista_espectral",
+  "templateFile": "assets/roblox/auras_originais/arquivista_espectral.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "pergaminho",
+      "triangles": 108,
+      "sizeStuds": [
+        1.3,
+        1.5284,
+        0.2911
+      ],
+      "centerFromPivot": [
+        0.0,
+        -0.0858,
+        0.0171
+      ],
+      "meshId": null
+    },
+    {
+      "name": "mao",
+      "triangles": 270,
+      "sizeStuds": [
+        0.7781,
+        1.6264,
+        0.5349
+      ],
+      "centerFromPivot": [
+        0.1391,
+        0.5382,
+        -0.1874
+      ],
+      "meshId": null
+    },
+    {
+      "name": "pagina",
+      "triangles": 16,
+      "sizeStuds": [
+        0.7,
+        0.9,
+        0.02
+      ],
+      "centerFromPivot": [
+        0.0,
+        0.0,
+        -0.0
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 5
+}

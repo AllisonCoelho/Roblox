@@ -7,7 +7,6 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Auras = require(Shared.Dados.Auras)
-local Cosmeticos = require(Shared.Dados.Cosmeticos)
 local AurasVfx = require(Shared.Dados.AurasVfx)
 local Perfil = require(Shared.Dados.Perfil)
 local Acoes = require(script.Parent.Acoes)
@@ -44,28 +43,9 @@ local function limpar(personagem: Model)
 	end
 end
 
--- Aparência Alternativa equipada (cosmético): recolore a aura sem mudar raridade nem efeito
-local function aparenciaDe(estado: any): Cosmeticos.Item?
-	local id = estado
-		and estado.cosmeticos
-		and estado.cosmeticos.equipados
-		and estado.cosmeticos.equipados.aparencia
-	local item = if type(id) == "string" then Cosmeticos.porId[id] else nil
-	return if item and item.tipo == "aparencia" then item else nil
-end
-
-local function criarEfeito(
-	aura: Auras.Aura,
-	personagem: Model,
-	raiz: BasePart,
-	aparencia: Cosmeticos.Item?
-)
+local function criarEfeito(aura: Auras.Aura, personagem: Model, raiz: BasePart)
 	local c1 = Color3.fromHex(aura.cores[1])
 	local c2 = Color3.fromHex(aura.cores[2])
-	if aparencia then
-		c1 = c1:Lerp(Color3.fromHex(aparencia.cor), 0.75)
-		c2 = c2:Lerp(Color3.fromHex(aparencia.cor2 or aparencia.cor), 0.75)
-	end
 	local t = aura.tier -- 1 (Comum) .. 7 (Divino)
 	local cores = ColorSequence.new(c1, c2)
 
@@ -168,9 +148,7 @@ local function aplicar(player: Player, forcar: boolean?)
 	local estado = Dados.de(player)
 	local equipada = if estado and estado.equipada then estado.equipada else ""
 	local id = previa[player] or equipada
-	local aparencia = aparenciaDe(estado)
-	local chave = id .. "|" .. (if aparencia then aparencia.id else "")
-	if not forcar and aplicada[player] == chave then
+	if not forcar and aplicada[player] == id then
 		return
 	end
 	local personagem = player.Character
@@ -178,9 +156,8 @@ local function aplicar(player: Player, forcar: boolean?)
 	if not personagem or not raiz or not raiz:IsA("BasePart") then
 		return
 	end
-	local anterior = aplicada[player]
-	local mudou = anterior ~= nil and string.split(anterior, "|")[1] ~= id
-	aplicada[player] = chave
+	local mudou = aplicada[player] ~= nil and aplicada[player] ~= id
+	aplicada[player] = id
 	limpar(personagem)
 	-- Auras com VFX próprio: cada cliente monta o efeito a partir deste atributo.
 	-- "AuraVfxEm" só muda quando o jogador troca de aura (não no respawn): é a deixa da manifestação.
@@ -189,13 +166,12 @@ local function aplicar(player: Player, forcar: boolean?)
 			personagem:SetAttribute("AuraVfxEm", Workspace:GetServerTimeNow())
 		end
 		personagem:SetAttribute("AuraVfx", id)
-		personagem:SetAttribute("AuraAparencia", if aparencia then aparencia.cor else nil)
 		return
 	end
 	personagem:SetAttribute("AuraVfx", nil)
 	local aura = Auras.porId[id]
 	if aura then
-		criarEfeito(aura, personagem, raiz, aparencia)
+		criarEfeito(aura, personagem, raiz)
 	end
 end
 

@@ -1,4 +1,4 @@
--- Liga e desliga os VFX de aura montados no cliente (por enquanto só a Gear 5).
+-- Liga e desliga os VFX de aura montados no cliente (Gear 5, Naruto, Monarca, Senbonzakura).
 -- Quem decide qual aura está ativa é o SERVIDOR: ele grava o atributo "AuraVfx" no personagem
 -- (e "AuraVfxEm" quando o jogador acabou de equipar, para tocar a manifestação).
 -- Este cliente só observa esses atributos; não pede nem concede aura nenhuma.
@@ -11,7 +11,10 @@ local AurasVfx =
 	require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Dados"):WaitForChild("AurasVfx"))
 local Caudas = require(script.Parent.Caudas)
 local Gear5 = require(script.Parent.Gear5)
+local PresencaAnime = require(script.Parent.PresencaAnime)
 local Monarca = require(script.Parent.Monarca)
+local MotorOriginais = require(script.Parent.Originais.Motor)
+local Senbonzakura = require(script.Parent.Senbonzakura)
 
 local Controlador = {}
 
@@ -27,7 +30,12 @@ type Modulo = { criar: (Model, Gear5.Opcoes) -> Gear5.Instancia? }
 local MODULOS: { [string]: Modulo } = {
 	gear5 = Gear5,
 	monarca = Monarca,
+	senbonzakura = Senbonzakura, -- templates clonados de ReplicatedStorage.AuraAssets (pipeline v2)
 }
+-- lote inicial das auras originais v2 (só prévia; templates em ReplicatedStorage.AurasOriginais)
+for _, id in MotorOriginais.IDS do
+	MODULOS[id] = MotorOriginais.modulo(id)
+end
 for _, id in Caudas.ORDEM do
 	MODULOS[id] = Caudas.estagio(id)
 end
@@ -52,6 +60,24 @@ local function sincronizar(jogador: Player, personagem: Model)
 			and permitido(jogador)
 		then id
 		else nil
+	-- Corpo e ambiente sao independentes da malha EditableMesh (podem funcionar
+	-- mesmo quando o aparelho nao puder criar a nuvem 3D).
+	if querido ~= "gear5" then
+		PresencaAnime.definir(personagem, nil)
+	else
+		task.spawn(function()
+			personagem:WaitForChild("HumanoidRootPart", 10)
+			personagem:WaitForChild("Humanoid", 10)
+			if
+				personagem.Parent
+				and jogador.Character == personagem
+				and personagem:GetAttribute("AuraVfx") == "gear5"
+				and permitido(jogador)
+			then
+				PresencaAnime.definir(personagem, "gear5")
+			end
+		end)
+	end
 	local atual = ativos[personagem]
 	if atual and atual.id == querido then
 		return
@@ -122,6 +148,7 @@ function Controlador.definir(novas: Preferencias)
 		or novas.movimentoReduzido ~= prefs.movimentoReduzido
 	local mudouAlheios = novas.ocultarEfeitosAlheios ~= prefs.ocultarEfeitosAlheios
 	prefs = novas
+	PresencaAnime.definirQualidade(prefs.qualidadeBaixa, prefs.movimentoReduzido)
 	if mudouQualidade then
 		for _, a in ativos do
 			a.inst:definirQualidade(prefs.qualidadeBaixa, prefs.movimentoReduzido)
@@ -147,18 +174,25 @@ function Controlador.iniciar()
 			c:Disconnect()
 		end
 		observados[jogador] = nil
+		if jogador.Character then
+			PresencaAnime.remover(jogador.Character)
+		end
 		if jogador.Character and ativos[jogador.Character] then
 			ativos[jogador.Character].inst:encerrar(true)
 			ativos[jogador.Character] = nil
 		end
 	end)
-	-- Um laço só para todas as auras; nada é criado por quadro
+	-- Retire a pose anterior, deixe o Animator avaliar e então aplique o quadro da Gear 5.
+	RunService.PreAnimation:Connect(PresencaAnime.antesDaAnimacao)
+	RunService.PreSimulation:Connect(PresencaAnime.simular)
+	-- Um unico laço de VFX para auras e efeitos locais de superficie.
 	RunService.PreRender:Connect(function(dt)
 		local camera = Workspace.CurrentCamera
 		if not camera then
 			return
 		end
 		local posicao = camera.CFrame.Position
+		PresencaAnime.atualizar(dt, posicao)
 		for personagem, a in ativos do
 			if not a.inst:atualizar(dt, posicao) then
 				ativos[personagem] = nil

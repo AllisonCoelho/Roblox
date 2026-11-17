@@ -1,0 +1,42 @@
+{
+  "auraId": "circulo_dos_predadores",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/circulo_dos_predadores",
+  "templateFile": "assets/roblox/auras_originais/circulo_dos_predadores.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "pegada",
+      "triangles": 88,
+      "sizeStuds": [
+        0.9788,
+        1.3758,
+        0.05
+      ],
+      "centerFromPivot": [
+        0.0,
+        0.2096,
+        -0.0
+      ],
+      "meshId": null
+    },
+    {
+      "name": "arranhao",
+      "triangles": 72,
+      "sizeStuds": [
+        0.6409,
+        1.8016,
+        0.0911
+      ],
+      "centerFromPivot": [
+        0.0148,
+        -0.0002,
+        0.0399
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 5
+}

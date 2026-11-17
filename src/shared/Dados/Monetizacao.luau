@@ -19,7 +19,6 @@ export type Produto = {
 	prioridade: string, -- "altissima" | "alta" | "media" | "baixa"
 	status: string, -- "ativo" | "planejado"
 	gamePassId: number?, -- só passes ativos; nil até o dono criar no Creator Hub
-	subscriptionId: string?, -- assinatura: id "EXP-..." do Creator Hub; nil até o dono criar
 }
 
 local function p(dados: { [string]: any }): Produto
@@ -68,9 +67,9 @@ Monetizacao.PRODUTOS = {
 		preco = 79,
 		precoTexto = "79",
 		tipo = "passe",
-		beneficio = "O giro automático para sozinho ao sair uma aura rara ou nova.",
+		beneficio = "Configurações avançadas para o giro automático.",
 		prioridade = "altissima",
-		status = "ativo",
+		status = "planejado",
 	}),
 	p({
 		id = "presets",
@@ -78,9 +77,9 @@ Monetizacao.PRODUTOS = {
 		preco = 49,
 		precoTexto = "49",
 		tipo = "passe",
-		beneficio = "Salvar até 5 combinações de aura e cosméticos e trocar com um toque.",
+		beneficio = "Salvar combinações de apresentação e aura.",
 		prioridade = "alta",
-		status = "ativo",
+		status = "planejado",
 	}),
 	p({
 		id = "ritualPersonalizado",
@@ -88,9 +87,9 @@ Monetizacao.PRODUTOS = {
 		preco = 99,
 		precoTexto = "99",
 		tipo = "passe",
-		beneficio = "3 estilos de cor para o seu ritual de giro (Solar, Abismo, Aurora).",
+		beneficio = "Novo efeito visual para o despertar.",
 		prioridade = "altissima",
-		status = "ativo",
+		status = "planejado",
 	}),
 	p({
 		id = "vip",
@@ -111,7 +110,7 @@ Monetizacao.PRODUTOS = {
 		tipo = "passe",
 		beneficio = "Cosméticos comemorativos e distintivo permanente.",
 		prioridade = "alta",
-		status = "ativo",
+		status = "planejado",
 	}),
 	p({
 		id = "titulos",
@@ -121,7 +120,7 @@ Monetizacao.PRODUTOS = {
 		tipo = "produto",
 		beneficio = "Títulos visíveis no mundo.",
 		prioridade = "media",
-		status = "ativo",
+		status = "planejado",
 	}),
 	p({
 		id = "trilhas",
@@ -131,7 +130,7 @@ Monetizacao.PRODUTOS = {
 		tipo = "produto",
 		beneficio = "Efeitos visuais ao correr e saltar.",
 		prioridade = "media",
-		status = "ativo",
+		status = "planejado",
 	}),
 	p({
 		id = "aparenciaAlternativa",
@@ -141,7 +140,7 @@ Monetizacao.PRODUTOS = {
 		tipo = "produto",
 		beneficio = "Variação cosmética de uma aura obtida.",
 		prioridade = "altissima",
-		status = "ativo",
+		status = "planejado",
 	}),
 	p({
 		id = "emotesVitoria",
@@ -151,7 +150,7 @@ Monetizacao.PRODUTOS = {
 		tipo = "produto",
 		beneficio = "Celebrações na Arena.",
 		prioridade = "media",
-		status = "ativo",
+		status = "planejado",
 	}),
 	p({
 		id = "finalizacoes",
@@ -161,7 +160,7 @@ Monetizacao.PRODUTOS = {
 		tipo = "produto",
 		beneficio = "Animação visual de vitória na Arena.",
 		prioridade = "media",
-		status = "ativo",
+		status = "planejado",
 	}),
 	p({
 		id = "passeTemporada",
@@ -180,10 +179,9 @@ Monetizacao.PRODUTOS = {
 		preco = 99,
 		precoTexto = "99/mês",
 		tipo = "assinatura",
-		beneficio = "Título Membro do Nexo e um cosmético novo por mês (fica para sempre).",
+		beneficio = "Cosméticos mensais e conveniência.",
 		prioridade = "baixa",
-		status = "ativo",
-		subscriptionId = nil,
+		status = "planejado",
 	}),
 	p({
 		id = "servidorPrivado",
@@ -191,9 +189,9 @@ Monetizacao.PRODUTOS = {
 		preco = 49,
 		precoTexto = "49/mês",
 		tipo = "servidor",
-		beneficio = "Servidor só seu e dos amigos (criado pela página do jogo no Roblox).",
+		beneficio = "Espaço para jogar com amigos.",
 		prioridade = "media",
-		status = "ativo",
+		status = "planejado",
 	}),
 } :: { Produto }
 

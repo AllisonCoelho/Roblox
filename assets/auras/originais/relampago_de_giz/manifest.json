@@ -1,0 +1,42 @@
+{
+  "auraId": "relampago_de_giz",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/relampago_de_giz",
+  "templateFile": "assets/roblox/auras_originais/relampago_de_giz.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "raio",
+      "triangles": 40,
+      "sizeStuds": [
+        0.75,
+        2.8,
+        0.12
+      ],
+      "centerFromPivot": [
+        0.075,
+        0.0,
+        -0.0
+      ],
+      "meshId": null
+    },
+    {
+      "name": "placa_tri",
+      "triangles": 12,
+      "sizeStuds": [
+        0.53,
+        0.5,
+        0.05
+      ],
+      "centerFromPivot": [
+        0.015,
+        0.05,
+        -0.0
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 6
+}

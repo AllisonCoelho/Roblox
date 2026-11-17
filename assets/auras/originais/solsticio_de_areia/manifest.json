@@ -1,0 +1,42 @@
+{
+  "auraId": "solsticio_de_areia",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/solsticio_de_areia",
+  "templateFile": "assets/roblox/auras_originais/solsticio_de_areia.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "duna",
+      "triangles": 140,
+      "sizeStuds": [
+        2.0031,
+        0.3489,
+        0.2433
+      ],
+      "centerFromPivot": [
+        -0.0,
+        0.1408,
+        -0.0006
+      ],
+      "meshId": null
+    },
+    {
+      "name": "relogio",
+      "triangles": 432,
+      "sizeStuds": [
+        1.178,
+        0.0773,
+        1.1787
+      ],
+      "centerFromPivot": [
+        -0.0005,
+        0.0,
+        -0.0002
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 3
+}

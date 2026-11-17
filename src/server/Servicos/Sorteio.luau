@@ -8,7 +8,6 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Apresentacao = require(Shared.Dados.Apresentacao)
 local Auras = require(Shared.Dados.Auras)
 local Config = require(Shared.Config)
-local Conveniencia = require(Shared.Dados.Conveniencia)
 local Monetizacao = require(Shared.Dados.Monetizacao)
 local Perfil = require(Shared.Dados.Perfil)
 local Remotos = require(Shared.Remotos)
@@ -100,21 +99,6 @@ local function despertar(player: Player): (boolean, string?, { [string]: any }?)
 	ultimoGiro[player] = agora
 	local aura = Auras.sortear(aleatorio, sorte)
 	local ok, id, dados = entregar(player, aura, sorte)
-	-- Auto Inteligente: o servidor pausa o giro automático ao sair aura rara ou nova
-	if ok and dados and Passes.tem(player, "autoInteligente") then
-		local atual = Dados.de(player)
-		if atual and atual.configuracoes.giroAutomatico then
-			local motivo =
-				Conveniencia.devePararAuto(atual.auto, aura.chance, dados.quantidade == 1)
-			if motivo then
-				Dados.alterar(player, function(e)
-					e.configuracoes.giroAutomatico = false
-					return true
-				end)
-				dados.autoParou = motivo
-			end
-		end
-	end
 	if ok and not Passes.tem(player, "pularAnimacao") then
 		local cat = Apresentacao.de(aura.chance)
 		liberadoEm[player] = agora + Apresentacao.tempoAteRevelacao(cat) - FOLGA_ANIMACAO
@@ -189,19 +173,6 @@ local function configurar(player: Player, chave: any, valor: any): (boolean, str
 	end)
 end
 
-local function configurarAuto(player: Player, pararChance: any, pararNova: any): (boolean, string?)
-	if not Conveniencia.limiarValido(pararChance) or type(pararNova) ~= "boolean" then
-		return false, "Pedido inválido"
-	end
-	if not Passes.tem(player, "autoInteligente") then
-		return false, "Auto Inteligente é um passe de 79 Robux."
-	end
-	return Dados.alterar(player, function(estado)
-		estado.auto = { pararChance = pararChance, pararNova = pararNova }
-		return true
-	end)
-end
-
 -- Desliga configurações pagas de quem não tem (ou perdeu) o passe
 local function corrigirConfiguracoes(player: Player)
 	if not Passes.verificado(player) or not Dados.de(player) then
@@ -235,7 +206,6 @@ function Sorteio.iniciar()
 	Acoes.registrar("Despertar", despertar)
 	Acoes.registrar("Equipar", equipar)
 	Acoes.registrar("Configurar", configurar)
-	Acoes.registrar("ConfigurarAuto", configurarAuto)
 	if RunService:IsStudio() then
 		Acoes.registrar("TesteVisual", function(_, indice)
 			return Sorteio.testeVisual(indice)

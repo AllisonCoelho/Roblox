@@ -1,0 +1,57 @@
+{
+  "auraId": "capsula_de_tempestade",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/capsula_de_tempestade",
+  "templateFile": "assets/roblox/auras_originais/capsula_de_tempestade.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "capsula",
+      "triangles": 1650,
+      "sizeStuds": [
+        1.442,
+        1.4485,
+        1.4459
+      ],
+      "centerFromPivot": [
+        0.0036,
+        0.0001,
+        0.0001
+      ],
+      "meshId": null
+    },
+    {
+      "name": "aro",
+      "triangles": 432,
+      "sizeStuds": [
+        2.1449,
+        0.0975,
+        2.1972
+      ],
+      "centerFromPivot": [
+        -0.0231,
+        0.0,
+        -0.0006
+      ],
+      "meshId": null
+    },
+    {
+      "name": "trovao",
+      "triangles": 24,
+      "sizeStuds": [
+        0.24,
+        0.9,
+        0.04
+      ],
+      "centerFromPivot": [
+        0.02,
+        0.0,
+        -0.0
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 5
+}

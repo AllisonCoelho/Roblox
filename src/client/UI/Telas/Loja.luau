@@ -3,8 +3,6 @@
 local Players = game:GetService("Players")
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
-local Auras = require(Shared.Dados.Auras)
-local Conveniencia = require(Shared.Dados.Conveniencia)
 local Cosmeticos = require(Shared.Dados.Cosmeticos)
 local Monetizacao = require(Shared.Dados.Monetizacao)
 local Temporada = require(Shared.Dados.Temporada)
@@ -18,30 +16,12 @@ local Loja = {}
 type Opcoes = {
 	aviso: (string) -> (),
 	oferecer: (string) -> (),
-	oferecerItem: (any) -> (),
 	temPasse: (string) -> boolean,
 }
 
-local ABAS = { "Temporada", "Pacotes", "Itens", "Cosméticos", "Extras" }
-local NOMES_TIPO = {
-	titulo = "Títulos",
-	distintivo = "Distintivos",
-	rastro = "Rastros",
-	ritual = "Estilos de Ritual",
-	aparencia = "Aparências de Aura",
-	emote = "Emotes de Vitória",
-	finalizacao = "Finalizações",
-}
-local PACOTES = { "iniciante", "vip", "fundador", "ritualPersonalizado", "passeTemporada" }
-local GRUPOS = { "titulos", "trilhas", "aparenciaAlternativa", "emotesVitoria", "finalizacoes" }
-local NOMES_LIMIAR = {
-	[0] = "Nunca",
-	[1000] = "1 em 1 mil",
-	[10000] = "1 em 10 mil",
-	[100000] = "1 em 100 mil",
-	[1000000] = "1 em 1 milhão",
-	[10000000] = "1 em 10 milhões",
-}
+local ABAS = { "Temporada", "Pacotes", "Cosméticos" }
+local NOMES_TIPO = { titulo = "Títulos", distintivo = "Distintivos", rastro = "Rastros" }
+local PACOTES = { "iniciante", "vip", "passeTemporada" }
 
 local op: Opcoes
 local aba = "Temporada"
@@ -293,131 +273,6 @@ local function mostrarCosmeticos(estado: any)
 	end
 end
 
-local function mostrarItens(estado: any)
-	local possui = estado.cosmeticos and estado.cosmeticos.possui or {}
-	linha(
-		"Itens avulsos: compre uma vez, são seus para sempre. Só aparência.",
-		Cores.TextoSuave,
-		15
-	)
-	for _, grupo in GRUPOS do
-		local produto = Monetizacao.porId[grupo]
-		linha(
-			string.format("<b>%s</b>  ·  %s Robux", produto.nome, produto.precoTexto),
-			Cores.Lilas,
-			20
-		)
-		linha(produto.beneficio, Cores.TextoSuave, 15)
-		for _, item in Cosmeticos.doGrupo(grupo) do
-			local tem = possui[item.id] == true
-			local b = botao(
-				string.format(
-					'<font color="#%s">%s</font>  ·  %s  —  %s',
-					item.cor,
-					item.nome,
-					item.texto,
-					if tem then "Possui ✓" else (item.preco :: number) .. " Robux"
-				),
-				if tem then "menta" else "neutro",
-				function()
-					if not tem then
-						op.oferecerItem(item)
-					end
-				end
-			)
-			b.rotulo.RichText = true
-		end
-	end
-end
-
-local function mostrarExtras(estado: any)
-	-- Auto Inteligente
-	local temAuto = op.temPasse("autoInteligente")
-	local auto = estado.auto or Conveniencia.autoPadrao()
-	linha("<b>Auto Inteligente</b>  ·  79 Robux", Cores.Lilas, 20)
-	linha(Monetizacao.porId.autoInteligente.beneficio, Cores.TextoSuave, 15)
-	if temAuto then
-		local indice = table.find(Conveniencia.LIMIARES, auto.pararChance) or 1
-		botao(
-			"Parar em aura de raridade: " .. NOMES_LIMIAR[auto.pararChance or 0],
-			"neutro",
-			function()
-				local proximo = Conveniencia.LIMIARES[indice % #Conveniencia.LIMIARES + 1]
-				pedir("ConfigurarAuto", proximo, auto.pararNova == true)
-			end
-		)
-		botao(
-			"Parar em aura nova: " .. (if auto.pararNova then "Sim" else "Não"),
-			if auto.pararNova then "menta" else "neutro",
-			function()
-				pedir("ConfigurarAuto", auto.pararChance or 0, not auto.pararNova)
-			end
-		)
-	else
-		botao("Comprar · 79 Robux", "lilas", function()
-			op.oferecer("autoInteligente")
-		end)
-	end
-
-	-- Presets de Auras
-	local temPresets = op.temPasse("presets")
-	linha("<b>Presets de Auras</b>  ·  49 Robux", Cores.Lilas, 20)
-	linha(Monetizacao.porId.presets.beneficio, Cores.TextoSuave, 15)
-	if temPresets then
-		local presets = estado.presets or {}
-		for slot = 1, Conveniencia.MAX_PRESETS do
-			local p = presets[slot]
-			local aura = p and p.aura ~= "" and Auras.porId[p.aura]
-			local resumo = if p then (if aura then aura.nome else "sem aura") else "vazio"
-			linha(string.format("Preset %d  ·  %s", slot, resumo), Cores.Texto, 16)
-			botao("Salvar o visual atual no preset " .. slot, "neutro", function()
-				pedir("SalvarPreset", slot)
-			end)
-			if p then
-				botao("Usar preset " .. slot, "lilas", function()
-					pedir("AplicarPreset", slot)
-				end)
-			end
-		end
-	else
-		botao("Comprar · 49 Robux", "lilas", function()
-			op.oferecer("presets")
-		end)
-	end
-
-	-- Assinatura do Nexo
-	local assinante = op.temPasse("assinatura")
-	linha("<b>Assinatura do Nexo</b>  ·  99 Robux/mês", Cores.Lilas, 20)
-	linha(Monetizacao.porId.assinatura.beneficio, Cores.TextoSuave, 15)
-	botao(
-		if assinante then "Assinante ✓" else "Assinar",
-		if assinante then "menta" else "lilas",
-		function()
-			if not assinante then
-				op.oferecer("assinatura")
-			end
-		end
-	)
-
-	-- Servidor Privado
-	linha("<b>Servidor Privado</b>  ·  49 Robux/mês", Cores.Lilas, 20)
-	linha(
-		"Na página do jogo no Roblox, abra a aba Servidores → Criar servidor privado. Chame amigos pelo link. O dono aparece com 🏠 no chat.",
-		Cores.TextoSuave,
-		15
-	)
-	local dono = workspace:GetAttribute("ServidorPrivadoDono")
-	if type(dono) == "number" then
-		linha(
-			if dono == Players.LocalPlayer.UserId
-				then "Você está no seu servidor privado."
-				else "Você está em um servidor privado.",
-			Cores.Menta,
-			16
-		)
-	end
-end
-
 local function atualizar()
 	if Navegacao.aberto() ~= "Loja" then
 		return
@@ -440,10 +295,6 @@ local function atualizar()
 		mostrarTemporada(estado)
 	elseif aba == "Pacotes" then
 		mostrarPacotes()
-	elseif aba == "Itens" then
-		mostrarItens(estado)
-	elseif aba == "Extras" then
-		mostrarExtras(estado)
 	else
 		mostrarCosmeticos(estado)
 	end

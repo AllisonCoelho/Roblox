@@ -1,0 +1,27 @@
+{
+  "auraId": "trilha_de_vaga_lumes",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/trilha_de_vaga_lumes",
+  "templateFile": "assets/roblox/auras_originais/trilha_de_vaga_lumes.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "vagalume",
+      "triangles": 86,
+      "sizeStuds": [
+        0.529,
+        0.1888,
+        0.4874
+      ],
+      "centerFromPivot": [
+        0.0,
+        -0.011,
+        0.0582
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 7
+}

@@ -11,7 +11,6 @@ local Remotos = require(Shared.Remotos)
 local Servicos = script.Parent.Parent.Servicos
 local Acoes = require(Servicos.Acoes)
 local Dados = require(Servicos.Dados)
-local Cosmeticos = require(Servicos.Cosmeticos)
 local Incursoes = require(script.Parent.Parent.Incursoes.Servico)
 
 local Servico = {}
@@ -88,7 +87,6 @@ local function terminar(d: Duelo, resultado: string)
 	if resultado == "vitoria" then
 		d.soberano:SetAttribute("DueloGolpe", "derrota")
 		d.soberano:SetAttribute("DueloGolpeEm", workspace:GetServerTimeNow())
-		Cosmeticos.celebrar(d.player, d.corpo, d.soberano)
 	end
 	enviar(d, "fim", { resultado = resultado, estado = d.estado })
 	task.delay(MOSTRAR_RESULTADO, encerrar, d)
