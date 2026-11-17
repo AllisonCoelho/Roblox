@@ -18,6 +18,7 @@ local Estado = require(script.Parent.Parent.Estado)
 local Combate = require(script.Parent.IncursoesCombate)
 local RunUI = require(script.Parent.IncursoesRunUI)
 local Run = require(Shared.Dados.IncursoesRun)
+local Desafios = require(Shared.Dados.IncursoesDesafios)
 local Visual = require(
 	script.Parent.Parent.Parent
 		:WaitForChild("Mundo")
@@ -75,11 +76,15 @@ local cartoes: { Cartao } = {}
 local linhas: { Linha } = {}
 local cabecalho: TextLabel
 
+-- Fenda do Dia e Desafios da Semana (montados em montarDiaria)
+local atualizarDiaria: (any) -> () = function() end
+
 local function atualizarPainel()
 	local estado = Estado.atual
 	local inc = if estado and type((estado :: any).incursoes) == "table"
 		then (estado :: any).incursoes
 		else Dados.padrao()
+	atualizarDiaria(inc)
 	local melhor = if estado then Auras.melhorDe(estado.auras) else nil
 	cabecalho.Text = string.format(
 		"FRAGMENTOS: %d   ·   RESSONÂNCIA: %.2fx (aura mais rara)",
@@ -245,6 +250,112 @@ local function montarPreparo(pai: Instance, altura: number)
 	atualizarPreparo()
 end
 
+local function montarDiaria(pai: Instance, alturaDia: number, alturaSemana: number)
+	-- Fenda do Dia
+	local dia = Kit.placa({
+		nome = "FendaDoDia",
+		tamanho = UDim2.new(1, 0, 0, alturaDia),
+		borda = Color3.fromHex("FFD36B"),
+		pai = pai,
+		ordem = -2,
+	}).conteudo
+	textoCartao(dia, "Fenda do Dia", 26, 5, 36, Color3.fromHex("FFD36B"), "titulo")
+	local infoDia = textoCartao(dia, "", 16, 40, 44, Cores.TextoSuave)
+	local recorde = textoCartao(dia, "", 16, 84, 24, Cores.Texto, "mono")
+	local ranking = textoCartao(dia, "", 15, 108, alturaDia - 170, Cores.TextoSuave, "mono")
+	acaoCartao(dia, "Entrar na Fenda do Dia", function()
+		pedir("IncursaoFila", if naFila == "diaria" then "" else "diaria")
+	end)
+	-- Desafios da Semana
+	local semana = Kit.placa({
+		nome = "DesafiosSemana",
+		tamanho = UDim2.new(1, 0, 0, alturaSemana),
+		borda = Cores.Menta,
+		pai = pai,
+		ordem = -1,
+	}).conteudo
+	textoCartao(semana, "Desafios da Semana", 26, 5, 36, Cores.Menta, "titulo")
+	local linhasSemana = textoCartao(semana, "", 17, 44, alturaSemana - 54, Cores.Texto)
+
+	local rankingTexto = "Ranking do servidor: ninguém ainda."
+	local ultimoPedido = 0
+	atualizarDiaria = function(inc: any)
+		local agora = os.time()
+		local fd = Desafios.fendaDoDia(Desafios.dia(agora))
+		local nomesMarcas = {}
+		for _, m in Run.MARCAS do
+			if fd.marcas[m.id] then
+				table.insert(nomesMarcas, m.nome)
+			end
+		end
+		local u = Dados.porId[fd.universo]
+		infoDia.Text = string.format(
+			"Hoje: %s  ·  %s\nMesmos andares para todos · 1ª vitória do dia: +%d Fragmentos",
+			if u then u.nome else fd.universo,
+			table.concat(nomesMarcas, " · "),
+			Desafios.recompensaDia(if u then u.nivel else 1)
+		)
+		local d = if type(inc) == "table" then inc.diaria else nil
+		local meu = if type(d) == "table" and d.dia == fd.dia then d else nil
+		recorde.Text = if meu
+			then string.format(
+				"Seu recorde hoje: %d pts%s",
+				meu.melhor or 0,
+				if meu.vitoria then "  ·  vitória ✓" else ""
+			)
+			else "Seu recorde hoje: —"
+		ranking.Text = rankingTexto
+		-- desafios
+		local sem = Desafios.semana(agora)
+		local estadoSemana = Desafios.semanaDe(if type(inc) == "table" then inc else nil, sem)
+		local linhas = {}
+		for _, id in Desafios.desafiosDaSemana(sem) do
+			local def = Desafios.desafioPorId[id]
+			local feito = estadoSemana.feitos[id] == true
+			table.insert(
+				linhas,
+				string.format(
+					"%s %s  —  %d/%d  (+%d)",
+					if feito then "✓" else "•",
+					def.nome,
+					math.min(estadoSemana.progresso[id] or 0, def.meta),
+					def.meta,
+					def.recompensa
+				)
+			)
+		end
+		linhasSemana.Text = table.concat(linhas, "\n")
+		-- ranking do servidor (no máximo a cada 10 s)
+		if os.clock() - ultimoPedido > 10 then
+			ultimoPedido = os.clock()
+			task.spawn(function()
+				local ok, _, dados = Estado.pedir("IncursaoRanking")
+				if ok and dados and type(dados.ranking) == "table" then
+					local partes = {}
+					for k, r in dados.ranking do
+						if k > 5 then
+							break
+						end
+						table.insert(
+							partes,
+							string.format(
+								"%d. %s  %d",
+								k,
+								tostring(r.nome),
+								tonumber(r.pontos) or 0
+							)
+						)
+					end
+					rankingTexto = if #partes > 0
+						then "Ranking do servidor hoje:\n" .. table.concat(partes, "\n")
+						else "Ranking do servidor: ninguém ainda."
+					ranking.Text = rankingTexto
+				end
+			end)
+		end
+	end
+end
+
 local function montarPainel()
 	local painel = Navegacao.criarPainel("Incursoes", { titulo = "Incursões", icone = "✦" })
 	local c = painel.conteudo
@@ -259,6 +370,9 @@ local function montarPainel()
 	local alturaReliquia = 160
 	local alturaPreparo = 290
 	montarPreparo(listaUniversos, alturaPreparo)
+	local alturaDia = 300
+	local alturaSemana = 170
+	montarDiaria(listaReliquias, alturaDia, alturaSemana)
 	for i, u in Dados.UNIVERSOS do
 		local cor = Color3.fromHex(u.cor)
 		local cartao = Kit.placa({
@@ -313,7 +427,11 @@ local function montarPainel()
 	Escala.aoMudar(function()
 		local compacto = Escala.tamanho.X < 780
 		local hUniversos = #Dados.UNIVERSOS * (alturaUniverso + 10) - 10 + alturaPreparo + 10
-		local hReliquias = #Dados.RELIQUIAS * (alturaReliquia + 10) + 38
+		local hReliquias = #Dados.RELIQUIAS * (alturaReliquia + 10)
+			+ 38
+			+ alturaDia
+			+ alturaSemana
+			+ 20
 		listaUniversos.Size = UDim2.new(if compacto then 1 else 0.56, -12, 0, hUniversos)
 		listaReliquias.Size = UDim2.new(if compacto then 1 else 0.44, -12, 0, hReliquias)
 		listaReliquias.Position = if compacto
@@ -550,20 +668,24 @@ local function aoEvento(d: any)
 	end
 	local u = if type(d.universo) == "string" then Dados.porId[d.universo] else nil
 	if d.tipo == "fila" then
-		naFila = if u then u.id else nil
+		naFila = if u then (if d.diaria then "diaria" else u.id) else nil
 		filaBanner.Visible = u ~= nil
 		if u then
-			filaBanner.Text = string.format(
-				"FILA: %s  ·  %d/%d jogador(es)  ·  %s",
-				string.upper(u.nome),
-				d.jogadores or 1,
-				Dados.MAX_JOGADORES,
-				if type(d.falta) == "number"
-					then "partida em " .. d.falta .. "s"
-					else "esperando..."
-			) .. (if type(d.preparo) == "string" and d.preparo ~= "Normal"
-				then "  ·  " .. d.preparo
-				else "")
+			filaBanner.Text = (if d.diaria then "FENDA DO DIA · " else "")
+				.. string.format(
+					"FILA: %s  ·  %d/%d jogador(es)  ·  %s",
+					string.upper(u.nome),
+					d.jogadores or 1,
+					Dados.MAX_JOGADORES,
+					if type(d.falta) == "number"
+						then "partida em " .. d.falta .. "s"
+						else "esperando..."
+				)
+				.. (
+					if type(d.preparo) == "string" and d.preparo ~= "Normal"
+						then "  ·  " .. d.preparo
+						else ""
+				)
 		end
 		atualizarPainel()
 	elseif d.tipo == "inicio" and u then
@@ -658,6 +780,18 @@ local function aoEvento(d: any)
 		end
 	elseif d.tipo == "enfurecido" then
 		RunUI.elite("O GUARDIÃO ENFURECEU! Dano e velocidade aumentados")
+	elseif d.tipo == "diaria" and type(d.pontos) == "number" then
+		aviso(
+			string.format(
+				"Fenda do Dia: %d pts (recorde %d)%s",
+				d.pontos,
+				tonumber(d.melhor) or d.pontos,
+				if (tonumber(d.bonus) or 0) > 0
+					then string.format("  ·  +%d Fragmentos!", d.bonus)
+					else ""
+			)
+		)
+		atualizarPainel()
 	elseif d.tipo == "nota" and type(d.nota) == "string" then
 		RunUI.nota(d.nota, d.mult, d.tempo, d.quedas)
 	elseif d.tipo == "bencaos" and type(d.cartas) == "table" then

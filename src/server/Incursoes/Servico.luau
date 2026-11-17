@@ -12,6 +12,7 @@ local Artefatos = require(Shared.Dados.Artefatos)
 local Auras = require(Shared.Dados.Auras)
 local Incursoes = require(Shared.Dados.Incursoes)
 local Run = require(Shared.Dados.IncursoesRun)
+local Desafios = require(Shared.Dados.IncursoesDesafios)
 local Loot = require(Shared.Dados.LootIncursoes)
 local Remotos = require(Shared.Remotos)
 local Servicos = script.Parent.Parent:WaitForChild("Servicos")
@@ -42,6 +43,16 @@ type Membro = {
 	ofertas: { string }?, -- 3 Bênçãos esperando escolha
 	sequencia: number, -- abates seguidos
 	ultimoAbate: number,
+	abates: number, -- nesta run (pontuação da Fenda do Dia)
+	desafios: { [string]: number }, -- progresso dos desafios semanais ainda não salvo
+	melhorSequencia: number,
+	-- reviver colega: abatido espera um aliado perto (ou levanta sozinho depois de um tempo)
+	marcaPos: Vector3?,
+	abatido: boolean,
+	abatidoAte: number,
+	reviverProg: number,
+	velocidadeAntes: number?,
+	rotulo: BillboardGui?,
 	ressonancia: number,
 	proximoPulso: number,
 	reviver: boolean,
@@ -55,6 +66,9 @@ type Run = {
 	andar: number,
 	tipos: { string }, -- tipo de cada andar, sorteado no início (IncursoesRun)
 	preparo: Run.Preparo, -- Marcas da Fenda e Pesadelo, escolhidos antes de entrar
+	diaria: boolean, -- Fenda do Dia (mesma run para todos no dia)
+	inicioRun: number,
+	notasS: number,
 	tipoAndar: string,
 	inicioAndar: number,
 	quedasAndar: number,
@@ -88,6 +102,10 @@ type Run = {
 local runs: { [number]: Run } = {}
 local daRun: { [Player]: Run } = {}
 local filas: { [string]: { jogadores: { Player }, fim: number?, preparo: Run.Preparo } } = {}
+local FILA_DIARIA = "diaria" -- chave da fila da Fenda do Dia
+-- Ranking da Fenda do Dia neste servidor (zera quando o dia muda)
+local rankingDia: { dia: number, pontos: { [number]: { nome: string, pontos: number } } } =
+	{ dia = -1, pontos = {} }
 local naFila: { [Player]: string } = {}
 local embarques: { [Player]: { personagem: Model, destino: CFrame } } = {}
 local raiz: Folder
@@ -210,6 +228,47 @@ end
 
 -- ===================================================================== recompensas
 
+-- Desafio semanal: acumula na memória e salva junto com o fim do andar/partida
+local function contarDesafio(membro: Membro, id: string, valor: number)
+	membro.desafios[id] = (membro.desafios[id] or 0) + valor
+end
+
+local function salvarDesafios(player: Player, run: Run, membro: Membro)
+	if Dados.emTeste(player) ~= run.teste or not Dados.podeProgredir(player) then
+		return
+	end
+	local pendentes = membro.desafios
+	if next(pendentes) == nil and membro.melhorSequencia < 2 then
+		return
+	end
+	membro.desafios = {}
+	local concluidos = {}
+	Dados.alterar(player, function(estado)
+		if type(estado.incursoes) ~= "table" then
+			estado.incursoes = Incursoes.padrao()
+		end
+		local inc = estado.incursoes
+		local semana = Desafios.semana(os.time())
+		local s = Desafios.semanaDe(inc, semana)
+		inc.semana = s
+		local function aplicar(id: string, valor: number, maximo: boolean?)
+			local premio = Desafios.progredir(s, semana, id, valor, maximo)
+			if premio > 0 then
+				inc.fragmentos = (inc.fragmentos or 0) + premio
+				table.insert(concluidos, Desafios.desafioPorId[id].nome .. " (+" .. premio .. ")")
+			end
+		end
+		for id, valor in pendentes do
+			aplicar(id, valor)
+		end
+		aplicar("sequencia", membro.melhorSequencia, true)
+		return true
+	end)
+	for _, texto in concluidos do
+		enviar(player, { tipo = "aviso", texto = "DESAFIO CONCLUÍDO: " .. texto })
+	end
+end
+
 local function premiar(player: Player, run: Run, membro: Membro, concluiu: boolean, venceu: boolean)
 	if Dados.emTeste(player) ~= run.teste or not Dados.podeProgredir(player) then
 		return
@@ -327,6 +386,71 @@ local function sair(run: Run, player: Player, motivo: string)
 	end
 end
 
+-- Fenda do Dia: pontuação, recorde pessoal, recompensa da 1ª vitória do dia e ranking do servidor
+local function rankingAtual(): { { nome: string, pontos: number } }
+	local dia = Desafios.dia(os.time())
+	if rankingDia.dia ~= dia then
+		rankingDia = { dia = dia, pontos = {} }
+	end
+	local lista = {}
+	for _, r in rankingDia.pontos do
+		table.insert(lista, r)
+	end
+	table.sort(lista, function(a, b)
+		return a.pontos > b.pontos
+	end)
+	local top = {}
+	for k = 1, math.min(10, #lista) do
+		top[k] = lista[k]
+	end
+	return top
+end
+
+local function registrarDiaria(player: Player, run: Run, membro: Membro, venceu: boolean)
+	local pontos = Desafios.pontuacao(
+		run.andaresConcluidos,
+		venceu,
+		run.notasS,
+		membro.abates,
+		os.clock() - run.inicioRun
+	)
+	local dia = Desafios.dia(os.time())
+	rankingAtual()
+	local atual = rankingDia.pontos[player.UserId]
+	if not atual or pontos > atual.pontos then
+		rankingDia.pontos[player.UserId] = { nome = player.DisplayName, pontos = pontos }
+	end
+	local melhor, bonus = pontos, 0
+	if Dados.emTeste(player) == run.teste and Dados.podeProgredir(player) then
+		Dados.alterar(player, function(estado)
+			if type(estado.incursoes) ~= "table" then
+				estado.incursoes = Incursoes.padrao()
+			end
+			local inc = estado.incursoes
+			local d = inc.diaria
+			if type(d) ~= "table" or d.dia ~= dia then
+				d = { dia = dia, melhor = 0, vitoria = false }
+			end
+			d.melhor = math.max(d.melhor or 0, pontos)
+			melhor = d.melhor
+			if venceu and not d.vitoria then
+				d.vitoria = true
+				bonus = Desafios.recompensaDia(Incursoes.porId[run.universo].nivel)
+				inc.fragmentos = (inc.fragmentos or 0) + bonus
+			end
+			inc.diaria = d
+			return true
+		end)
+	end
+	enviar(player, {
+		tipo = "diaria",
+		pontos = pontos,
+		melhor = melhor,
+		bonus = bonus,
+		ranking = rankingAtual(),
+	})
+end
+
 local function terminar(run: Run, venceu: boolean)
 	if run.estado == "fim" then
 		return
@@ -342,6 +466,23 @@ local function terminar(run: Run, venceu: boolean)
 	for _, player in lista do
 		local membro = run.membros[player]
 		premiar(player, run, membro, venceu, venceu)
+		if venceu then
+			contarDesafio(membro, "guardioes", 1)
+			if run.preparo.pesadelo then
+				contarDesafio(membro, "pesadelo", 1)
+			end
+			local marcas = 0
+			for _ in run.preparo.marcas do
+				marcas += 1
+			end
+			if marcas >= 2 then
+				contarDesafio(membro, "marcas", 1)
+			end
+		end
+		salvarDesafios(player, run, membro)
+		if run.diaria then
+			registrarDiaria(player, run, membro, venceu)
+		end
 		enviar(player, {
 			tipo = "fim",
 			universo = run.universo,
@@ -445,6 +586,103 @@ local function elitesVivas(run: Run): number
 	return n
 end
 
+-- ===================================================================== reviver colega
+
+local function rotuloAbatido(player: Player, texto: string, membro: Membro)
+	local cabeca = player.Character and player.Character:FindFirstChild("Head")
+	if not cabeca then
+		return
+	end
+	local bb = membro.rotulo
+	if not bb or bb.Parent ~= cabeca then
+		if bb then
+			bb:Destroy()
+		end
+		bb = Instance.new("BillboardGui")
+		bb.Name = "Abatido"
+		bb.AlwaysOnTop = true
+		bb.Size = UDim2.fromOffset(260, 54)
+		bb.StudsOffsetWorldSpace = Vector3.new(0, 3, 0)
+		local t = Instance.new("TextLabel")
+		t.Name = "Texto"
+		t.BackgroundTransparency = 1
+		t.Size = UDim2.fromScale(1, 1)
+		t.Font = Enum.Font.GothamBlack
+		t.TextScaled = true
+		t.TextColor3 = Color3.fromHex("FF6B6B")
+		t.TextStrokeTransparency = 0.2
+		t.Parent = bb
+		bb.Parent = cabeca
+		membro.rotulo = bb
+	end
+	local t = bb:FindFirstChild("Texto") :: TextLabel?
+	if t then
+		t.Text = texto
+	end
+end
+
+local function reerguer(run: Run, player: Player, membro: Membro, ajudado: boolean)
+	if not membro.abatido then
+		return
+	end
+	membro.abatido = false
+	membro.reviverProg = 0
+	if membro.rotulo then
+		membro.rotulo:Destroy()
+		membro.rotulo = nil
+	end
+	local _, h = corpo(player)
+	if h then
+		h.WalkSpeed = membro.velocidadeAntes or 16
+		h.JumpHeight = 7.2
+		h.JumpPower = 50
+		if h.Health > 0 then
+			h.Health = h.MaxHealth * (if ajudado then Desafios.REVIVER_VIDA else 1)
+		end
+	end
+	membro.velocidadeAntes = nil
+	paraRun(run, {
+		tipo = "aviso",
+		texto = if ajudado
+			then player.DisplayName .. " foi reerguido!"
+			else player.DisplayName .. " se levantou.",
+	})
+end
+
+-- Renasceu: volta onde caiu, abatido, até um aliado chegar perto (ou o tempo acabar)
+local function entrarAbatido(run: Run, player: Player, membro: Membro)
+	local mapa = run.mapa
+	if not mapa then
+		return
+	end
+	membro.reviver = false
+	definirVida(player, membro.vidaMax)
+	local destino = mapa.spawn
+	local pos = membro.marcaPos
+	if pos and (pos - mapa.origem.Position).Magnitude < mapa.raio then
+		destino = CFrame.new(pos + Vector3.new(0, 3, 0))
+	end
+	levar(player, destino)
+	local sozinho = ativos(run) <= 1
+	if sozinho then
+		return -- sozinho não há quem reviva: volta direto ao combate
+	end
+	local _, h = corpo(player)
+	membro.abatido = true
+	membro.abatidoAte = os.clock() + Desafios.ABATIDO_ESPERA
+	membro.reviverProg = 0
+	if h then
+		membro.velocidadeAntes = h.WalkSpeed
+		h.WalkSpeed = 0
+		h.JumpHeight = 0
+		h.JumpPower = 0
+	end
+	enviar(player, {
+		tipo = "aviso",
+		texto = "ABATIDO: um aliado precisa ficar perto de você para te reerguer.",
+	})
+end
+
 -- Recalcula os efeitos das Bênçãos (combate, vida máxima)
 local function aplicarBencaos(player: Player, membro: Membro, curar: boolean)
 	membro.mods = Run.modificadores(membro.bencaos)
@@ -492,6 +730,9 @@ local function iniciarAndar(run: Run, n: number)
 		local ofertas = membro.ofertas
 		if ofertas and #ofertas > 0 then
 			escolherBencao(player, membro, ofertas[rng:NextInteger(1, #ofertas)])
+		end
+		if membro.abatido then
+			reerguer(run, player, membro, false)
 		end
 	end
 	local nucleos = if tipo == "purificacao" or tipo == "guardiao"
@@ -583,8 +824,18 @@ local function abrirFenda(run: Run)
 		quedas = run.quedasAndar,
 		mult = Run.MULT_NOTA[run.notaAndar],
 	})
+	if run.notaAndar == "S" then
+		run.notasS += 1
+	end
 	for player, membro in run.membros do
 		premiar(player, run, membro, true, false)
+		if run.notaAndar == "S" then
+			contarDesafio(membro, "notasS", 1)
+		end
+		if run.tipoAndar == "horda" then
+			contarDesafio(membro, "hordas", 1)
+		end
+		salvarDesafios(player, run, membro)
 	end
 	if run.tipoAndar ~= "cofre" then
 		for _, i in run.inimigos do
@@ -623,6 +874,10 @@ local function aoMorrer(run: Run, player: Player)
 	local membroCaido = run.membros[player]
 	if membroCaido then
 		membroCaido.sequencia = 0
+	end
+	if membroCaido then
+		local r = corpo(player)
+		membroCaido.marcaPos = if r then r.Position else nil
 	end
 	if run.vidas > 0 then
 		run.vidas -= 1
@@ -665,9 +920,7 @@ local function ligarPersonagem(run: Run, player: Player, personagem: Model)
 		then
 			return
 		end
-		m.reviver = false
-		definirVida(player, m.vidaMax)
-		levar(player, mapa.spawn)
+		entrarAbatido(run, player, m)
 	end
 end
 
@@ -676,7 +929,8 @@ local function lancar(
 	jogadores: { Player },
 	andar: number,
 	teste: boolean,
-	preparo: Run.Preparo?
+	preparo: Run.Preparo?,
+	diaria: boolean?
 ): boolean
 	local slot: number? = nil
 	for s = 1, SLOTS do
@@ -695,8 +949,17 @@ local function lancar(
 		slot = slot,
 		universo = universo,
 		andar = 0,
-		tipos = Run.sortearAndares(Incursoes.ANDARES, sorteio),
+		-- Fenda do Dia: mesma sequência de andares e mesmos mapas para todos no dia
+		tipos = if diaria
+			then Run.sortearAndares(
+				Incursoes.ANDARES,
+				Desafios.gerador(Desafios.fendaDoDia(Desafios.dia(os.time())).semente)
+			)
+			else Run.sortearAndares(Incursoes.ANDARES, sorteio),
 		preparo = preparo or Run.preparo(nil),
+		diaria = diaria == true,
+		inicioRun = os.clock(),
+		notasS = 0,
 		tipoAndar = "purificacao",
 		inicioAndar = os.clock(),
 		quedasAndar = 0,
@@ -715,7 +978,9 @@ local function lancar(
 		pasta = pasta,
 		-- cada partida num espaço só dela, longe do Nexo (que termina no raio 238)
 		origem = CFrame.new(5000 + slot * 400, 600, 0),
-		seed = rng:NextInteger(1, 2 ^ 30),
+		seed = if diaria
+			then Desafios.fendaDoDia(Desafios.dia(os.time())).semente
+			else rng:NextInteger(1, 2 ^ 30),
 		teste = teste,
 		mapa = nil,
 		cfg = Incursoes.andar(universo, 1, #jogadores),
@@ -745,6 +1010,15 @@ local function lancar(
 			ofertas = nil,
 			sequencia = 0,
 			ultimoAbate = 0,
+			abates = 0,
+			desafios = {},
+			melhorSequencia = 0,
+			marcaPos = nil,
+			abatido = false,
+			abatidoAte = 0,
+			reviverProg = 0,
+			velocidadeAntes = nil,
+			rotulo = nil,
 			recompensas = Loot.novo(),
 			ressonancia = ressonanciaDe(player),
 			proximoPulso = 0,
@@ -842,19 +1116,62 @@ local function passoRun(run: Run, dt: number)
 			if d.Y < -30 and Vector3.new(d.X, 0, d.Z).Magnitude < 200 then
 				levar(player, mapa.spawn)
 			elseif d.Magnitude < 200 then
-				table.insert(alvos, { raiz = r, humanoide = h })
-				vivos[player] = r
+				if not run.membros[player].abatido then
+					table.insert(alvos, { raiz = r, humanoide = h })
+					vivos[player] = r
+				end
 			else
 				-- Renasceu no lobby (o spawn do Roblox venceu o teleporte do reviver): volta ao andar
 				local m = run.membros[player]
 				if agora >= m.proximoResgate then
 					m.proximoResgate = agora + 1
-					if m.reviver or h.MaxHealth ~= m.vidaMax then
-						m.reviver = false
-						definirVida(player, m.vidaMax)
+					if m.reviver then
+						entrarAbatido(run, player, m)
+					else
+						if h.MaxHealth ~= m.vidaMax then
+							definirVida(player, m.vidaMax)
+						end
+						levar(player, mapa.spawn)
 					end
-					levar(player, mapa.spawn)
 				end
+			end
+		end
+	end
+
+	-- reviver colega: aliado perto enche a barra; sem ajuda, levanta sozinho no fim do tempo
+	for player, m in run.membros do
+		if m.abatido then
+			local r = corpo(player)
+			if not r then
+				continue
+			end
+			local ajudantes = {}
+			for outro, ro in vivos do
+				if
+					outro ~= player
+					and (ro.Position - r.Position).Magnitude <= Desafios.REVIVER_RAIO
+				then
+					table.insert(ajudantes, outro)
+				end
+			end
+			if #ajudantes > 0 then
+				m.reviverProg = math.min(1, m.reviverProg + dt / Desafios.REVIVER_TEMPO)
+			end
+			if m.reviverProg >= 1 then
+				for _, ajudante in ajudantes do
+					contarDesafio(run.membros[ajudante], "reviver", 1)
+				end
+				reerguer(run, player, m, true)
+			elseif agora >= m.abatidoAte then
+				reerguer(run, player, m, false)
+			else
+				rotuloAbatido(
+					player,
+					if #ajudantes > 0
+						then string.format("REERGUENDO %d%%", math.floor(m.reviverProg * 100))
+						else string.format("ABATIDO · %ds", math.ceil(m.abatidoAte - agora)),
+					m
+				)
 			end
 		end
 	end
@@ -999,6 +1316,8 @@ local function passoRun(run: Run, dt: number)
 				run.notaAndar = "S" -- o risco paga: loot de andar perfeito outra vez
 				for player, membro in run.membros do
 					premiar(player, run, membro, true, false)
+					contarDesafio(membro, "cofres", 1)
+					salvarDesafios(player, run, membro)
 				end
 				paraRun(run, { tipo = "aviso", texto = "COFRE ABERTO! Loot extra para todos." })
 			end
@@ -1089,15 +1408,21 @@ end
 
 -- ===================================================================== fila
 
+local function fendaHoje(): Desafios.FendaDoDia
+	return Desafios.fendaDoDia(Desafios.dia(os.time()))
+end
+
 local function enviarFila(universo: string)
 	local f = filas[universo]
 	if not f then
 		return
 	end
+	local diaria = universo == FILA_DIARIA
 	for _, player in f.jogadores do
 		enviar(player, {
 			tipo = "fila",
-			universo = universo,
+			universo = if diaria then fendaHoje().universo else universo,
+			diaria = diaria,
 			jogadores = #f.jogadores,
 			preparo = Run.descreverPreparo(f.preparo),
 			falta = if f.fim then math.max(0, math.ceil(f.fim - os.clock())) else nil,
@@ -1140,7 +1465,9 @@ local function passoFilas()
 			f.fim = f.fim or (os.clock() + Incursoes.ESPERA_FILA)
 			if os.clock() >= f.fim or #f.jogadores >= Incursoes.MAX_JOGADORES then
 				local grupo = table.clone(f.jogadores)
-				if lancar(universo, grupo, 1, false, f.preparo) then
+				local diaria = universo == FILA_DIARIA
+				local destino = if diaria then fendaHoje().universo else universo
+				if lancar(destino, grupo, 1, false, f.preparo, diaria) then
 					for _, p in grupo do
 						naFila[p] = nil
 					end
@@ -1171,7 +1498,8 @@ function Servico.iniciarTeste(
 	player: Player,
 	universo: string,
 	andar: number,
-	preparo: Run.Preparo?
+	preparo: Run.Preparo?,
+	diaria: boolean?
 ): (boolean, string?)
 	if player:GetAttribute("EmDueloArena") then
 		return false, "Conclua o duelo antes de entrar nas Incursões."
@@ -1189,7 +1517,7 @@ function Servico.iniciarTeste(
 	if not r or not h or h.Health <= 0 then
 		return false, "Aguarde seu personagem renascer."
 	end
-	if not lancar(universo, { player }, andar, true, preparo) then
+	if not lancar(universo, { player }, andar, true, preparo, diaria) then
 		return false, "Todas as fendas estão ocupadas. Tente novamente."
 	end
 	return true, nil
@@ -1199,6 +1527,14 @@ local function acaoFila(player: Player, universo: any, bruto: any): (boolean, st
 	if universo == "" or universo == nil then
 		tirarDaFila(player)
 		return true, "Você saiu da fila."
+	end
+	-- Fenda do Dia: universo e Marcas do dia, iguais para todos
+	local chave = universo
+	local diaria = universo == FILA_DIARIA
+	if diaria then
+		local fd = fendaHoje()
+		universo = fd.universo
+		bruto = { pesadelo = false, marcas = fd.marcas }
 	end
 	if type(universo) ~= "string" or not Incursoes.porId[universo] then
 		return false, "Universo inválido."
@@ -1224,24 +1560,26 @@ local function acaoFila(player: Player, universo: any, bruto: any): (boolean, st
 			"Vença " .. Incursoes.porId[universo].nome .. " no normal para liberar o Pesadelo."
 	end
 	if Dados.emTeste(player) then
-		return Servico.iniciarTeste(player, universo, 1, preparo)
+		return Servico.iniciarTeste(player, universo, 1, preparo, diaria)
 	end
-	if naFila[player] == universo then
+	if naFila[player] == chave then
 		return true, nil
 	end
 	tirarDaFila(player)
-	local f = filas[universo]
+	local f = filas[chave]
 	if not f then
 		f = { jogadores = {}, fim = nil, preparo = preparo } -- quem abre a fila escolhe o preparo
-		filas[universo] = f
+		filas[chave] = f
 	end
 	if #f.jogadores >= Incursoes.MAX_JOGADORES then
 		return false, "Esta fila está cheia. Espere a próxima partida."
 	end
 	table.insert(f.jogadores, player)
-	naFila[player] = universo
-	enviarFila(universo)
-	return true, "Na fila: " .. Incursoes.porId[universo].nome
+	naFila[player] = chave
+	enviarFila(chave)
+	return true,
+		(if diaria then "Na fila da Fenda do Dia: " else "Na fila: ")
+			.. Incursoes.porId[universo].nome
 end
 
 local function acaoSair(player: Player): (boolean, string?)
@@ -1267,7 +1605,7 @@ local function acaoPulso(player: Player): (boolean, string?)
 	end
 	local m = run.membros[player]
 	local agora = os.clock()
-	if not m or agora < m.proximoPulso then
+	if not m or m.abatido or agora < m.proximoPulso then
 		return false, nil
 	end
 	local r, h = corpo(player)
@@ -1305,7 +1643,7 @@ local function contextoCombate(player: Player): Combate.Contexto?
 	local m = run.membros[player]
 	local r, h = corpo(player)
 	local mapa = run.mapa
-	if not m or not r or not h or h.Health <= 0 or not mapa or embarques[player] then
+	if not m or m.abatido or not r or not h or h.Health <= 0 or not mapa or embarques[player] then
 		return nil
 	end
 	local distancia = r.Position - mapa.origem.Position
@@ -1377,6 +1715,12 @@ local function aoAbater(player: Player, i: any)
 		then membro.sequencia + 1
 		else 1
 	membro.ultimoAbate = agora
+	membro.abates += 1
+	membro.melhorSequencia = math.max(membro.melhorSequencia, membro.sequencia)
+	contarDesafio(membro, "abates", 1)
+	if i.elite then
+		contarDesafio(membro, "elites", 1)
+	end
 	enviar(player, { tipo = "sequencia", n = membro.sequencia })
 	local cura = membro.mods.curaAbate or 0
 	if cura > 0 then
@@ -1388,6 +1732,16 @@ local function aoAbater(player: Player, i: any)
 	if i.elite then
 		paraRun(run, { tipo = "aviso", texto = player.DisplayName .. " derrubou uma Elite!" })
 	end
+end
+
+-- Painel: Fenda do Dia (universo e Marcas) e ranking deste servidor
+local function acaoRanking(_player: Player): (boolean, string?, { [string]: any }?)
+	local fd = fendaHoje()
+	local marcas = {}
+	for id in fd.marcas do
+		table.insert(marcas, id)
+	end
+	return true, nil, { universo = fd.universo, marcas = marcas, ranking = rankingAtual() }
 end
 
 local function acaoReliquia(player: Player, id: any): (boolean, string?)
@@ -1429,6 +1783,7 @@ function Servico.iniciar()
 	Acoes.registrar("IncursaoEsquiva", acaoEsquiva)
 	Acoes.registrar("IncursaoGuarda", acaoGuarda)
 	Acoes.registrar("IncursaoBencao", acaoBencao)
+	Acoes.registrar("IncursaoRanking", acaoRanking)
 	Combate.aoAbater = aoAbater
 	Combate.iniciar()
 
