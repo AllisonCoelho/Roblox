@@ -304,18 +304,6 @@ function Loja.abrir()
 	Navegacao.alternar("Loja")
 end
 
--- Abre a Loja já na aba pedida (ex.: o cartão do jogador abre o Passe de Temporada)
-function Loja.abrirAba(nome: string)
-	if table.find(ABAS, nome) then
-		aba = nome
-	end
-	if Navegacao.aberto() == "Loja" then
-		atualizar()
-	else
-		Navegacao.abrir("Loja")
-	end
-end
-
 function Loja.montar(opcoes: Opcoes)
 	op = opcoes
 	local painel =

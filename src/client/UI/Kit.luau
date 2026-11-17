@@ -1,7 +1,5 @@
--- Componentes da interface "Nexo Vibrante". Todas as formas usam instâncias nativas
--- (sem imagens externas): cantos arredondados, contorno grosso, brilho e ícones em texto.
+-- Componentes da interface Órbita do Nexo. Todas as formas usam instâncias nativas.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TweenService = game:GetService("TweenService")
 
 local Tema = require(ReplicatedStorage.Shared.Tema)
 local Cores = Tema.Orbita
@@ -23,24 +21,14 @@ function Kit.texto(props: { [string]: any }): TextLabel
 	local fonte = props.fonte
 	props.fonte = nil
 	props.BackgroundTransparency = 1
-	props.FontFace = if fonte == "titulo" or fonte == "mono"
-		then Tema.FonteCartoon
+	props.FontFace = if fonte == "titulo"
+		then Tema.FonteNegrito
+		elseif fonte == "mono" then Tema.FonteNumeros
 		else Tema.FonteCorpo
 	props.TextColor3 = props.TextColor3 or Cores.Texto
 	props.TextSize = props.TextSize or 18
 	props.Text = props.Text or ""
-	local rotulo = novo("TextLabel", props)
-	-- Títulos e números ganham contorno escuro (leitura sobre qualquer cor)
-	if fonte == "titulo" or fonte == "mono" then
-		novo("UIStroke", {
-			Name = "Contorno",
-			Color = Cores.Borda,
-			Thickness = math.clamp(math.floor((props.TextSize :: number) / 12), 1, 3),
-			ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual,
-			Parent = rotulo,
-		})
-	end
-	return rotulo
+	return novo("TextLabel", props)
 end
 
 function Kit.corLegivel(cor: Color3): Color3
@@ -64,6 +52,24 @@ local function bloco(
 	})
 end
 
+-- Dois cantos chanfrados. As faixas centrais acompanham o tamanho da placa.
+local function superficie(pai: Frame, cor: Color3, corte: number): { Frame }
+	local meio = bloco(pai, cor, UDim2.new(1, 0, 1, -2 * corte), UDim2.fromOffset(0, corte))
+	local topo = bloco(pai, cor, UDim2.new(1, -corte, 0, corte), UDim2.new())
+	local base = bloco(pai, cor, UDim2.new(1, -corte, 0, corte), UDim2.new(0, corte, 1, -corte))
+	local superior = bloco(pai, cor, UDim2.fromOffset(corte, corte), UDim2.new(1, -corte, 0, 0))
+	local inferior = bloco(pai, cor, UDim2.fromOffset(corte, corte), UDim2.new(0, 0, 1, -corte))
+	local recorte = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0),
+		NumberSequenceKeypoint.new(0.495, 0),
+		NumberSequenceKeypoint.new(0.505, 1),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	novo("UIGradient", { Rotation = -45, Transparency = recorte, Parent = superior })
+	novo("UIGradient", { Rotation = 135, Transparency = recorte, Parent = inferior })
+	return { meio, topo, base, superior, inferior }
+end
+
 export type Placa = {
 	quadro: Frame,
 	conteudo: Frame,
@@ -82,11 +88,10 @@ function Kit.placa(op: {
 	ordem: number?,
 	z: number?,
 }): Placa
-	local raio = math.max(op.corte or 10, 8)
+	local corte = op.corte or 10
 	local quadro = novo("Frame", {
 		Name = op.nome or "Placa",
-		BackgroundColor3 = op.fundo or Cores.Painel,
-		BorderSizePixel = 0,
+		BackgroundTransparency = 1,
 		Size = op.tamanho,
 		Position = op.posicao or UDim2.new(),
 		AnchorPoint = op.ancora or Vector2.zero,
@@ -94,31 +99,15 @@ function Kit.placa(op: {
 		ZIndex = op.z or 1,
 		Parent = op.pai,
 	})
-	novo("UICorner", { CornerRadius = UDim.new(0, raio), Parent = quadro })
-	local contorno = novo("UIStroke", {
-		Color = op.borda or Cores.Borda,
-		Thickness = 3,
-		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-		Parent = quadro,
-	})
-	-- Volume: claro em cima, um pouco mais escuro embaixo
-	novo("UIGradient", {
-		Rotation = 90,
-		Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(190, 190, 205)),
-		Parent = quadro,
-	})
-	-- Brilho na metade de cima
-	local brilho = novo("Frame", {
-		Name = "Brilho",
-		BackgroundColor3 = Color3.new(1, 1, 1),
-		BackgroundTransparency = 0.88,
-		BorderSizePixel = 0,
-		Position = UDim2.fromOffset(4, 3),
-		Size = UDim2.new(1, -8, 0.42, 0),
+	local bordas = superficie(quadro, op.borda or Cores.Borda, corte)
+	local interior = novo("Frame", {
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(1, 1),
+		Size = UDim2.new(1, -2, 1, -2),
 		ZIndex = 2,
 		Parent = quadro,
 	})
-	novo("UICorner", { CornerRadius = UDim.new(0, math.max(raio - 3, 4)), Parent = brilho })
+	local miolo = superficie(interior, op.fundo or Cores.Painel, corte - 1)
 	local conteudo = novo("Frame", {
 		Name = "Conteudo",
 		BackgroundTransparency = 1,
@@ -130,33 +119,16 @@ function Kit.placa(op: {
 		quadro = quadro,
 		conteudo = conteudo,
 		definirCor = function(fundo: Color3, borda: Color3?)
-			quadro.BackgroundColor3 = fundo
+			for _, f in miolo do
+				f.BackgroundColor3 = fundo
+			end
 			if borda then
-				contorno.Color = borda
+				for _, f in bordas do
+					f.BackgroundColor3 = borda
+				end
 			end
 		end,
 	}
-end
-
--- Pequeno "pop" ao passar o mouse e ao tocar (0,1 a 0,2 s)
-function Kit.animarToque(alvo: GuiObject, botao: GuiButton)
-	local escala = alvo:FindFirstChildOfClass("UIScale") or novo("UIScale", { Parent = alvo })
-	local function para(v: number)
-		TweenService:Create(escala, TweenInfo.new(0.12, Enum.EasingStyle.Back), { Scale = v })
-			:Play()
-	end
-	botao.MouseEnter:Connect(function()
-		para(1.05)
-	end)
-	botao.MouseLeave:Connect(function()
-		para(1)
-	end)
-	botao.MouseButton1Down:Connect(function()
-		para(0.93)
-	end)
-	botao.MouseButton1Up:Connect(function()
-		para(1.05)
-	end)
 end
 
 function Kit.alvo(pai: GuiObject, nome: string, aoClicar: () -> ()): TextButton
@@ -240,25 +212,22 @@ function Kit.botaoPlaca(op: {
 		Position = UDim2.fromOffset(6, 0),
 		Parent = placa.conteudo,
 	})
-	local contornoTexto = rotulo:FindFirstChild("Contorno") :: UIStroke?
 	local function definirTom(tom: Tom)
 		local primario = tom == "lilas"
 		local ativo = tom == "menta"
 		placa.definirCor(
-			if primario then Cores.Lilas elseif ativo then Cores.Ativo else Cores.Elevado,
-			Cores.Borda
+			if primario then Cores.Lilas elseif ativo then Cores.Ativo else Cores.Painel,
+			if primario then Cores.Lilas elseif ativo then Cores.Menta else Cores.Borda
 		)
-		rotulo.TextColor3 = if primario then Cores.Fundo else Cores.Texto
-		if contornoTexto then
-			contornoTexto.Enabled = not primario
-		end
+		rotulo.TextColor3 = if primario
+			then Cores.Fundo
+			elseif ativo then Cores.Menta
+			else Cores.Texto
 	end
 	definirTom(op.tom or "neutro")
-	local botao = Kit.alvo(placa.quadro, op.texto, op.aoClicar)
-	Kit.animarToque(placa.quadro, botao)
 	return {
 		placa = placa,
-		botao = botao,
+		botao = Kit.alvo(placa.quadro, op.texto, op.aoClicar),
 		rotulo = rotulo,
 		definirTom = definirTom,
 	}
@@ -295,8 +264,7 @@ function Kit.cristal(pai: Instance, largura: number, cor: Color3): (Frame, Frame
 		Vector2.new(0.5, 0.5)
 	)
 	diamante.Rotation = 45
-	novo("UIStroke", { Color = Cores.Borda, Thickness = 3, Parent = diamante })
-	novo("UICorner", { CornerRadius = UDim.new(0.2, 0), Parent = diamante })
+	novo("UIStroke", { Color = Cores.Borda, Thickness = 1, Parent = diamante })
 	local centro = bloco(
 		quadro,
 		cor,
@@ -305,7 +273,6 @@ function Kit.cristal(pai: Instance, largura: number, cor: Color3): (Frame, Frame
 		Vector2.new(0.5, 0.5)
 	)
 	centro.Rotation = 45
-	novo("UICorner", { CornerRadius = UDim.new(0.25, 0), Parent = centro })
 	novo("UIGradient", {
 		Rotation = -45,
 		Color = ColorSequence.new({

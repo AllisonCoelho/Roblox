@@ -1,7 +1,5 @@
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
-local Formato = require(Shared.Formato)
 local Artefatos = require(Shared.Dados.Artefatos)
-local Icones = require(Shared.Dados.Icones)
 local Itens = require(Shared.Dados.Itens)
 local Receitas = require(Shared.Dados.Receitas)
 local Cores = require(Shared.Tema).Orbita
@@ -93,95 +91,31 @@ local function atualizar()
 		)
 		return
 	end
-	-- Grade de ícones (cor da raridade, símbolo do item e quantidade)
-	local grade = Kit.novo("Frame", {
-		BackgroundTransparency = 1,
-		AutomaticSize = Enum.AutomaticSize.Y,
-		Size = UDim2.new(1, -12, 0, 0),
-		LayoutOrder = proximaPosicao(),
-		Parent = lista,
-	})
-	Kit.novo("UIGridLayout", {
-		CellSize = UDim2.fromOffset(104, 116),
-		CellPadding = UDim2.fromOffset(10, 10),
-		SortOrder = Enum.SortOrder.LayoutOrder,
-		Parent = grade,
-	})
-	for ordemItem, id in ids do
-		local item = Itens.porId[id]
-		local tier = Itens.Tiers[item.raridade]
-		local cor = Color3.fromHex(tier.cor)
-		local placa =
-			Kit.placa({ tamanho = UDim2.new(), corte = 16, ordem = ordemItem, pai = grade })
-		placa.definirCor(
-			Color3.new(1, 1, 1),
-			if selecionado == id then Color3.new(1, 1, 1) else Cores.Borda
-		)
-		local grad = placa.quadro:FindFirstChildOfClass("UIGradient")
-		if grad then
-			grad.Color = ColorSequence.new(cor:Lerp(Cores.Painel, 0.25), cor:Lerp(Cores.Borda, 0.6))
-		end
-		Kit.texto({
-			Text = Icones.item(id, item.categoria),
-			TextSize = 40,
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.new(0.5, 0, 0, 40),
-			Size = UDim2.fromOffset(70, 50),
-			ZIndex = 4,
-			Parent = placa.conteudo,
-		})
-		Kit.texto({
-			fonte = "titulo",
-			Text = item.nome,
-			TextSize = 13,
-			TextWrapped = true,
-			Position = UDim2.new(0, 4, 1, -38),
-			Size = UDim2.new(1, -8, 0, 34),
-			ZIndex = 4,
-			Parent = placa.conteudo,
-		})
-		Kit.texto({
-			fonte = "mono",
-			Text = "×" .. Formato.curto(anterior[id]),
-			TextSize = 15,
-			TextXAlignment = Enum.TextXAlignment.Right,
-			Position = UDim2.new(0, 0, 0, 4),
-			Size = UDim2.new(1, -8, 0, 18),
-			ZIndex = 5,
-			Parent = placa.conteudo,
-		})
-		if equipado == id then
-			Kit.texto({
-				Text = "✅",
-				TextSize = 16,
-				Position = UDim2.fromOffset(6, 4),
-				Size = UDim2.fromOffset(20, 20),
-				ZIndex = 5,
-				Parent = placa.conteudo,
-			})
-		end
-		local alvo = Kit.alvo(placa.quadro, item.nome, function()
-			selecionado = if selecionado == id then nil else id
-			atualizar()
-		end)
-		Kit.animarToque(placa.quadro, alvo)
-	end
 	for _, id in ids do
 		local item = Itens.porId[id]
 		local tier = Itens.Tiers[item.raridade]
 		local cor = Color3.fromHex(tier.cor)
+		local botao = Kit.botaoPlaca({
+			texto = string.format(
+				"%s  %s  ·  %s  ×%d%s",
+				tier.icone,
+				item.nome,
+				tier.nome,
+				anterior[id],
+				if equipado == id then "  ·  Equipado" else ""
+			),
+			tamanho = UDim2.new(1, -12, 0, 52),
+			tamanhoTexto = 16,
+			pai = lista,
+			ordem = proximaPosicao(),
+			aoClicar = function()
+				selecionado = if selecionado == id then nil else id
+				atualizar()
+			end,
+		})
+		botao.rotulo.TextColor3 = Kit.corLegivel(cor)
+		botao.rotulo.TextWrapped = true
 		if selecionado == id then
-			linha(
-				string.format(
-					"%s  %s  ·  %s  ×%d",
-					Icones.item(id, item.categoria),
-					item.nome,
-					tier.nome,
-					anterior[id]
-				),
-				lista,
-				Kit.corLegivel(cor)
-			)
 			linha(item.descricao, lista)
 			linha(
 				"Origem  ·  " .. item.origem .. "\nUso  ·  " .. item.uso,
