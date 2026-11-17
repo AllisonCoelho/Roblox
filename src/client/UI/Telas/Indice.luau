@@ -197,7 +197,8 @@ function Indice.montar(aoAviso: (string) -> ())
 		)
 		for _, aura in Auras.lista do
 			local c = cartoes[aura.id]
-			c.chanceAtual.Text = "Atual: 1 em " .. Formato.chance(1 / Auras.probabilidadeReal(aura.id, sorte))
+			c.chanceAtual.Text = "Atual: 1 em "
+				.. Formato.chance(1 / Auras.probabilidadeReal(aura.id, sorte))
 			local tem = Perfil.possui(estado, aura.id)
 			local equipada = tem and estado.equipada == aura.id
 			local cor = if tem then c.cor else Cores.Borda

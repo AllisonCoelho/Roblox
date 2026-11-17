@@ -84,7 +84,8 @@ Catalogo.PROBABILIDADE_RESERVA = 1 - soma
 for i, d in DEFINICOES do
 	local reserva = i == 1
 	local pBase = if reserva then Catalogo.PROBABILIDADE_RESERVA else 1 / d[2]
-	local aura = { id = d[1], chance = 1 / pBase, tierNome = d[3], pBase = pBase, reserva = reserva }
+	local aura =
+		{ id = d[1], chance = 1 / pBase, tierNome = d[3], pBase = pBase, reserva = reserva }
 	table.insert(Catalogo.lista, aura)
 	Catalogo.porId[aura.id] = aura
 end
