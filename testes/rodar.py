@@ -23,6 +23,7 @@ MODULOS = {
     "Arena": "src/shared/Dados/Arena.luau",
     "Incursoes": "src/shared/Dados/Incursoes.luau",
     "Combate": "src/shared/Dados/Combate.luau",
+    "Monetizacao": "src/shared/Dados/Monetizacao.luau",
 }
 codigo = ["""
 -- Vector3 mínimo (o luau puro não tem): só para a geometria do combate nos testes

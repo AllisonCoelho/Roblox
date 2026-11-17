@@ -15,6 +15,7 @@ export type Categoria = {
 	ruptura: number,
 	silencio: number, -- pausa dentro da ruptura, logo antes do estouro
 	cartao: number, -- tempo do cartão de revelação na tela (0 = só o texto rápido do HUD)
+	roleta: number, -- Roleta de Ecos antes do ritual (só para quem girou), em segundos
 	-- Intensidade
 	aneis: number, -- anéis orbitando o núcleo
 	nucleo: number, -- diâmetro do núcleo, em studs
@@ -43,6 +44,7 @@ Apresentacao.Categorias = {
 		ruptura = 0.12,
 		silencio = 0,
 		cartao = 0,
+		roleta = 1.2,
 		aneis = 1,
 		nucleo = 0.6,
 		pulsos = 0,
@@ -67,6 +69,7 @@ Apresentacao.Categorias = {
 		ruptura = 0.18,
 		silencio = 0,
 		cartao = 0,
+		roleta = 1.4,
 		aneis = 2,
 		nucleo = 0.8,
 		pulsos = 1,
@@ -91,6 +94,7 @@ Apresentacao.Categorias = {
 		ruptura = 0.3,
 		silencio = 0,
 		cartao = 2.2,
+		roleta = 1.7,
 		aneis = 3,
 		nucleo = 1,
 		pulsos = 4,
@@ -115,6 +119,7 @@ Apresentacao.Categorias = {
 		ruptura = 0.4,
 		silencio = 0.06,
 		cartao = 2.8,
+		roleta = 2.0,
 		aneis = 4,
 		nucleo = 1.2,
 		pulsos = 7,
@@ -139,6 +144,7 @@ Apresentacao.Categorias = {
 		ruptura = 0.65,
 		silencio = 0.18,
 		cartao = 3.4,
+		roleta = 2.3,
 		aneis = 5,
 		nucleo = 1.4,
 		pulsos = 10,
@@ -163,6 +169,7 @@ Apresentacao.Categorias = {
 		ruptura = 1,
 		silencio = 0.35,
 		cartao = 4.5,
+		roleta = 2.6,
 		aneis = 6,
 		nucleo = 1.7,
 		pulsos = 14,
@@ -198,7 +205,7 @@ end
 
 -- Tempo do clique até a aura ser revelada
 function Apresentacao.tempoAteRevelacao(c: Categoria): number
-	return c.chamado + c.ressonancia + c.instabilidade + c.ruptura
+	return (c.roleta or 0) + c.chamado + c.ressonancia + c.instabilidade + c.ruptura
 end
 
 -- Categoria usada quando o jogador pede para pular animações de auras repetidas.

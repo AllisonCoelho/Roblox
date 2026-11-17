@@ -25,6 +25,7 @@ local Trilha = require(Shared.Dados.Trilha)
 local Fenda = require(script.Parent.Fenda)
 local Motion = require(script.Parent.Motion)
 local Sons = require(script.Parent.Sons)
+local MalhaNuvem = require(script.Parent:WaitForChild("Auras"):WaitForChild("MalhaNuvem"))
 
 local Ritual = {}
 
@@ -240,7 +241,7 @@ local function estourar(
 end
 
 -- Toca o ritual no personagem. Devolve uma função que cancela e limpa tudo.
-function Ritual.tocar(personagem: Model, aura: Auras.Aura, op: Opcoes): () -> ()
+local function tocarRitual(personagem: Model, aura: Auras.Aura, op: Opcoes): () -> ()
 	local raiz = personagem:FindFirstChild("HumanoidRootPart")
 	local humanoide = personagem:FindFirstChildOfClass("Humanoid")
 	if not raiz or not raiz:IsA("BasePart") or not humanoide or humanoide.Health <= 0 then
@@ -717,6 +718,248 @@ function Ritual.tocar(personagem: Model, aura: Auras.Aura, op: Opcoes): () -> ()
 		end)
 	)
 
+	return finalizar
+end
+
+-- ===================================================================== Roleta de Ecos
+-- Etapa nova, antes do Chamado (só para quem girou): cristais com as cores de várias auras giram
+-- em volta do personagem e desaceleram como uma roleta; um letreiro sobre a cabeça passa nomes de
+-- auras. O cristal que para na frente acende com a cor do resultado e voa para o núcleo, onde o
+-- ritual de sempre começa. Nas raridades com cartão o letreiro termina em "???" (sem estragar a
+-- revelação). As malhas vêm do Blender (assets/ritual) e são montadas no cliente.
+
+local function malhaRoleta(nome: string): BasePart
+	local ok, parte = pcall(function(): MeshPart
+		local m = MalhaNuvem.criar(nome, false)
+		return m
+	end)
+	if ok and parte then
+		return parte
+	end
+	-- sem EditableMesh: um losango simples no lugar do cristal
+	return peca({ Shape = Enum.PartType.Block, Size = Vector3.new(0.45, 1.5, 0.45) })
+end
+
+-- já converte as malhas no carregamento (a primeira conversão espera um pouco)
+task.spawn(function()
+	for _, nome in { "ritual_eco", "ritual_ponteiro" } do
+		pcall(function()
+			local m = MalhaNuvem.criar(nome, false)
+			m:Destroy()
+		end)
+	end
+end)
+
+local function roleta(
+	personagem: Model,
+	raiz: BasePart,
+	aura: Auras.Aura,
+	op: Opcoes,
+	aoTerminar: () -> ()
+): () -> ()
+	local cat = op.categoria
+	local duracao = cat.roleta or 0
+	local baixa = op.qualidadeBaixa
+	local n = if baixa then 6 else 8
+	local corFinal = if cat.cartao > 0
+		then Color3.fromHex(Auras.Tiers[aura.tier].cor)
+		else Color3.fromHex(aura.cores[1])
+	local pasta = Instance.new("Folder")
+	pasta.Name = "RoletaDeEcos"
+	pasta.Parent = workspace
+
+	-- cores e nomes de auras para girar (o resultado real só aparece no fim)
+	local sorteio = Random.new()
+	local candidatas: { Auras.Aura } = {}
+	for _ = 1, 24 do
+		table.insert(candidatas, Auras.lista[sorteio:NextInteger(1, #Auras.lista)])
+	end
+
+	local cristais: { BasePart } = {}
+	for k = 1, n do
+		local c = malhaRoleta("ritual_eco")
+		c.Anchored = true
+		c.CanCollide = false
+		c.CanQuery = false
+		c.CanTouch = false
+		c.CastShadow = false
+		c.Material = Enum.Material.Neon
+		c.Color = Color3.fromHex(candidatas[k].cores[1])
+		c.Parent = pasta
+		table.insert(cristais, c)
+	end
+	local ponteiro = malhaRoleta("ritual_ponteiro")
+	ponteiro.Anchored = true
+	ponteiro.CanCollide = false
+	ponteiro.CanQuery = false
+	ponteiro.CastShadow = false
+	ponteiro.Material = Enum.Material.Neon
+	ponteiro.Color = BRANCO
+	ponteiro.Parent = pasta
+	local anelChao = peca({
+		Shape = Enum.PartType.Cylinder,
+		Color = corFinal,
+		Transparency = 0.6,
+		Parent = pasta,
+	})
+	local tamanhoCristal = cristais[1].Size
+	local tamanhoPonteiro = ponteiro.Size
+
+	-- letreiro sobre a cabeça (só quem girou vê)
+	local cabeca = personagem:FindFirstChild("Head")
+	local letreiro = Instance.new("BillboardGui")
+	letreiro.Name = "RoletaLetreiro"
+	letreiro.Size = UDim2.fromOffset(420, 70)
+	letreiro.StudsOffsetWorldSpace = Vector3.new(0, 3.2, 0)
+	letreiro.AlwaysOnTop = true
+	letreiro.Adornee = if cabeca and cabeca:IsA("BasePart") then cabeca else raiz
+	local texto = Instance.new("TextLabel")
+	texto.BackgroundTransparency = 1
+	texto.Size = UDim2.fromScale(1, 1)
+	texto.Font = Enum.Font.GothamBlack
+	texto.TextScaled = true
+	texto.TextStrokeTransparency = 0.2
+	texto.Parent = letreiro
+	letreiro.Parent = pasta
+
+	-- giro: a roleta faz (2 + duração) voltas e para com o cristal 1 na frente do personagem
+	local olhar = raiz.CFrame.LookVector
+	local anguloFrente = math.atan2(olhar.Z, olhar.X)
+	local total = math.pi * 2 * (2 + duracao)
+	local inicioAngulo = anguloFrente - total
+	local raio = 4.2
+	local inicio = os.clock()
+	local proximoNome = 0
+	local nomeAtual = 0
+	local acendeu = false
+	local terminou = false
+	local conexao: RBXScriptConnection
+
+	local function limpar()
+		if conexao then
+			conexao:Disconnect()
+		end
+		pasta:Destroy()
+	end
+
+	conexao = RunService.Heartbeat:Connect(function()
+		if not raiz.Parent then
+			limpar()
+			return
+		end
+		local t = os.clock() - inicio
+		local f = math.clamp(t / duracao, 0, 1)
+		-- desacelera como roleta: ângulo = total * (1 - (1 - f)^3)
+		local giro = total * (1 - (1 - f) ^ 3)
+		local centro = raiz.Position + Vector3.new(0, 0.4, 0)
+		local surgir = suave(t / 0.25)
+		for k, c in cristais do
+			local a = inicioAngulo + giro + 2 * math.pi * (k - 1) / n
+			local alto = 0.35 * math.sin(t * 5 + k)
+			local pos = centro + Vector3.new(math.cos(a) * raio, alto, math.sin(a) * raio)
+			local escala = surgir * (if k == 1 and acendeu then 1.45 else 1)
+			c.Size = tamanhoCristal * math.max(escala, 0.05)
+			c.CFrame = CFrame.lookAt(pos, centro)
+				* CFrame.Angles(0, t * 3 + k, 0)
+				* CFrame.Angles(0.25, 0, 0)
+		end
+		local frente = centro
+			+ Vector3.new(math.cos(anguloFrente), 0, math.sin(anguloFrente)) * raio
+		ponteiro.Size = tamanhoPonteiro * surgir
+		ponteiro.CFrame = CFrame.new(frente + Vector3.new(0, 2.3 + 0.15 * math.sin(t * 8), 0))
+			* CFrame.Angles(0, t * 2, 0)
+		local r = raio * (0.6 + 0.4 * surgir)
+		anelChao.Size = Vector3.new(0.1, r * 2 + 1, r * 2 + 1)
+		anelChao.CFrame = CFrame.new(raiz.Position - Vector3.new(0, raiz.Size.Y / 2 + 2.6, 0))
+			* CFrame.Angles(0, 0, math.rad(90))
+
+		-- letreiro: os nomes passam cada vez mais devagar (um "tique" por troca)
+		if not acendeu and t >= proximoNome then
+			nomeAtual = nomeAtual % #candidatas + 1
+			local candidata = candidatas[nomeAtual]
+			texto.Text = candidata.nome
+			texto.TextColor3 = Color3.fromHex(Auras.Tiers[candidata.tier].cor)
+			-- troca as cores dos cristais de trás também (sem mexer no da frente quando acender)
+			local k = (nomeAtual % (n - 1)) + 2
+			cristais[k].Color = Color3.fromHex(candidata.cores[1])
+			proximoNome = t + 0.05 + 0.3 * f * f
+			Sons.tocar("batida", raiz, 1.4 + 0.4 * (1 - f), 0.18)
+		end
+		-- trava: o cristal da frente acende com a cor do resultado
+		if not acendeu and f >= 0.86 then
+			acendeu = true
+			cristais[1].Color = corFinal
+			ponteiro.Color = corFinal
+			anelChao.Color = corFinal
+			anelChao.Transparency = 0.35
+			texto.Text = if cat.cartao > 0 then "???" else aura.nome
+			texto.TextColor3 = corFinal
+			Sons.tocar("chamado", raiz, 1.2, 0.45)
+		end
+		if f >= 1 and not terminou then
+			terminou = true
+			conexao:Disconnect()
+			-- os cristais voam para o núcleo (à frente do peito) e o ritual começa
+			local nucleo = (raiz.CFrame * CFrame.new(0, 0.5, -2.2)).Position
+			for _, c in cristais do
+				TweenService
+					:Create(
+						c,
+						TweenInfo.new(0.28, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+						{
+							Position = nucleo,
+							Size = tamanhoCristal * 0.2,
+							Transparency = 0.6,
+						}
+					)
+					:Play()
+			end
+			TweenService:Create(ponteiro, TweenInfo.new(0.2), { Transparency = 1 }):Play()
+			TweenService:Create(anelChao, TweenInfo.new(0.3), { Transparency = 1 }):Play()
+			Debris:AddItem(pasta, 0.4)
+			aoTerminar()
+		end
+	end)
+	return limpar
+end
+
+-- Toca o giro completo: Roleta de Ecos (quem girou) e depois o ritual
+function Ritual.tocar(personagem: Model, aura: Auras.Aura, op: Opcoes): () -> ()
+	local raiz = personagem:FindFirstChild("HumanoidRootPart")
+	local cat = op.categoria
+	if not op.completo or (cat.roleta or 0) <= 0 or not raiz or not raiz:IsA("BasePart") then
+		return tocarRitual(personagem, aura, op)
+	end
+	if ativos[personagem] then
+		ativos[personagem]()
+	end
+	local cancelado = false
+	local fimRitual: (() -> ())? = nil
+	local finalizar: () -> ()
+	local limparRoleta = roleta(personagem, raiz, aura, op, function()
+		if cancelado then
+			return
+		end
+		ativos[personagem] = nil
+		fimRitual = tocarRitual(personagem, aura, op)
+		ativos[personagem] = finalizar
+	end)
+	finalizar = function()
+		if cancelado then
+			return
+		end
+		cancelado = true
+		limparRoleta()
+		if ativos[personagem] == finalizar then
+			ativos[personagem] = nil
+		end
+		if fimRitual then
+			fimRitual() -- o ritual termina e revela
+		elseif op.aoRevelar then
+			task.spawn(op.aoRevelar) -- pulou durante a roleta: revela na hora
+		end
+	end
+	ativos[personagem] = finalizar
 	return finalizar
 end
 

@@ -8,11 +8,13 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Apresentacao = require(Shared.Dados.Apresentacao)
 local Auras = require(Shared.Dados.Auras)
 local Config = require(Shared.Config)
+local Monetizacao = require(Shared.Dados.Monetizacao)
 local Perfil = require(Shared.Dados.Perfil)
 local Remotos = require(Shared.Remotos)
 local Transcendencia = require(Shared.Dados.Transcendencia)
 local Acoes = require(script.Parent.Acoes)
 local Dados = require(script.Parent.Dados)
+local Passes = require(script.Parent.Passes)
 
 local Sorteio = {}
 
@@ -20,6 +22,9 @@ local Sorteio = {}
 local TOLERANCIA = 0.1
 local rng = Random.new()
 local ultimoGiro: { [Player]: number } = {}
+-- Sem o passe "Pular Animação", o próximo giro só vale depois do ritual do anterior
+local liberadoEm: { [Player]: number } = {}
+local FOLGA_ANIMACAO = 0.25
 
 local function aleatorio(): number
 	return rng:NextNumber()
@@ -85,9 +90,18 @@ local function despertar(player: Player): (boolean, string?, { [string]: any }?)
 	if not estado or not Dados.podeProgredir(player) then
 		return false, "Seu perfil ainda não está disponível."
 	end
+	if agora < (liberadoEm[player] or 0) then
+		return false, nil -- a animação ainda está correndo (pular é um passe)
+	end
 	local sorte = Transcendencia.sorte(estado.transcendencia.nivel)
 	ultimoGiro[player] = agora
-	return entregar(player, Auras.sortear(aleatorio, sorte), sorte)
+	local aura = Auras.sortear(aleatorio, sorte)
+	local ok, id, dados = entregar(player, aura, sorte)
+	if ok and not Passes.tem(player, "pularAnimacao") then
+		local cat = Apresentacao.de(aura.chance)
+		liberadoEm[player] = agora + Apresentacao.tempoAteRevelacao(cat) - FOLGA_ANIMACAO
+	end
+	return ok, id, dados
 end
 
 function Sorteio.simular(player: Player, aura: Auras.Aura?): (boolean, string?, { [string]: any }?)
@@ -144,13 +158,49 @@ local function configurar(player: Player, chave: any, valor: any): (boolean, str
 	if type(chave) ~= "string" or not Perfil.CONFIGURACOES[chave] or type(valor) ~= "boolean" then
 		return false, "Pedido inválido"
 	end
+	local passe = Monetizacao.passeNecessario(chave, valor, function(id)
+		return Passes.tem(player, id)
+	end)
+	if passe then
+		local produto = Monetizacao.porId[passe]
+		return false, string.format("%s é um passe de %d Robux.", produto.nome, produto.preco)
+	end
 	return Dados.alterar(player, function(estado)
 		estado.configuracoes[chave] = valor
 		return true
 	end)
 end
 
+-- Desliga configurações pagas de quem não tem (ou perdeu) o passe
+local function corrigirConfiguracoes(player: Player)
+	if not Passes.verificado(player) or not Dados.de(player) then
+		return
+	end
+	local estado = Dados.de(player) :: Perfil.Estado
+	local precisa = false
+	for chave, regra in Monetizacao.CONFIGURACOES_PAGAS do
+		if estado.configuracoes[chave] == regra.exige and not Passes.tem(player, regra.passe) then
+			precisa = true
+		end
+	end
+	if not precisa then
+		return
+	end
+	Dados.alterar(player, function(e)
+		for chave, regra in Monetizacao.CONFIGURACOES_PAGAS do
+			if e.configuracoes[chave] == regra.exige and not Passes.tem(player, regra.passe) then
+				e.configuracoes[chave] = not regra.exige
+			end
+		end
+		return true
+	end)
+end
+
 function Sorteio.iniciar()
+	Passes.aoMudar(corrigirConfiguracoes)
+	Dados.quandoCarregar(function(player)
+		corrigirConfiguracoes(player)
+	end)
 	Acoes.registrar("Despertar", despertar)
 	Acoes.registrar("Equipar", equipar)
 	Acoes.registrar("Configurar", configurar)
@@ -161,6 +211,7 @@ function Sorteio.iniciar()
 	end
 	Players.PlayerRemoving:Connect(function(player)
 		ultimoGiro[player] = nil
+		liberadoEm[player] = nil
 	end)
 end
 

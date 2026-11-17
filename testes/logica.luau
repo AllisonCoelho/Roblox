@@ -69,6 +69,61 @@ do
 	igual("guarda: pelas costas", C.deFrente(o, f, V3.new(0, 0, 5)), false)
 end
 
+-- Monetização: catálogo e passes das configurações
+do
+	local M = req("Monetizacao")
+	local Ap = req("Apresentacao")
+	local vistos = {}
+	for _, p in M.PRODUTOS do
+		igual("loja: id único " .. p.id, vistos[p.id], nil)
+		vistos[p.id] = true
+		igual("loja: preço positivo " .. p.id, p.preco > 0, true)
+		igual(
+			"loja: status conhecido " .. p.id,
+			p.status == "ativo" or p.status == "planejado",
+			true
+		)
+	end
+	igual("loja: 16 produtos no catálogo", #M.PRODUTOS, 16)
+	igual("loja: giro automático 49", M.porId.autoGiro.preco, 49)
+	igual("loja: pular animação 39", M.porId.pularAnimacao.preco, 39)
+	igual("loja: 2 ativos", #M.ativos(), 2)
+	local nada = function()
+		return false
+	end
+	local tudo = function()
+		return true
+	end
+	igual(
+		"loja: ligar auto exige passe",
+		M.passeNecessario("giroAutomatico", true, nada),
+		"autoGiro"
+	)
+	igual("loja: desligar auto é livre", M.passeNecessario("giroAutomatico", false, nada), nil)
+	igual(
+		"loja: desligar animações exige passe",
+		M.passeNecessario("animacoes", false, nada),
+		"pularAnimacao"
+	)
+	igual("loja: ligar animações é livre", M.passeNecessario("animacoes", true, nada), nil)
+	igual(
+		"loja: encurtar repetidas exige passe",
+		M.passeNecessario("pularRepetidas", true, nada),
+		"pularAnimacao"
+	)
+	igual("loja: acessibilidade é livre", M.passeNecessario("movimentoReduzido", true, nada), nil)
+	igual("loja: com passe libera", M.passeNecessario("giroAutomatico", true, tudo), nil)
+	for _, c in Ap.Categorias do
+		igual("ritual: roleta em " .. c.id, (c.roleta or 0) > 0, true)
+		igual("ritual: tempo inclui a roleta " .. c.id, Ap.tempoAteRevelacao(c) > c.roleta, true)
+	end
+	igual(
+		"ritual: raras giram mais tempo",
+		Ap.Categorias[#Ap.Categorias].roleta > Ap.Categorias[1].roleta,
+		true
+	)
+end
+
 local Perfil = req("Perfil")
 local p = Perfil.padrao()
 igual("versao", p.versao, 1)
@@ -251,7 +306,8 @@ igual("1 em 1.000 = alta", Apresentacao.de(1000).id, "alta")
 igual("1 em 10.000 = muito alta", Apresentacao.de(10000).id, "muito_alta")
 igual("1 em 100.000 = extrema", Apresentacao.de(100000).id, "extrema")
 igual("1 em 1.000.000 = absoluta", Apresentacao.de(1000000).id, "absoluta")
-local faixas = { { 0.4, 0.6 }, { 0.8, 1.2 }, { 1.5, 2 }, { 2, 3 }, { 3, 4 }, { 4, 6 } }
+-- durações com a Roleta de Ecos (1,2 a 2,6 s) somada ao ritual (pedido do dono: giro mais longo)
+local faixas = { { 1.6, 1.8 }, { 2.2, 2.6 }, { 3.2, 3.7 }, { 4, 5 }, { 5.3, 6.3 }, { 6.6, 8.6 } }
 local anterior = 0
 for i, c in Apresentacao.Categorias do
 	local d = Apresentacao.tempoAteRevelacao(c)

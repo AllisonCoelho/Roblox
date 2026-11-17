@@ -1,6 +1,7 @@
 -- Monta a interface do Despertar e controla o giro (manual e automático).
 -- O cliente só pede: o resultado do sorteio sempre vem do servidor, já decidido e registrado.
 -- A apresentação (Mundo/Despertar) é escolhida a partir desse resultado.
+local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -10,6 +11,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Apresentacao = require(Shared.Dados.Apresentacao)
 local Auras = require(Shared.Dados.Auras)
 local Config = require(Shared.Config)
+local Monetizacao = require(Shared.Dados.Monetizacao)
 local Remotos = require(Shared.Remotos)
 local Escala = require(script.Parent.Escala)
 local Estado = require(script.Parent.Estado)
@@ -48,6 +50,45 @@ local hud: HUD.Api
 local function preferencias(): Despertar.Preferencias
 	local estado = Estado.atual
 	return Despertar.preferencias(if estado then estado.configuracoes else nil)
+end
+
+-- Passes (o servidor liga o atributo "Passe_<id>" no jogador; aqui só lemos)
+local function temPasse(id: string): boolean
+	return Players.LocalPlayer:GetAttribute(Monetizacao.atributo(id)) == true
+end
+
+local ultimaOferta = 0
+-- Mostra a compra do passe (ou "em breve" se o dono ainda não criou o passe no Creator Hub)
+local function oferecer(id: string)
+	if os.clock() - ultimaOferta < 4 then
+		return
+	end
+	ultimaOferta = os.clock()
+	local produto = Monetizacao.porId[id]
+	if not produto then
+		return
+	end
+	if produto.gamePassId then
+		pcall(
+			MarketplaceService.PromptGamePassPurchase,
+			MarketplaceService,
+			Players.LocalPlayer,
+			produto.gamePassId
+		)
+	else
+		Avisos.toast(
+			string.format("%s · %d Robux — em breve na loja", produto.nome, produto.preco)
+		)
+	end
+end
+
+-- Pular o ritual é um passe; sem ele, o toque oferece a compra
+local function pular()
+	if temPasse("pularAnimacao") then
+		Despertar.pular()
+	else
+		oferecer("pularAnimacao")
+	end
 end
 
 local function podeGirar(): boolean
@@ -151,7 +192,7 @@ local function aoApertar()
 	-- Por isso a condição não olha Revelacao.ativa(): nas cenas raras a tela já está reservada
 	-- desde o início, e era isso que impedia o pulo pela tecla.
 	if not girando and os.clock() < ocupadoAte then
-		Despertar.pular()
+		pular()
 		return
 	end
 	-- Com o cartão aberto, girar() não faz nada (a tecla não fecha o cartão nem gira de novo)
@@ -230,6 +271,12 @@ function App.iniciar()
 			task.spawn(aoApertar)
 		end,
 		aoAlternarAuto = function()
+			local estado = Estado.atual
+			local ligando = estado ~= nil and not estado.configuracoes.giroAutomatico
+			if ligando and not temPasse("autoGiro") then
+				oferecer("autoGiro")
+				return
+			end
 			alternarConfiguracao("giroAutomatico")
 		end,
 		aoAbrirIndice = Indice.abrir,
@@ -245,7 +292,7 @@ function App.iniciar()
 				end
 			end)
 		end,
-		aoPular = Despertar.pular,
+		aoPular = pular,
 		aoMudar = function(ativa)
 			hud.definirVisivel(not ativa and not emIncursao and not emArena)
 		end,
@@ -405,7 +452,12 @@ function App.iniciar()
 		while true do
 			task.wait(0.1)
 			local estado = Estado.atual
-			if estado and estado.configuracoes.giroAutomatico and podeGirar() then
+			if
+				estado
+				and estado.configuracoes.giroAutomatico
+				and temPasse("autoGiro")
+				and podeGirar()
+			then
 				task.spawn(girar)
 			end
 		end
