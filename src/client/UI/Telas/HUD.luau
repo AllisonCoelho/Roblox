@@ -381,7 +381,7 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 		BackgroundTransparency = 1,
 		AnchorPoint = Vector2.new(0.5, 1),
 		Position = UDim2.new(0.5, 0, 1, -18),
-		Size = UDim2.fromOffset(560, 170),
+		Size = UDim2.fromOffset(600, 170),
 		Parent = hud,
 	})
 	local escalaHotbar = Kit.novo("UIScale", { Parent = hotbar })
@@ -402,7 +402,7 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 	): Espaco
 		local p = Kit.placa({
 			nome = "Espaco" .. numero,
-			tamanho = UDim2.fromOffset(96, 104),
+			tamanho = UDim2.fromOffset(96, 112),
 			ancora = Vector2.new(0.5, 1),
 			posicao = UDim2.new(0.5, x, 1, 0),
 			corte = 16,
@@ -427,13 +427,13 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 		Kit.animarToque(p.quadro, b)
 		return { placa = p, simbolo = simb, titulo = tit, valor = val, botao = b }
 	end
-	local espAura = espaco("1", -224, "AURA", Icones.MENU.Aura, op.aoAbrirIndice)
-	local espAuto = espaco("2", -116, "AUTO", Icones.MENU.Auto, op.aoAlternarAuto)
-	local espIndice = espaco("3", 116, "ÍNDICE", Icones.MENU.Indice, op.aoAbrirIndice)
-	local espArtefato = espaco("4", 224, "ARTEFATO", Icones.MENU.Artefato, op.aoAbrirInventario)
+	local espAura = espaco("1", -240, "AURA", Icones.MENU.Aura, op.aoAbrirIndice)
+	local espAuto = espaco("2", -130, "AUTO", Icones.MENU.Auto, op.aoAlternarAuto)
+	local espIndice = espaco("3", 130, "ÍNDICE", Icones.MENU.Indice, op.aoAbrirIndice)
+	local espArtefato = espaco("4", 240, "ARTEFATO", Icones.MENU.Artefato, op.aoAbrirInventario)
 	colorir(espIndice.placa, V.Indice[1], V.Indice[2])
 	local progresso =
-		barra(espIndice.placa.conteudo, V.Giros, UDim2.new(0, 10, 1, -10), UDim2.new(1, -20, 0, 6))
+		barra(espIndice.placa.conteudo, V.Giros, UDim2.new(0, 12, 1, -11), UDim2.new(1, -24, 0, 6))
 
 	-- Botão DESPERTAR: disco dourado com anel de recarga
 	local giro = Kit.novo("Frame", {
