@@ -8,6 +8,7 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Artefatos = require(Shared.Dados.Artefatos)
 local Auras = require(Shared.Dados.Auras)
 local Incursoes = require(Shared.Dados.Incursoes)
 local Loot = require(Shared.Dados.LootIncursoes)
@@ -32,6 +33,7 @@ local ESPERA_VOLTA = 5 -- depois do fim, até voltar ao Bastião
 
 type Membro = {
 	recompensas: Loot.Registro,
+	vidaMax: number,
 	ressonancia: number,
 	proximoPulso: number,
 	reviver: boolean,
@@ -452,7 +454,7 @@ local function ligarPersonagem(run: Run, player: Player, personagem: Model)
 			return
 		end
 		m.reviver = false
-		definirVida(player, Incursoes.vidaMax(progressoDe(player)))
+		definirVida(player, m.vidaMax)
 		levar(player, mapa.spawn)
 	end
 end
@@ -501,7 +503,13 @@ local function lancar(
 	}
 	runs[slot] = run
 	for _, player in jogadores do
+		local estado = Dados.de(player)
+		local equipado = if estado then estado.inventario.equipados.artefato else nil
+		local vidaMax = math.floor(
+			Incursoes.vidaMax(progressoDe(player)) * (1 + Artefatos.bonusVida(equipado)) + 0.5
+		)
 		local m: Membro = {
+			vidaMax = vidaMax,
 			recompensas = Loot.novo(),
 			ressonancia = ressonanciaDe(player),
 			proximoPulso = 0,
@@ -519,7 +527,7 @@ local function lancar(
 		if player.Character then
 			task.spawn(ligarPersonagem, run, player, player.Character)
 		end
-		definirVida(player, Incursoes.vidaMax(progressoDe(player)))
+		definirVida(player, m.vidaMax)
 	end
 	paraRun(run, {
 		tipo = "inicio",

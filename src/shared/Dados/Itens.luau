@@ -138,7 +138,7 @@ Itens.porId = {
 		"Artefatos",
 		"Forja avançada",
 		"Uma insígnia forjada com marcas de guardiões.",
-		"Equipar para melhorar a defesa em incursões."
+		"Vida máxima +10% nas incursões enquanto equipado."
 	),
 	coracao_ressonancia = item(
 		"Coração da Ressonância",
