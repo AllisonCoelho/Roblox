@@ -13,6 +13,7 @@ MODULOS = {
     "Sessao": "src/server/Servicos/Sessao.luau",
     "PermissaoDev": "src/server/Servicos/PermissaoDev.luau",
     "Incursoes": "src/shared/Dados/Incursoes.luau",
+    "AurasVfx": "src/shared/Dados/AurasVfx.luau",
 }
 codigo = ["""
 local MODULOS, CACHE = {}, {}

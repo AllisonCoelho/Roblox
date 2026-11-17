@@ -13,6 +13,10 @@ igual("negativo", Formato.inteiro(-1500), "-1.500")
 igual("abreviado", Formato.curto(15000), "15 mil")
 igual("tempo", Formato.tempo(42), "0:42")
 
+-- Senbonzakura: efeito de prévia, nunca entra no sorteio sem autorização do dono
+igual("senbonzakura como prévia de VFX", req("AurasVfx").senbonzakura, true)
+igual("senbonzakura fora do catálogo sorteável", req("Auras").porId.senbonzakura, nil)
+
 local Perfil = req("Perfil")
 local p = Perfil.padrao()
 igual("versao", p.versao, 1)
@@ -61,9 +65,21 @@ igual(
 igual("dev primeiro cliente do Studio", Dev.autoriza(0, 0, true, nil, -1), true)
 igual("dev segundo cliente do Studio", Dev.autoriza(0, 0, true, nil, -2), false)
 igual("dev IDs vazios fora do Studio", Dev.autoriza(0, 0, false, nil, 42), false)
-igual("dev conta designada no Roblox Player", Dev.autoriza(universoTeste, lugarTeste, false, 42, 43, 43), true)
-igual("dev visitante com conta designada cadastrada", Dev.autoriza(universoTeste, lugarTeste, false, 42, 44, 43), false)
-igual("dev conta designada em outro lugar", Dev.autoriza(universoTeste, 730, false, 42, 43, 43), false)
+igual(
+	"dev conta designada no Roblox Player",
+	Dev.autoriza(universoTeste, lugarTeste, false, 42, 43, 43),
+	true
+)
+igual(
+	"dev visitante com conta designada cadastrada",
+	Dev.autoriza(universoTeste, lugarTeste, false, 42, 44, 43),
+	false
+)
+igual(
+	"dev conta designada em outro lugar",
+	Dev.autoriza(universoTeste, 730, false, 42, 43, 43),
+	false
+)
 
 local Sessao = req("Sessao")
 local t = 1000
@@ -102,12 +118,20 @@ igual("mais rara", Auras.lista[30].chance, 1000000)
 igual("tier comum", Auras.porId.faisca.tier, 1)
 igual("tier divino", Auras.porId.despertar_absoluto.tier, 7)
 igual("tier epico", Auras.tierDe(1000), 4)
-igual("rng 0 = mais rara", Auras.sortear(function()
-	return 0
-end).id, "despertar_absoluto")
-igual("rng alto = reserva", Auras.sortear(function()
-	return 0.9999
-end).id, "faisca")
+igual(
+	"rng 0 = mais rara",
+	Auras.sortear(function()
+		return 0
+	end).id,
+	"despertar_absoluto"
+)
+igual(
+	"rng alto = reserva",
+	Auras.sortear(function()
+		return 0.9999
+	end).id,
+	"faisca"
+)
 
 -- A chance exibida ("1 em N") é a probabilidade real de cada aura, inclusive a de reserva
 local soma = 0
@@ -122,7 +146,11 @@ for _, a in Auras.lista do
 end
 igual("probabilidades somam 1", math.abs(soma - 1) < 1e-9, true)
 igual("chance exibida = chance real (todas)", todasExatas, true)
-igual("reserva continua a mais comum", Auras.probabilidadeReal("faisca") > Auras.probabilidadeReal("nevoa"), true)
+igual(
+	"reserva continua a mais comum",
+	Auras.probabilidadeReal("faisca") > Auras.probabilidadeReal("nevoa"),
+	true
+)
 
 -- O texto mostrado ao jogador (Formato.chance) bate com a frequência efetiva do sorteio
 local function lerTexto(texto: string): number
@@ -138,7 +166,13 @@ for _, id in { "faisca", "nevoa", "brasa", "pedra_viva", "trovao_jovem" } do
 	local exibido = lerTexto(Formato.chance(Auras.porId[id].chance))
 	local efetivo = N / (contagem[id] or 1)
 	igual(
-		"exibido x efetivo " .. id .. " (1 em " .. exibido .. " vs " .. string.format("%.2f", efetivo) .. ")",
+		"exibido x efetivo "
+			.. id
+			.. " (1 em "
+			.. exibido
+			.. " vs "
+			.. string.format("%.2f", efetivo)
+			.. ")",
 		math.abs(efetivo - exibido) / exibido < 0.05,
 		true
 	)
@@ -147,7 +181,11 @@ igual("texto reserva", Formato.chance(Auras.porId.faisca.chance), "4,2")
 igual("texto inteiro", Formato.chance(1000), "1.000")
 igual("texto curto", Formato.chanceCurta(25000), "25 mil")
 igual("texto curto pequeno", Formato.chanceCurta(4.26), "4,3")
-igual("melhor da colecao", Auras.melhorDe({ faisca = 3, chama_azul = 1, inexistente = 9 }).id, "chama_azul")
+igual(
+	"melhor da colecao",
+	Auras.melhorDe({ faisca = 3, chama_azul = 1, inexistente = 9 }).id,
+	"chama_azul"
+)
 igual("colecao vazia sem melhor", Auras.melhorDe({}), nil)
 igual("descobertas", Auras.contarDescobertas({ faisca = 1, brasa = 0, x = 2 }), 1)
 -- Apresentação do giro: categorias pela chance real e durações dentro das faixas do design
@@ -170,7 +208,11 @@ for i, c in Apresentacao.Categorias do
 	igual("silencio cabe na ruptura " .. c.id, c.silencio < c.ruptura, true)
 	anterior = d
 end
-igual("anuncio e versao alheia no mesmo limiar", Apresentacao.de(Auras.ANUNCIO_MINIMO).alheios, true)
+igual(
+	"anuncio e versao alheia no mesmo limiar",
+	Apresentacao.de(Auras.ANUNCIO_MINIMO).alheios,
+	true
+)
 igual("comuns nao aparecem para os outros", Apresentacao.de(999).alheios, false)
 igual("abreviada = baixa", Apresentacao.abreviada().id, "baixa")
 local semCategoria = 0
@@ -201,7 +243,11 @@ igual("primeira aura equipa", Perfil.deveEquipar(pe, true, 5, nil), true)
 Perfil.registrarGiro(pe, "nevoa")
 igual("colecao com itens", Perfil.colecaoVazia(pe), false)
 pe.equipada = nil -- jogador desequipou pelo índice
-igual("desequipada + auto desligado: nao equipa", Perfil.deveEquipar(pe, false, 1000000, nil), false)
+igual(
+	"desequipada + auto desligado: nao equipa",
+	Perfil.deveEquipar(pe, false, 1000000, nil),
+	false
+)
 pe.equipada = "nevoa"
 igual("auto desligado: mais rara nao troca", Perfil.deveEquipar(pe, false, 1000, 5), false)
 pe.configuracoes.equiparAutomatico = true
@@ -243,15 +289,31 @@ igual("comum solta no fim", poseEm(Trilha.gesto(curto, false), 0.465), "impulso"
 igual("comum termina neutra", poseEm(Trilha.gesto(curto, false), 0.82), "neutra")
 igual("fenda fechada antes da instabilidade", Trilha.aberturaFenda(tp, 1.0, 0, 0), 0)
 igual("fenda e fresta na instabilidade", Trilha.aberturaFenda(tp, 2.5, 0.7, 0) < 0.3, true)
-igual("fenda cresce com a instabilidade", Trilha.aberturaFenda(tp, 2.8, 0.9, 0) > Trilha.aberturaFenda(tp, 2.0, 0.3, 0), true)
+igual(
+	"fenda cresce com a instabilidade",
+	Trilha.aberturaFenda(tp, 2.8, 0.9, 0) > Trilha.aberturaFenda(tp, 2.0, 0.3, 0),
+	true
+)
 igual("fenda toda aberta na ruptura", Trilha.aberturaFenda(tp, 3.54, 1, 0) > 0.99, true)
 igual("fenda fecha no fim", Trilha.aberturaFenda(tp, 3.9, 1, 0), 0)
 igual("animacoes ligadas por padrao", Perfil.padrao().configuracoes.animacoes, true)
 -- Fenda guiada pelas mãos
-igual("bordas entre as maos", Trilha.meiaLarguraPelasMaos(tp, 2.5, 2.4, 0.2), 1.2 * Trilha.FOLGA_MAOS)
-igual("abre junto com os bracos", Trilha.meiaLarguraPelasMaos(tp, 3.5, 6, 1) > Trilha.meiaLarguraPelasMaos(tp, 2.5, 2.4, 0.2), true)
+igual(
+	"bordas entre as maos",
+	Trilha.meiaLarguraPelasMaos(tp, 2.5, 2.4, 0.2),
+	1.2 * Trilha.FOLGA_MAOS
+)
+igual(
+	"abre junto com os bracos",
+	Trilha.meiaLarguraPelasMaos(tp, 3.5, 6, 1) > Trilha.meiaLarguraPelasMaos(tp, 2.5, 2.4, 0.2),
+	true
+)
 igual("fecha depois da revelacao", Trilha.meiaLarguraPelasMaos(tp, 3.9, 6, 0), 0)
-igual("meio fechada no retorno", Trilha.meiaLarguraPelasMaos(tp, 3.7, 4, 0.5), 2 * Trilha.FOLGA_MAOS * 0.5)
+igual(
+	"meio fechada no retorno",
+	Trilha.meiaLarguraPelasMaos(tp, 3.7, 4, 0.5),
+	2 * Trilha.FOLGA_MAOS * 0.5
+)
 -- Incursões
 local Inc = req("Incursoes")
 local pi = Perfil.padrao().incursoes
@@ -271,8 +333,16 @@ igual("inc ressonancia minima", Inc.ressonancia(nil), 1)
 igual("inc ressonancia 1 milhao", math.floor(Inc.ressonancia(1000000) * 100 + 0.5), 136)
 igual("inc ressonancia cresce", Inc.ressonancia(1000) > Inc.ressonancia(10), true)
 pi.reliquias.pulso = 2
-igual("inc dano com reliquia", math.floor(Inc.danoPulso(pi, 1) * 100 + 0.5), math.floor(22 * 1.24 * 100 + 0.5))
-igual("inc raio com reliquia", math.floor(Inc.raioPulso(pi) * 100 + 0.5), math.floor(14 * 1.24 * 100 + 0.5))
+igual(
+	"inc dano com reliquia",
+	math.floor(Inc.danoPulso(pi, 1) * 100 + 0.5),
+	math.floor(22 * 1.24 * 100 + 0.5)
+)
+igual(
+	"inc raio com reliquia",
+	math.floor(Inc.raioPulso(pi) * 100 + 0.5),
+	math.floor(14 * 1.24 * 100 + 0.5)
+)
 igual("inc vida base", Inc.vidaMax(Inc.padrao()), 100)
 igual("inc grupo 1", Inc.bonusGrupo(1), 1)
 igual("inc grupo 0", Inc.bonusGrupo(0), 0)
@@ -282,13 +352,29 @@ igual("inc andar 1 tem nucleos", a1.nucleos > 0, true)
 igual("inc andar 1 sem guardiao", a1.guardiao, false)
 igual("inc andar 5 guardiao", a5.guardiao, true)
 igual("inc andar 5 sem nucleos", a5.nucleos, 0)
-igual("inc grupo maior mais sombras", Inc.andar("cinzas", 2, 4).sombras > Inc.andar("cinzas", 2, 1).sombras, true)
-igual("inc universo mais dificil", Inc.andar("umbral", 2, 1).vidaSombra > Inc.andar("cinzas", 2, 1).vidaSombra, true)
+igual(
+	"inc grupo maior mais sombras",
+	Inc.andar("cinzas", 2, 4).sombras > Inc.andar("cinzas", 2, 1).sombras,
+	true
+)
+igual(
+	"inc universo mais dificil",
+	Inc.andar("umbral", 2, 1).vidaSombra > Inc.andar("cinzas", 2, 1).vidaSombra,
+	true
+)
 igual("inc vidas", Inc.vidas(2), 5)
 igual("inc recompensa 0 andares", Inc.recompensa("cinzas", 0, false, false), 0)
 igual("inc recompensa 2 andares", Inc.recompensa("cinzas", 2, false, false), 6 + 8)
-igual("inc vitoria vale mais", Inc.recompensa("cinzas", 5, true, true) > Inc.recompensa("cinzas", 5, true, false), true)
-igual("inc andares limitados", Inc.recompensa("cinzas", 99, false, false), Inc.recompensa("cinzas", 5, false, false))
+igual(
+	"inc vitoria vale mais",
+	Inc.recompensa("cinzas", 5, true, true) > Inc.recompensa("cinzas", 5, true, false),
+	true
+)
+igual(
+	"inc andares limitados",
+	Inc.recompensa("cinzas", 99, false, false),
+	Inc.recompensa("cinzas", 5, false, false)
+)
 igual("inc 3 universos", #Inc.UNIVERSOS, 3)
 
 print(string.format("%d testes, %d falhas", total, falhas))

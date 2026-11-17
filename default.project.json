@@ -5,6 +5,10 @@
     "ReplicatedStorage": {
       "Shared": {
         "$path": "src/shared"
+      },
+      "AuraAssets": {
+        "$className": "Folder",
+        "$path": "assets/roblox/AuraAssets"
       }
     },
     "ServerScriptService": {
