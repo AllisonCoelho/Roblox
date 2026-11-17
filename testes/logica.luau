@@ -1177,4 +1177,24 @@ do
 	igual("temporada: XP limitado ao último nível", maximo.xp, T.NIVEIS * T.XP_POR_NIVEL)
 end
 
+-- Gear 5: o contato é a virada da mesma fase que move o corpo.
+do
+	local M = req("Gear5Movimento")
+	local altura, compressao = M.amostrar(0)
+	igual("gear 5: contato com pernas comprimidas", compressao, 1)
+	igual("gear 5: corpo abaixa no contato", altura < 0, true)
+	altura, compressao = M.amostrar(0.49)
+	igual("gear 5: quique no ápice é visível", altura >= 0.9, true)
+	igual("gear 5: sem compressão no ar", compressao, 0)
+
+	local fase, contato = M.avancar(0.15, 0.15)
+	igual("gear 5: sem marca durante a subida", contato, false)
+	igual("gear 5: fase avança durante a subida", fase > 0.15, true)
+	fase, contato = M.avancar(0.98, 0.04)
+	igual("gear 5: virada emite um contato", contato, true)
+	igual("gear 5: volta ao quadro de compressão", fase < 0.05, true)
+	fase, contato = M.avancar(fase, 0.02)
+	igual("gear 5: quadro seguinte não repete o contato", contato, false)
+end
+
 print(string.format("%d testes, %d falhas", total, falhas))
