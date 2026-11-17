@@ -73,3 +73,9 @@ O Altar mostra os custos exatos da próxima oferta. As ofertas II–III usam mar
 - Equipe o Emblema, confira a vida em uma incursão, morra e confira o mesmo teto ao reviver. Ao voltar, confira a vida do Nexo.
 - Fabrique e equipe a Lâmina. Confira o visual em dois clientes, à distância, ao trocar a peça, ao renascer e com Qualidade baixa.
 - Reconecte com um artefato equipado. Confirme o slot e tente gastar uma oferta incompleta sem perder nenhum item.
+
+
+## Regra vigente de sorte (RNG V2 / PR #27)
+
+A implementacao de sorte por raridade usa **pesos normalizados** por expoente de tier, conforme `docs/despertar/PROBABILIDADES-V2.md`. O indice `1,05x` **nao significa 5% exatos para cada aura rara**, pois as probabilidades sao recalculadas para totalizar 100%. O motor do PR #27 e a fonte unica de verdade para o sorteio. As probabilidades exibidas no HUD/Indice/Revelacao devem coincidir com o servidor.
+
