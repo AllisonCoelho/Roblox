@@ -203,6 +203,12 @@ function Poses.manter(userId: number?, nome: string, ligada: boolean)
 	end
 end
 
+-- Outras animacoes (idle anime) nao devem disputar as juntas com golpes/guarda.
+function Poses.ocupada(personagem: Model): boolean
+	local a = ativas[personagem]
+	return a ~= nil and (a.manter == true or os.clock() - a.inicio < a.duracao)
+end
+
 function Poses.limpar()
 	for personagem in ativas do
 		mostrar(personagem)
