@@ -56,22 +56,38 @@ Tema.Sombra = 5
 -- Tamanho de referência das telas de design; a interface escala a partir dele
 Tema.Referencia = Vector2.new(1600, 900)
 
--- Padrão de interface Órbita do Nexo.
+-- Padrão de interface "Nexo Vibrante": cores saturadas, contorno escuro grosso, cantos
+-- arredondados e fonte arredondada (estilo dos jogos de aventura do Roblox, com identidade própria).
+-- Os nomes das chaves continuam os mesmos para todas as telas herdarem o visual novo.
 Tema.Orbita = {
-	Fundo = Color3.fromHex("0B0915"),
-	Painel = Color3.fromHex("141126"),
-	Elevado = Color3.fromHex("211C37"),
-	Borda = Color3.fromHex("605682"),
-	Lilas = Color3.fromHex("C0ADFF"),
-	Menta = Color3.fromHex("B7FFD9"),
-	Texto = Color3.fromHex("F7F2EC"),
-	TextoSuave = Color3.fromHex("C9C7D6"),
-	Foco = Color3.fromHex("E5D9FF"),
-	Aviso = Color3.fromHex("FF8298"),
-	Ativo = Color3.fromHex("17312F"),
+	Fundo = Color3.fromHex("10153A"), -- texto sobre o destaque e fundo profundo
+	Painel = Color3.fromHex("2A3A8F"), -- azul real dos painéis
+	Elevado = Color3.fromHex("3A50B8"), -- blocos dentro dos painéis
+	Borda = Color3.fromHex("0B0F26"), -- contorno grosso
+	Lilas = Color3.fromHex("FFC83D"), -- destaque principal (ouro)
+	Menta = Color3.fromHex("5BF07D"),
+	Texto = Color3.fromHex("FFFFFF"),
+	TextoSuave = Color3.fromHex("C9D4FF"),
+	Foco = Color3.fromHex("FFFFFF"),
+	Aviso = Color3.fromHex("FF4D6D"),
+	Ativo = Color3.fromHex("1E8A43"),
 }
 
-Tema.FonteCorpo = Font.fromEnum(Enum.Font.BuilderSans)
-Tema.FonteNumeros = Font.fromEnum(Enum.Font.RobotoMono)
+-- Cores dos botões do menu lateral e da hotbar (cada atalho tem a sua)
+Tema.Vibrante = {
+	Loja = { Color3.fromHex("FFB020"), Color3.fromHex("FF7A00") },
+	Bolsa = { Color3.fromHex("FF8A3D"), Color3.fromHex("E2462B") },
+	Indice = { Color3.fromHex("4FC3FF"), Color3.fromHex("2B6BFF") },
+	Temporada = { Color3.fromHex("FF6FD0"), Color3.fromHex("B23BFF") },
+	Ajustes = { Color3.fromHex("A9B4D6"), Color3.fromHex("5F6B91") },
+	Auto = { Color3.fromHex("6CF08A"), Color3.fromHex("1FAE4B") },
+	Despertar = { Color3.fromHex("FFE066"), Color3.fromHex("FF9D00") },
+	Giros = Color3.fromHex("FFD23F"),
+	Fragmentos = Color3.fromHex("C77DFF"),
+}
+
+Tema.FonteCartoon = Font.new("rbxasset://fonts/families/FredokaOne.json")
+Tema.FonteCorpo = Font.new("rbxasset://fonts/families/BuilderSans.json", Enum.FontWeight.Bold)
+Tema.FonteNumeros = Font.new("rbxasset://fonts/families/FredokaOne.json")
 
 return Tema
