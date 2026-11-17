@@ -1,0 +1,27 @@
+{
+  "auraId": "borboletas_de_cinza",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/borboletas_de_cinza",
+  "templateFile": "assets/roblox/auras_originais/borboletas_de_cinza.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "mariposa",
+      "triangles": 130,
+      "sizeStuds": [
+        0.8918,
+        0.6277,
+        0.2088
+      ],
+      "centerFromPivot": [
+        0.0,
+        0.0111,
+        -0.0658
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 3
+}

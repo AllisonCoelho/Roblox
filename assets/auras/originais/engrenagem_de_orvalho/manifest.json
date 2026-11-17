@@ -1,0 +1,27 @@
+{
+  "auraId": "engrenagem_de_orvalho",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/engrenagem_de_orvalho",
+  "templateFile": "assets/roblox/auras_originais/engrenagem_de_orvalho.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "engrenagem",
+      "triangles": 624,
+      "sizeStuds": [
+        1.6147,
+        1.6147,
+        0.1229
+      ],
+      "centerFromPivot": [
+        0.0,
+        0.0,
+        -0.0
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 3
+}

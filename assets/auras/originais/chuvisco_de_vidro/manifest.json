@@ -1,0 +1,42 @@
+{
+  "auraId": "chuvisco_de_vidro",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/chuvisco_de_vidro",
+  "templateFile": "assets/roblox/auras_originais/chuvisco_de_vidro.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "gota",
+      "triangles": 156,
+      "sizeStuds": [
+        0.3476,
+        1.0,
+        0.3476
+      ],
+      "centerFromPivot": [
+        0.0,
+        -0.15,
+        -0.0
+      ],
+      "meshId": null
+    },
+    {
+      "name": "prisma_mini",
+      "triangles": 6,
+      "sizeStuds": [
+        0.1411,
+        0.4315,
+        0.134
+      ],
+      "centerFromPivot": [
+        -0.0119,
+        0.0,
+        -0.0083
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 7
+}

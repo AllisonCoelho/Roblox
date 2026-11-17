@@ -1,0 +1,42 @@
+{
+  "auraId": "fagulha_de_cobre",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/fagulha_de_cobre",
+  "templateFile": "assets/roblox/auras_originais/fagulha_de_cobre.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "caco",
+      "triangles": 20,
+      "sizeStuds": [
+        0.5468,
+        0.5947,
+        0.244
+      ],
+      "centerFromPivot": [
+        0.0241,
+        0.0264,
+        -0.0112
+      ],
+      "meshId": null
+    },
+    {
+      "name": "filamento",
+      "triangles": 52,
+      "sizeStuds": [
+        0.3673,
+        0.9102,
+        0.1989
+      ],
+      "centerFromPivot": [
+        0.1563,
+        0.4349,
+        -0.0214
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 6
+}

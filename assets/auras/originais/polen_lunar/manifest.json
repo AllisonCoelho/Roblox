@@ -1,0 +1,57 @@
+{
+  "auraId": "polen_lunar",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/polen_lunar",
+  "templateFile": "assets/roblox/auras_originais/polen_lunar.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "coroa_estames",
+      "triangles": 464,
+      "sizeStuds": [
+        1.4762,
+        0.6716,
+        0.628
+      ],
+      "centerFromPivot": [
+        -0.0026,
+        0.3109,
+        0.474
+      ],
+      "meshId": null
+    },
+    {
+      "name": "grao",
+      "triangles": 108,
+      "sizeStuds": [
+        0.1389,
+        0.32,
+        0.1389
+      ],
+      "centerFromPivot": [
+        0.0,
+        0.048,
+        -0.0
+      ],
+      "meshId": null
+    },
+    {
+      "name": "disco",
+      "triangles": 660,
+      "sizeStuds": [
+        2.063,
+        0.0852,
+        2.0601
+      ],
+      "centerFromPivot": [
+        0.0038,
+        0.0,
+        0.0024
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 6
+}
