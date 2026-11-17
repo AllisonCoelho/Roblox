@@ -1129,6 +1129,37 @@ for _id, (_ft, _fr) in AJUSTE.items():
     _e = AURAS[_id]["especial"]
     _e["escala"] = round(_e["escala"] * min(_ft, 1.6), 3)
 
+
+# Rodada de correção (3 Comuns/Incomuns + 6 Raras): material, cor, tamanho e posição por peça.
+def _ajustar(aura, filtro, **mudancas):
+    for _p in AURAS[aura]["pecas"]:
+        if _p["template"] == filtro:
+            for _k, _v in mudancas.items():
+                _p[_k] = _v(_p) if callable(_v) else _v
+
+
+_ajustar("fagulha_de_cobre", "caco", material="Neon", escala=lambda p: round(p["escala"] * 0.55, 3))
+for _k in range(4):  # mais cacos menores, faiscando em volta
+    AURAS["fagulha_de_cobre"]["pecas"].append(dict(template="caco", modo="orbita", rx=1.6 + 0.3 * _k, rz=1.4 + 0.3 * _k, altura=-0.4 + 0.6 * _k, ang=_k * 1.6 + 0.8, vel=0.8 if _k % 2 else -0.7, inclinacao=0.4, cor=_k % 2, material="Neon" if _k % 2 == 0 else "Metal", rigidez=40, atraso=0.6, giro=(90, 70 - 20 * _k, 30), escala=1.0, detalhe=_k >= 2))
+_ajustar("fagulha_de_cobre", "filamento", escala=1.8)
+for _i, _p in enumerate(AURAS["engrenagem_de_orvalho"]["pecas"]):
+    _lado = -1 if _p["pos"][0] < 0 else 1
+    _p.update(pos=(_lado * 1.9, _p["pos"][1], 0.1), rot=(0, _lado * 75, 0), material="Neon" if _i == 1 else "Glass", transp=0.3 if _i != 1 else 0.1)
+_ajustar("raiz_cintilante", "cipo", material="Neon", cor=0, escala=1.45)
+_ajustar("raiz_cintilante", "semente", escala=1.8)
+for _i, _p in enumerate(AURAS["fenda_de_porcelana"]["pecas"]):
+    _p.update(cor=0 if _i % 2 == 0 else 1, material="SmoothPlastic" if _i % 2 == 0 else "Neon", escala=2.0)
+_ajustar("petalas_de_ferrugem", "petala", escala=2.6)
+for _i, _p in enumerate(AURAS["petalas_de_ferrugem"]["pecas"]):
+    if _i % 2 == 0:
+        _p["material"] = "Neon"
+_ajustar("sinos_do_crepusculo", "sino", material="Neon", escala=lambda p: round(p["escala"] * 1.7, 3), pos=lambda p: (p["pos"][0] * 1.2, p["pos"][1], 0.1))
+_ajustar("sinos_do_crepusculo", "onda", escala=2.0, pos=lambda p: (p["pos"][0] * 1.2, p["pos"][1], 0.1))
+_ajustar("marfim_flutuante", "presa", escala=2.1, pos=lambda p: (p["pos"][0] * 1.1, p["pos"][1], -0.1))
+_ajustar("lotus_de_gravidade", "lotus", cor=0, material="SmoothPlastic", escala=2.0)
+_ajustar("lotus_de_gravidade", "petala_solta", escala=2.0)
+_ajustar("solsticio_de_areia", "duna", material="Neon", transp=0.15, escala=2.4, pos=lambda p: (p["pos"][0], p["pos"][1], 0.3))
+
 # ---------------------------------------------------------------- saída
 
 
