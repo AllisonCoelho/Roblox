@@ -73,6 +73,9 @@ local function entregar(
 end
 
 local function despertar(player: Player): (boolean, string?, { [string]: any }?)
+	if player:GetAttribute("EmDueloArena") then
+		return false, "O giro volta assim que o duelo terminar."
+	end
 	local agora = os.clock()
 	local ultimo = ultimoGiro[player]
 	if ultimo and agora - ultimo < Config.CooldownGiro - TOLERANCIA then
@@ -116,6 +119,9 @@ end
 
 -- auraId nil ou "" desequipa
 local function equipar(player: Player, auraId: any): (boolean, string?)
+	if player:GetAttribute("EmDueloArena") then
+		return false, "A aura fica equipada até o duelo terminar."
+	end
 	if auraId ~= nil and type(auraId) ~= "string" then
 		return false, "Pedido inválido"
 	end

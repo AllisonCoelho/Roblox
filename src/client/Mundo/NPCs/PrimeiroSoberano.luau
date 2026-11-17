@@ -9,9 +9,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
-local Pecas = require(
-	ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Dados"):WaitForChild("SoberanoPecas")
-)
+local Dados = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Dados")
+local Pecas = require(Dados:WaitForChild("SoberanoPecas"))
+local ArenaCena = require(Dados:WaitForChild("ArenaCena"))
 local Malha = require(script.Parent.Parent:WaitForChild("Nexo3D"):WaitForChild("Malha"))
 
 local PrimeiroSoberano = {}
@@ -39,19 +39,94 @@ function PrimeiroSoberano.definir(novas: Preferencias)
 	prefs = novas
 end
 
+local function suave(x: number): number
+	local a = math.clamp(x, 0, 1)
+	return a * a * (3 - 2 * a)
+end
+
+-- As poses usam o relógio replicado. Quem passa pela Arena vê a mesma entrada e os ataques.
+local function poseDuelo(
+	p: { [string]: Peca },
+	raiz: BasePart,
+	origem: CFrame
+): (CFrame, boolean, number)
+	local agora = Workspace:GetServerTimeNow()
+	local inicio = raiz:GetAttribute("DueloInicio")
+	if raiz:GetAttribute("Estado") ~= "DESAFIO_EM_ANDAMENTO" or type(inicio) ~= "number" then
+		return origem, false, 0
+	end
+
+	local t = agora - inicio
+	local emPe = t >= 0.34
+	local avanco = suave((t - 0.45) / 1.18)
+	local de = origem * CFrame.new(0, 0, -2.1)
+	local base = origem:Lerp(de, suave(t / 0.44)):Lerp(ArenaCena.soberano, avanco)
+	local andar = if avanco > 0 and avanco < 1 then math.sin(avanco * math.pi * 5) else 0
+	local altura = if emPe then 1.35 else 1.35 * suave(t / 0.34)
+	local arma = raiz:GetAttribute("DueloGolpe")
+	local intencao = raiz:GetAttribute("DueloIntencao")
+	local quando = raiz:GetAttribute("DueloGolpeEm")
+	local preparo, corte, recuo, derrota = 0, 0, 0, 0
+	if arma and type(quando) == "number" then
+		local f = math.max(0, agora - quando)
+		local impacto = if arma == "pesado" then 0.46 else 0.27
+		local fim = impacto + (if arma == "pesado" then 0.62 else 0.42)
+		if arma == "pesado" or arma == "investida" then
+			preparo = 1 - suave(f / impacto)
+			corte = suave(f / impacto) * (1 - suave((f - impacto) / (fim - impacto)))
+			recuo = corte * (if arma == "pesado" then 7.7 else 6.3)
+		elseif arma == "baluarte" then
+			preparo = 1 - suave(f / fim)
+		elseif arma == "derrota" then
+			derrota = suave(f / 0.66)
+		end
+	elseif intencao == "pesado" or intencao == "baluarte" then
+		preparo = if intencao == "pesado" then 0.83 else 0.53
+	end
+
+	local rad = math.rad
+	if emPe then
+		base *= CFrame.new(0, math.abs(andar) * 0.12 - derrota * 0.7, -recuo) * CFrame.Angles(
+			rad(-11 * corte - 15 * derrota),
+			0,
+			rad(21 * derrota)
+		)
+		p.braco_dir.giro =
+			CFrame.Angles(rad(37 + preparo * 82 - corte * 62), 0, rad(18 - corte * 30))
+		p.braco_esq.giro = CFrame.Angles(rad(46 - preparo * 38 + corte * 14), 0, rad(-14))
+		p.antebraco_dir.giro = CFrame.Angles(rad(16 - preparo * 32), 0, 0)
+		p.antebraco_esq.giro = CFrame.Angles(rad(18 - preparo * 35), 0, 0)
+		p.cabeca.giro = CFrame.Angles(rad(-6 + derrota * 22), 0, 0)
+	end
+	p.torso.giro = CFrame.new(0, altura, 0) * CFrame.Angles(rad(-5 * andar - 8 * corte), 0, 0)
+	return base, emPe, math.max(preparo * 0.6, corte)
+end
+
 local function montar(modelo: Model, raiz: BasePart): { [string]: Peca }
 	local prontas: Malha.Cache = {}
 	local pasta = Instance.new("Folder")
 	pasta.Name = "Armadura"
 	local pecas: { [string]: Peca } = {}
 	local ok, erro = pcall(function()
-		for _, d in Pecas.pecas :: { { [string]: any } } do
+		local descricoes = table.clone(Pecas.pecas) :: { { [string]: any } }
+		table.insert(
+			descricoes,
+			{ nome = "base_duelo", malha = "soberano_base_duelo", material = "Metal" }
+		)
+		table.insert(
+			descricoes,
+			{ nome = "lamina_duelo", malha = "soberano_lamina_duelo", material = "Metal" }
+		)
+		for _, d in descricoes do
 			local parte, centro = Malha.criar(d.malha, prontas)
 			parte.Name = d.nome
 			parte.Material = (Enum.Material :: any)[d.material] or Enum.Material.Metal
 			parte.CastShadow = d.material ~= "Neon"
 			if d.material == "Neon" then
 				parte.Color = COR_LUZ -- as peças de luz são brancas nos vértices: a cor vem daqui
+			end
+			if d.nome == "base_duelo" or d.nome == "lamina_duelo" then
+				parte.Transparency = 1
 			end
 			parte.Parent = pasta
 			pecas[d.nome] = {
@@ -92,9 +167,9 @@ function PrimeiroSoberano.iniciar()
 		return
 	end
 	local pecas = resultado :: { [string]: Peca }
-	for _, inst in modelo:GetChildren() do
+	for _, inst in modelo:GetDescendants() do
 		if inst:IsA("BasePart") and inst:GetAttribute("ReservaNPC") then
-			inst.Transparency = 1
+			inst.LocalTransparencyModifier = 1
 		end
 	end
 
@@ -222,6 +297,8 @@ function PrimeiroSoberano.iniciar()
 			math.rad(-1.1) * math.sin(t * 0.55 + 0.7) * capa
 		)
 
+		local referencial, emPe, intensidade = poseDuelo(pecas, raiz, origem)
+		local guardiao = raiz:GetAttribute("Estado") == "DESAFIO_EM_ANDAMENTO"
 		for _, p in ordem do
 			local base = if p.pai then p.pai.total else CFrame.identity
 			local junta = p.junta
@@ -230,7 +307,20 @@ function PrimeiroSoberano.iniciar()
 			else
 				p.total = base
 			end
-			p.parte.CFrame = origem * p.total * CFrame.new(p.centro)
+			p.parte.CFrame = referencial * p.total * CFrame.new(p.centro)
+		end
+
+		pecas.base.parte.Transparency = if emPe then 1 else 0
+		pecas.espada.parte.Transparency = if emPe then 1 else 0
+		pecas.base_duelo.parte.Transparency = if emPe then 0 else 1
+		pecas.lamina_duelo.parte.Transparency = if emPe then 0 else 1
+		if emPe then
+			pecas.base_duelo.parte.CFrame = referencial * CFrame.new(pecas.base_duelo.centro)
+			pecas.lamina_duelo.parte.CFrame = referencial
+				* pecas.antebraco_dir.total
+				* CFrame.new(3.0, 3.75, -2.35)
+				* CFrame.Angles(math.rad(-52), 0, math.rad(-17))
+				* CFrame.new(pecas.lamina_duelo.centro)
 		end
 
 		-- luzes: olhos acendem na reação; uma linha de luz passa pelas fissuras a cada 8–15 s
@@ -243,13 +333,13 @@ function PrimeiroSoberano.iniciar()
 		end
 		local ff = (t - fissuraInicio) / 1.4
 		local onda_f = if ff >= 0 and ff <= 1 then math.sin(ff * math.pi) else 0
-		local brilho = math.max(onda_f, aceso, pressao)
+		local brilho = math.max(onda_f, aceso, pressao, intensidade)
 		pecas.fissuras.parte.Transparency = 0.82 - 0.82 * brilho
 		pecas.nucleo.parte.Transparency = 0.3 - 0.08 * respira - 0.2 * brilho
 		luz.Brightness = 0.6 + 1.2 * brilho
 
 		-- onda no piso durante o alerta
-		if fa >= 0 and fa <= 1 and not prefs.qualidadeBaixa and not reduzido then
+		if not guardiao and fa >= 0 and fa <= 1 and not prefs.qualidadeBaixa and not reduzido then
 			local raio = 3 + 22 * fa
 			onda.Size = Vector3.new(0.06, raio * 2, raio * 2)
 			onda.CFrame = chaoOnda

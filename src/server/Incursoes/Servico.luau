@@ -776,6 +776,9 @@ function Servico.ocupado(player: Player): boolean
 end
 
 function Servico.iniciarTeste(player: Player, universo: string, andar: number): (boolean, string?)
+	if player:GetAttribute("EmDueloArena") then
+		return false, "Conclua o duelo antes de entrar nas Incursões."
+	end
 	if not Dados.emTeste(player) or not Incursoes.porId[universo] then
 		return false, "Inicie uma sessão de teste primeiro."
 	end
@@ -802,6 +805,9 @@ local function acaoFila(player: Player, universo: any): (boolean, string?)
 	end
 	if type(universo) ~= "string" or not Incursoes.porId[universo] then
 		return false, "Universo inválido."
+	end
+	if player:GetAttribute("EmDueloArena") then
+		return false, "Conclua o duelo antes de entrar nas Incursões."
 	end
 	if daRun[player] or embarques[player] then
 		return false, "Termine sua incursão ou aguarde o retorno ao Bastião."

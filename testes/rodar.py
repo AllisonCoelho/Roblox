@@ -20,6 +20,7 @@ MODULOS = {
     "Trilha": "src/shared/Dados/Trilha.luau",
     "Sessao": "src/server/Servicos/Sessao.luau",
     "PermissaoDev": "src/server/Servicos/PermissaoDev.luau",
+    "Arena": "src/shared/Dados/Arena.luau",
     "Incursoes": "src/shared/Dados/Incursoes.luau",
 }
 codigo = ["""

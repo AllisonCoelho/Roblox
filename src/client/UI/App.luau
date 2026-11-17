@@ -16,6 +16,7 @@ local Estado = require(script.Parent.Estado)
 local Navegacao = require(script.Parent.Navegacao)
 local Telas = script.Parent:WaitForChild("Telas")
 local Ajustes = require(Telas.Ajustes)
+local ArenaUI = require(Telas.Arena)
 local Altar = require(Telas.Altar)
 local Avisos = require(Telas.Avisos)
 local HUD = require(Telas.HUD)
@@ -39,6 +40,7 @@ local INTERVALO = Config.CooldownGiro + FOLGA
 
 local girando = false
 local emIncursao = false
+local emArena = false
 local proximoGiro = 0
 local ocupadoAte = 0 -- fim do ritual em andamento (auras sem cartão)
 local hud: HUD.Api
@@ -53,6 +55,7 @@ local function podeGirar(): boolean
 	return Estado.atual ~= nil
 		and Navegacao.aberto() == nil
 		and not emIncursao
+		and not emArena
 		and not PainelDev.pendente()
 		and not girando
 		and not Revelacao.ativa()
@@ -85,7 +88,7 @@ local function apresentar(aura: Auras.Aura, dados: { [string]: any })
 			local nome = if simulado then "[Teste] " .. jogador.DisplayName else jogador.DisplayName
 			Avisos.anunciar(nome, jogador.UserId, aura, chance)
 		end
-		if comCartao then
+		if comCartao and not emArena then
 			local estado = Estado.atual
 			Revelacao.mostrar(aura, cat, {
 				quantidade = quantidade,
@@ -94,6 +97,11 @@ local function apresentar(aura: Auras.Aura, dados: { [string]: any })
 				teste = teste,
 			})
 		end
+	end
+
+	if emArena then
+		revelar()
+		return
 	end
 
 	-- Animações desligadas: nada de ritual nem câmera; o resultado (e o cartão) vem na hora
@@ -239,7 +247,7 @@ function App.iniciar()
 		end,
 		aoPular = Despertar.pular,
 		aoMudar = function(ativa)
-			hud.definirVisivel(not ativa and not emIncursao)
+			hud.definirVisivel(not ativa and not emIncursao and not emArena)
 		end,
 	})
 	Avisos.montar(raiz)
@@ -251,6 +259,7 @@ function App.iniciar()
 		podeAbrir = function()
 			return not girando
 				and not emIncursao
+				and not emArena
 				and not Revelacao.ativa()
 				and os.clock() >= ocupadoAte
 		end,
@@ -268,7 +277,17 @@ function App.iniciar()
 			Despertar.pular()
 			Revelacao.fechar()
 		end
-		hud.definirVisivel(not emPartida and not Revelacao.ativa())
+		hud.definirVisivel(not emPartida and not emArena and not Revelacao.ativa())
+	end)
+	ArenaUI.montar(raiz, Avisos.toast, function(emDuelo)
+		emArena = emDuelo
+		if emDuelo then
+			Navegacao.fechar()
+			Despertar.pular()
+			Revelacao.fechar()
+			ocupadoAte = 0
+		end
+		hud.definirVisivel(not emDuelo and not emIncursao and not Revelacao.ativa())
 	end)
 	Navegacao.ajustar()
 
@@ -321,7 +340,7 @@ function App.iniciar()
 	end)
 
 	UserInputService.InputBegan:Connect(function(input, processado)
-		if processado then
+		if processado or emArena then
 			return
 		end
 		if input.KeyCode == Enum.KeyCode.E then
