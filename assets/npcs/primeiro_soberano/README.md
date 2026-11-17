@@ -1,6 +1,6 @@
 # Primeiro Soberano — Guardião do Trono Vazio
 
-O Primeiro Soberano ocupa o trono quando o servidor nasce e recebe o jogador com uma conversa.
+O Primeiro Soberano ocupa o trono quando o servidor nasce e recebe o jogador com um diálogo de desafio.
 Ao ser desafiado, levanta, desembainha o espadão e assume seu lugar no ringue. Veja as regras no
 [guia da Arena](../../../docs/despertar/ARENA.md).
 
@@ -19,9 +19,9 @@ Ao ser desafiado, levanta, desembainha o espadão e assume seu lugar no ringue. 
 ## Quem faz o quê
 
 - **Servidor** (`src/server/NPCs/PrimeiroSoberano.luau`): cria o NPC uma única vez (não duplica em
-  respawn/reconexão), a colisão, o nome, o `ProximityPrompt` "Conversar" e os atributos compartilhados
+  respawn/reconexão), a colisão, o nome, o ponto de interação e os atributos compartilhados
   na peça `Raiz`: `Estado`, `Alvo` (quem ele olha), `Reacao` e `Alerta` (hora do servidor).
-  Confere distância e espera por jogador na conversa; reação e gesto têm espera global (não empilham).
+  O serviço da Arena monta o prompt **Desafiar** nesse ponto e valida a distância de quem responde.
 - **Cliente** (`src/client/Mundo/NPCs/PrimeiroSoberano.luau`): monta as peças 3D, esconde a reserva
   de blocos e anima a partir dos atributos. Se a montagem falhar, a reserva continua visível.
 
@@ -31,7 +31,7 @@ Ao ser desafiado, levanta, desembainha o espadão e assume seu lugar no ringue. 
   e capa com variação mínima; uma linha de luz passa pelas fissuras a cada 8–15 s.
 - **Proximidade:** a cabeça acompanha o jogador mais próximo (até ±55°); quando alguém chega e não
   havia ninguém, os olhos acendem por 0,55 s (no máximo uma vez a cada 8 s).
-- **Alerta:** ao conversar (no máximo a cada 25 s, compartilhado), a mão direita pressiona o braço do
+- **Alerta:** ao abrir o diálogo (no máximo a cada 25 s, compartilhado), a mão direita pressiona o braço do
   trono e uma onda de luz corre pelo piso.
 - Movimento reduzido: amplitudes menores, capa parada, sem onda. Qualidade baixa: capa parada, sem onda.
 - **Duelo:** a pose em pé reutiliza o tronco, a armadura e as articulações. A base e a lâmina

@@ -21,6 +21,7 @@ local Ajustes = require(Telas.Ajustes)
 local ArenaUI = require(Telas.Arena)
 local Altar = require(Telas.Altar)
 local Avisos = require(Telas.Avisos)
+local DialogoSoberano = require(Telas.DialogoSoberano)
 local HUD = require(Telas.HUD)
 local Indice = require(Telas.Indice)
 local Inventario = require(Telas.Inventario)
@@ -131,7 +132,7 @@ local function apresentar(aura: Auras.Aura, dados: { [string]: any })
 			local nome = if simulado then "[Teste] " .. jogador.DisplayName else jogador.DisplayName
 			Avisos.anunciar(nome, jogador.UserId, aura, chance)
 		end
-		if comCartao and not emArena then
+		if comCartao and not emArena and not DialogoSoberano.aberto() then
 			local estado = Estado.atual
 			Revelacao.mostrar(aura, cat, {
 				quantidade = quantidade,
@@ -142,7 +143,7 @@ local function apresentar(aura: Auras.Aura, dados: { [string]: any })
 		end
 	end
 
-	if emArena then
+	if emArena or DialogoSoberano.aberto() then
 		revelar()
 		return
 	end
@@ -312,6 +313,7 @@ function App.iniciar()
 			return not girando
 				and not emIncursao
 				and not emArena
+				and not DialogoSoberano.aberto()
 				and not Revelacao.ativa()
 				and os.clock() >= ocupadoAte
 		end,
@@ -326,18 +328,25 @@ function App.iniciar()
 	IncursoesUI.montar(raiz, Avisos.toast, function(emPartida)
 		emIncursao = emPartida
 		if emPartida then
+			if DialogoSoberano.aberto() then
+				Navegacao.fechar()
+			end
 			Despertar.pular()
 			Revelacao.fechar()
 		end
 		hud.definirVisivel(not emPartida and not emArena and not Revelacao.ativa())
 	end)
+	local function fecharRitual()
+		Despertar.pular()
+		Revelacao.fechar()
+		ocupadoAte = 0
+	end
+	DialogoSoberano.montar(Avisos.toast, fecharRitual)
 	ArenaUI.montar(raiz, Avisos.toast, function(emDuelo)
 		emArena = emDuelo
 		if emDuelo then
 			Navegacao.fechar()
-			Despertar.pular()
-			Revelacao.fechar()
-			ocupadoAte = 0
+			fecharRitual()
 		end
 		hud.definirVisivel(not emDuelo and not emIncursao and not Revelacao.ativa())
 	end)
