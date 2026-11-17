@@ -1244,4 +1244,21 @@ do
 	igual("haki: queda média tem mínimo", M.hakiPouso(-31), 0.8)
 end
 
+-- Ícones da interface
+do
+	local I = req("Icones")
+	local It = req("Itens")
+	for id, item in It.porId do
+		igual("ícone: item tem símbolo próprio " .. id, I.ITENS[id] ~= nil, true)
+		igual("ícone: categoria conhecida " .. id, I.CATEGORIAS[item.categoria] ~= nil, true)
+	end
+	igual(
+		"ícone: item desconhecido usa a categoria",
+		I.item("xx", "Artefatos"),
+		I.CATEGORIAS.Artefatos
+	)
+	igual("ícone: sem categoria", I.item("xx", nil), "❔")
+	igual("ícone: aura sem estilo", I.aura(nil), "✨")
+end
+
 print(string.format("%d testes, %d falhas", total, falhas))
