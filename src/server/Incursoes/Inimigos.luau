@@ -27,6 +27,7 @@ export type Inimigo = {
 	proximoGolpe: number,
 	golpeEm: number?,
 	invocou: number,
+	atordoadoAte: number, -- combate: sem andar nem atacar até este instante
 }
 
 export type Alvo = { raiz: BasePart, humanoide: Humanoid }
@@ -35,6 +36,21 @@ local ESPERA_ATAQUE = 1.1
 local GOLPE_AVISO = 1.3 -- segundos entre o aviso (círculo no chão) e o impacto
 local GOLPE_RAIO = 15
 local GOLPE_INTERVALO = 7
+
+-- Dano nos jogadores passa por aqui: o combate (guarda, dash) pode reduzir ou anular.
+-- (humanoide, dano, posição de quem atacou, inimigo) -> dano final
+Inimigos.defesa = nil :: ((Humanoid, number, Vector3, any) -> number)?
+
+local function ferirJogador(a: Alvo, dano: number, origem: Vector3, i: any)
+	local final = dano
+	local defesa = Inimigos.defesa
+	if defesa then
+		final = defesa(a.humanoide, dano, origem, i)
+	end
+	if final > 0 then
+		a.humanoide:TakeDamage(final)
+	end
+end
 
 function Inimigos.novo(
 	pai: Instance,
@@ -72,7 +88,23 @@ function Inimigos.novo(
 		proximoGolpe = os.clock() + 4,
 		golpeEm = nil,
 		invocou = 0,
+		atordoadoAte = 0,
 	}
+end
+
+-- Combate: empurra (no plano) e/ou atordoa. O Guardião sente menos.
+function Inimigos.empurrar(i: Inimigo, vetor: Vector3, atordoar: number?)
+	if i.vida <= 0 then
+		return
+	end
+	local fator = if i.guardiao then 0.25 else 1
+	i.pos += Vector3.new(vetor.X, 0, vetor.Z) * fator
+	if atordoar and atordoar > 0 then
+		local agora = os.clock()
+		i.atordoadoAte =
+			math.max(i.atordoadoAte, agora + atordoar * (if i.guardiao then 0.4 else 1))
+		i.parte:SetAttribute("Atordoado", Workspace:GetServerTimeNow() + atordoar)
+	end
 end
 
 -- Aplica dano; devolve true se morreu (a peça some aqui)
@@ -128,12 +160,18 @@ function Inimigos.passo(
 			if dist > 0.1 then
 				olhar = i.pos + para
 			end
-			if dist > i.alcance * 0.8 and not i.golpeEm then
+			local atordoado = agora < i.atordoadoAte
+			if dist > i.alcance * 0.8 and not i.golpeEm and not atordoado then
 				i.pos += para.Unit * math.min(i.velocidade * dt, dist - i.alcance * 0.8)
 			end
-			if dist <= i.alcance and agora >= i.proximoAtaque and not i.golpeEm then
+			if
+				dist <= i.alcance
+				and agora >= i.proximoAtaque
+				and not i.golpeEm
+				and not atordoado
+			then
 				i.proximoAtaque = agora + ESPERA_ATAQUE * (if i.guardiao then 1.5 else 1)
-				melhor.humanoide:TakeDamage(i.dano)
+				ferirJogador(melhor, i.dano, i.pos, i)
 				i.parte:SetAttribute("Ataque", Workspace:GetServerTimeNow())
 			end
 		end
@@ -163,7 +201,7 @@ function Inimigos.passo(
 						local d =
 							Vector3.new(a.raiz.Position.X - i.pos.X, 0, a.raiz.Position.Z - i.pos.Z)
 						if a.humanoide.Health > 0 and d.Magnitude <= GOLPE_RAIO then
-							a.humanoide:TakeDamage(i.dano * 1.6)
+							ferirJogador(a, i.dano * 1.6, i.pos, i)
 						end
 					end
 					i.parte:SetAttribute("Impacto", Workspace:GetServerTimeNow())

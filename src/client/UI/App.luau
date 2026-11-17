@@ -303,6 +303,7 @@ function App.iniciar()
 			c.ocultarEfeitosAlheios == true
 		)
 		EfeitosAlheios.definir(c.ocultarEfeitosAlheios == true)
+		IncursoesUI.definirQualidade(c.qualidadeBaixa == true, c.movimentoReduzido == true)
 		AurasControlador.definir({
 			qualidadeBaixa = c.qualidadeBaixa == true,
 			movimentoReduzido = c.movimentoReduzido == true,
@@ -343,7 +344,7 @@ function App.iniciar()
 		if processado or emArena then
 			return
 		end
-		if input.KeyCode == Enum.KeyCode.E then
+		if input.KeyCode == Enum.KeyCode.E and not emIncursao then
 			task.spawn(aoApertar)
 		elseif
 			RunService:IsStudio()
