@@ -761,6 +761,35 @@ AURAS.update({
     },
 })
 
+
+# Ajuste de leitura das Comuns/Incomuns (rodada 2): peças maiores e mais afastadas do corpo,
+# para não sumirem atrás do avatar. (fator de tamanho, fator de afastamento)
+AJUSTE = {
+    "centelha_do_nexo": (1.3, 1.0),
+    "musgo_luminoso": (1.8, 1.15),
+    "fagulha_de_cobre": (2.2, 1.15),
+    "chuvisco_de_vidro": (1.3, 1.1),
+    "borboletas_de_cinza": (2.2, 1.2),
+    "gelo_de_neon": (1.25, 1.0),
+    "mare_de_quartzo": (1.15, 1.05),
+    "raiz_cintilante": (1.35, 1.15),
+    "nevoa_de_amora": (1.0, 1.05),
+    "vento_de_papel": (2.4, 1.15),
+    "polen_lunar": (1.8, 1.1),
+    "engrenagem_de_orvalho": (1.5, 1.15),
+    "trilha_de_vaga_lumes": (2.6, 1.1),
+    "ambar_vivo": (1.25, 1.05),
+}
+for _id, (_ft, _fr) in AJUSTE.items():
+    for _p in AURAS[_id]["pecas"]:
+        _p["escala"] = round(_p.get("escala", 1.0) * _ft, 3)
+        if _p["modo"] == "orbita":
+            _p["rx"], _p["rz"] = _p["rx"] * _fr, _p["rz"] * _fr
+        elif _p["modo"] == "ancora" and abs(_p["pos"][1]) < 2.8:
+            _p["pos"] = (_p["pos"][0] * _fr, _p["pos"][1], _p["pos"][2] * _fr)
+    _e = AURAS[_id]["especial"]
+    _e["escala"] = round(_e["escala"] * min(_ft, 1.6), 3)
+
 # ---------------------------------------------------------------- saída
 
 
@@ -975,7 +1004,7 @@ def renderizar(objs):
             esc = p.get("escala", 1.0)
             o.matrix_world = rb_cf(pos, g) @ Matrix.Scale(esc, 4) @ (Matrix.Scale(-1, 4, Vector((1, 0, 0))) if p.get("espelhar") else Matrix.Identity(4))
             col.objects.link(o)
-        for nome, graus in (("front", 0), ("three_quarter", 35), ("side", 90), ("back", 180)):
+        for nome, graus in (("front", 0), ("three_quarter", 50), ("side", 90), ("back", 180)):
             a = math.radians(graus)
             cena.render.resolution_x, cena.render.resolution_y = 520, 680
             oc.location = (math.sin(a) * 13, math.cos(a) * 13, 4.6)
