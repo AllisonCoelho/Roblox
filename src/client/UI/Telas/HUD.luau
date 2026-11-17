@@ -29,6 +29,7 @@ type Opcoes = {
 	aoAlternarAuto: () -> (),
 	aoAbrirIndice: () -> (),
 	aoAbrirInventario: () -> (),
+	aoAbrirLoja: () -> (),
 	aoAbrirAjustes: () -> (),
 }
 
@@ -147,6 +148,17 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 		aoClicar = op.aoAbrirInventario,
 	})
 	inventario.placa.quadro.AnchorPoint = Vector2.new(1, 0)
+
+	local loja = Kit.botaoPlaca({
+		texto = "✦ Loja",
+		tamanho = UDim2.fromOffset(146, 50),
+		tamanhoTexto = 18,
+		tom = "lilas",
+		pai = hud,
+		aoClicar = op.aoAbrirLoja,
+	})
+	loja.placa.quadro.AnchorPoint = Vector2.new(1, 0)
+	loja.botao.Text = "Loja"
 
 	local placaAura = Kit.placa({
 		nome = "AuraEquipada",
@@ -417,6 +429,7 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 		placaAura.quadro.Size = UDim2.fromOffset(larguraAura, if compacto then 112 else 96)
 		placaAura.quadro.Position = UDim2.new(1, -14, 0, 84)
 		inventario.placa.quadro.Position = UDim2.new(1, -14, 0, if compacto then 202 else 186)
+		loja.placa.quadro.Position = UDim2.new(1, -14, 0, if compacto then 258 else 242)
 		local textoX = if estreito then 46 else 70
 		iconeAura.Size = UDim2.fromOffset(if estreito then 30 else 48, if estreito then 30 else 48)
 		iconeAura.Position = UDim2.new(0, 10, 0.5, 0)

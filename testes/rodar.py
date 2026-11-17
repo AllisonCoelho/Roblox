@@ -24,6 +24,8 @@ MODULOS = {
     "Incursoes": "src/shared/Dados/Incursoes.luau",
     "Combate": "src/shared/Dados/Combate.luau",
     "Monetizacao": "src/shared/Dados/Monetizacao.luau",
+    "Cosmeticos": "src/shared/Dados/Cosmeticos.luau",
+    "Temporada": "src/shared/Dados/Temporada.luau",
     "IncursoesRun": "src/shared/Dados/IncursoesRun.luau",
     "IncursoesDesafios": "src/shared/Dados/IncursoesDesafios.luau",
 }
