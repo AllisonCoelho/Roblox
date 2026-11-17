@@ -38,6 +38,7 @@ type Membro = {
 	ressonancia: number,
 	proximoPulso: number,
 	reviver: boolean,
+	proximoResgate: number, -- vivo fora do andar (respawn no lobby): leva de volta
 	conexoes: { RBXScriptConnection },
 }
 
@@ -523,6 +524,7 @@ local function lancar(
 			ressonancia = ressonanciaDe(player),
 			proximoPulso = 0,
 			reviver = false,
+			proximoResgate = 0,
 			conexoes = {},
 		}
 		run.membros[player] = m
@@ -606,6 +608,17 @@ local function passoRun(run: Run, dt: number)
 			elseif d.Magnitude < 200 then
 				table.insert(alvos, { raiz = r, humanoide = h })
 				vivos[player] = r
+			else
+				-- Renasceu no lobby (o spawn do Roblox venceu o teleporte do reviver): volta ao andar
+				local m = run.membros[player]
+				if agora >= m.proximoResgate then
+					m.proximoResgate = agora + 1
+					if m.reviver or h.MaxHealth ~= m.vidaMax then
+						m.reviver = false
+						definirVida(player, m.vidaMax)
+					end
+					levar(player, mapa.spawn)
+				end
 			end
 		end
 	end
