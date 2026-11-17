@@ -45,4 +45,42 @@ function Movimento.corrida(fase: number): (boolean, number, number, number)
 	end
 end
 
+-- ===================================================================== Haki do Rei
+-- O haki estoura em quadros fixos da animação parada, alternando ciclos:
+-- no auge da risada (pose 1) vem o estouro forte; no meio do repouso (pose 2), só faíscas.
+Movimento.TEMPO_PARADO = TEMPO_PARADO
+Movimento.HAKI_RISADA = 0.35
+Movimento.HAKI_RELAXADO = 3.0
+Movimento.HAKI_PASSOS = 8 -- na corrida, faísca a cada N pisadas
+
+local function cruzou(antes: number, depois: number, marca: number): number?
+	if depois < marca then
+		return nil
+	end
+	local a = math.floor((antes - marca) / TEMPO_PARADO)
+	local d = math.floor((depois - marca) / TEMPO_PARADO)
+	return if d > a then d else nil
+end
+
+-- Devolve "forte", "fraco" ou nil para o intervalo de tempo parado (antes, depois]
+function Movimento.hakiParado(antes: number, depois: number): string?
+	local ciclo = cruzou(antes, depois, Movimento.HAKI_RISADA)
+	if ciclo and ciclo % 2 == 1 then
+		return "forte"
+	end
+	ciclo = cruzou(antes, depois, Movimento.HAKI_RELAXADO)
+	if ciclo and ciclo % 2 == 0 then
+		return "fraco"
+	end
+	return nil
+end
+
+-- Pouso: intensidade do haki pela velocidade de queda (nil = queda baixa, só a borracha)
+function Movimento.hakiPouso(velocidadeQueda: number): number?
+	if velocidadeQueda > -30 then
+		return nil
+	end
+	return math.clamp(-velocidadeQueda / 45, 0.8, 1.6)
+end
+
 return Movimento

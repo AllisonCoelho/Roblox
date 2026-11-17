@@ -5,6 +5,7 @@ local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 
 local Poses = require(script.Parent.Parent.Incursoes.Poses)
+local Haki = require(script.Parent.Gear5Haki)
 local Movimento = require(script.Parent.Gear5Movimento)
 local Quadros = require(script.Parent.Gear5Poses)
 
@@ -35,6 +36,8 @@ type Ativa = {
 	velocidadeQueda: number,
 	ultimoImpacto: number,
 	visivel: boolean,
+	hakiPendente: string?, -- quadro da animação parada que pede o Haki do Rei
+	passos: number, -- pisadas desde o último haki da corrida
 }
 
 type Mancha = {
@@ -269,7 +272,10 @@ function Presenca.simular(dt: number)
 				a.tempoIdle = 0
 			end
 		elseif noChao then
+			local antes = a.tempoIdle
 			a.tempoIdle += dt
+			-- Haki do Rei sincronizado com a pose: auge da risada ou meio do repouso
+			a.hakiPendente = Movimento.hakiParado(antes, a.tempoIdle) or a.hakiPendente
 		end
 
 		local relaxar, flutuar = Movimento.parado(a.tempoIdle)
@@ -331,6 +337,7 @@ function Presenca.definir(personagem: Model, id: string?)
 		velocidadeQueda = 0,
 		ultimoImpacto = 0,
 		visivel = true,
+		passos = 0,
 	}
 	ativas[personagem] = a
 	local function invalidar(obj: Instance)
@@ -347,6 +354,7 @@ end
 function Presenca.definirQualidade(baixa: boolean, reduzido: boolean)
 	qualidadeBaixa = baixa
 	movimentoReduzido = reduzido
+	Haki.definirQualidade(baixa, reduzido)
 end
 
 function Presenca.atualizar(_dt: number, camera: Vector3)
@@ -380,8 +388,18 @@ function Presenca.atualizar(_dt: number, camera: Vector3)
 		elseif pousou and a.velocidadeQueda < -8 and agora - a.ultimoImpacto > 0.35 then
 			marcarChao(a, math.clamp(-a.velocidadeQueda / 32, 0.6, 1.7), camera)
 			a.ultimoImpacto = agora
+			local forca = Movimento.hakiPouso(a.velocidadeQueda)
+			if forca and not Poses.ocupada(personagem) then
+				Haki.disparar(personagem, a.raiz, "pouso", forca)
+			end
 		end
 		a.noAr = ar
+
+		local pendente = a.hakiPendente
+		a.hakiPendente = nil
+		if pendente and not ar and not Poses.ocupada(personagem) then
+			Haki.disparar(personagem, a.raiz, pendente :: any)
+		end
 
 		if ar or pousou or movimentoReduzido or qualidadeBaixa or Poses.ocupada(personagem) then
 			continue
@@ -392,6 +410,11 @@ function Presenca.atualizar(_dt: number, camera: Vector3)
 				or personagem:FindFirstChild(nome .. " Leg")
 			marcarChao(a, 0.64, camera, if pe and pe:IsA("BasePart") then pe else nil)
 			a.ultimoImpacto = agora
+			a.passos += 1
+			if a.passos >= Movimento.HAKI_PASSOS then
+				a.passos = 0
+				Haki.disparar(personagem, a.raiz, "passo", 0.8)
+			end
 		end
 	end
 	animarChao()
