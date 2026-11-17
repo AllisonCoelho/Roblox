@@ -425,6 +425,18 @@ function App.iniciar()
 		elseif
 			RunService:IsStudio()
 			and UserInputService:IsKeyDown(Enum.KeyCode.LeftAlt)
+			and input.KeyCode == Enum.KeyCode.K
+		then
+			-- Só no Studio: Alt+K liga/desliga a prévia da Senbonzakura (precisa dos templates importados)
+			task.spawn(function()
+				local _, msg = Estado.pedir("PreviaAura", "senbonzakura")
+				if msg then
+					Avisos.toast(msg)
+				end
+			end)
+		elseif
+			RunService:IsStudio()
+			and UserInputService:IsKeyDown(Enum.KeyCode.LeftAlt)
 			and input.KeyCode == Enum.KeyCode.N
 		then
 			-- Só no Studio: Alt+N passa pelos estágios Naruto (2 caudas ... 9 caudas, Seis Caminhos, nenhum)

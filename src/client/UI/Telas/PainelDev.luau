@@ -34,6 +34,7 @@ local DESTINOS = {
 local NOMES_VFX = {
 	gear5 = "Gear 5",
 	monarca = "Monarca das Sombras",
+	senbonzakura = "Senbonzakura",
 	naruto_seis = "Modo Sábio dos Seis Caminhos",
 }
 

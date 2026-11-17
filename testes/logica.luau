@@ -13,6 +13,10 @@ igual("negativo", Formato.inteiro(-1500), "-1.500")
 igual("abreviado", Formato.curto(15000), "15 mil")
 igual("tempo", Formato.tempo(42), "0:42")
 
+-- Senbonzakura: efeito de prévia, nunca entra no sorteio sem autorização do dono
+igual("senbonzakura como prévia de VFX", req("AurasVfx").senbonzakura, true)
+igual("senbonzakura fora do catálogo sorteável", req("Auras").porId.senbonzakura, nil)
+
 -- Combate das Incursões (fase 1)
 do
 	local C = req("Combate")

@@ -22,6 +22,7 @@ MODULOS = {
     "PermissaoDev": "src/server/Servicos/PermissaoDev.luau",
     "Arena": "src/shared/Dados/Arena.luau",
     "Incursoes": "src/shared/Dados/Incursoes.luau",
+    "AurasVfx": "src/shared/Dados/AurasVfx.luau",
     "Combate": "src/shared/Dados/Combate.luau",
     "Monetizacao": "src/shared/Dados/Monetizacao.luau",
     "Cosmeticos": "src/shared/Dados/Cosmeticos.luau",

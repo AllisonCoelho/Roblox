@@ -1,4 +1,4 @@
--- Liga e desliga os VFX de aura montados no cliente (por enquanto só a Gear 5).
+-- Liga e desliga os VFX de aura montados no cliente (Gear 5, Naruto, Monarca, Senbonzakura).
 -- Quem decide qual aura está ativa é o SERVIDOR: ele grava o atributo "AuraVfx" no personagem
 -- (e "AuraVfxEm" quando o jogador acabou de equipar, para tocar a manifestação).
 -- Este cliente só observa esses atributos; não pede nem concede aura nenhuma.
@@ -12,6 +12,7 @@ local AurasVfx =
 local Caudas = require(script.Parent.Caudas)
 local Gear5 = require(script.Parent.Gear5)
 local Monarca = require(script.Parent.Monarca)
+local Senbonzakura = require(script.Parent.Senbonzakura)
 
 local Controlador = {}
 
@@ -27,6 +28,7 @@ type Modulo = { criar: (Model, Gear5.Opcoes) -> Gear5.Instancia? }
 local MODULOS: { [string]: Modulo } = {
 	gear5 = Gear5,
 	monarca = Monarca,
+	senbonzakura = Senbonzakura, -- templates clonados de ReplicatedStorage.AuraAssets (pipeline v2)
 }
 for _, id in Caudas.ORDEM do
 	MODULOS[id] = Caudas.estagio(id)
