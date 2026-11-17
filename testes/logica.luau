@@ -340,4 +340,24 @@ for id, item in Itens.porId do
 end
 igual("catálogo inicial de itens", totalItens, 16)
 
+local Loot = req("LootIncursoes")
+local membroA, membroB = Loot.novo(), Loot.novo()
+local function semBonus() return 1 end
+local materiaisA, materiaisB = {}, {}
+for andar = 1, 5 do
+	igual("credita andar " .. andar, Loot.creditar(membroA, materiaisA, "cinzas", andar, semBonus) ~= nil, true)
+	igual("não repete andar " .. andar, Loot.creditar(membroA, materiaisA, "cinzas", andar, semBonus), nil)
+end
+igual("progresso de cada membro é isolado", Loot.creditar(membroB, materiaisB, "cinzas", 1, semBonus).estilhaco_bruto, 3)
+igual("primeira incursão rende estilhaços suficientes", materiaisA.estilhaco_bruto, 15)
+igual("lascas garantidas", materiaisA.lasca_estavel, 2)
+igual("selo garantido por marco", materiaisA.selo_purificacao, 1)
+igual("marca de Guardião garantida", materiaisA.brasa_arauto, 1)
+igual("bônus épico separado", Loot.creditar(Loot.novo(), {}, "cinzas", 5, function() return 0 end).coracao_fenda, 1)
+igual("outro bioma entrega material de Maré", Loot.creditar(Loot.novo(), {}, "mare", 1, semBonus).sal_mare_morta, 1)
+igual("outro Guardião entrega marca de Umbral", Loot.creditar(Loot.novo(), {}, "umbral", 5, semBonus).veu_ocaso, 1)
+igual("andar inválido não é premiado", Loot.creditar(Loot.novo(), {}, "cinzas", 6, semBonus), nil)
+igual("universo inválido não é premiado", Loot.creditar(Loot.novo(), {}, "arena", 1, semBonus), nil)
+igual("membros não compartilham estoque", materiaisB.estilhaco_bruto, 3)
+
 print(string.format("%d testes, %d falhas", total, falhas))
