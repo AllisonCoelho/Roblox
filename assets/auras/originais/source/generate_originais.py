@@ -917,6 +917,172 @@ def _(bm, rng):
     placa(bm, [(-0.12, 0), (0.12, 0), (0, -0.06)], 0.04, Matrix.Translation(Vector((0, -0.25, 0.06))))
     tubo(bm, [(0.4, 0.2, -0.05), (0.75, 0.0, -0.1), (0.9, -0.5, 0.0), (1.1, -0.9, -0.1)], 0.04, lados=4, achatar=0.25)
 
+
+# ================================================================ Lendárias
+
+
+@peca("arquiduque_de_cinzas", "capa")
+def _(bm, rng):
+    for fila in range(5):
+        for k in range(7 - fila):
+            x = (k - (6 - fila) / 2) * 0.32
+            y = 0.9 - fila * 0.45
+            m = Matrix.Translation(Vector((x, y, 0.05 * abs(x) ** 2 + 0.03 * fila))) @ rot(0, 0, rng.uniform(-12, 12) + x * 15)
+            placa(bm, [(-0.15, 0.1), (0.15, 0.1), (0.05, -0.55), (0, -0.7), (-0.05, -0.55)], 0.04, m)
+
+
+@peca("arquiduque_de_cinzas", "broche")
+def _(bm, rng):
+    bipiramide(bm, (0, 0, 0), (0, 0, 1), 0.12, 0.05, 0.22, lados=6, rng=rng)
+    anel(bm, 0.24, 0.03, n=18, achatar=1.0)
+
+
+@peca("aurora_do_mar_profundo", "umbrela")
+def _(bm, rng):
+    t = bmesh.ops.create_uvsphere(bm, u_segments=20, v_segments=8, radius=1.0)
+    for v in t["verts"]:
+        x, y, z = v.co.x, v.co.y, v.co.z
+        if z < 0:
+            z *= 0.15
+        onda = 1 + 0.06 * math.sin(math.atan2(y, x) * 8)
+        v.co = V(x * 1.4 * onda, z * 0.9, y * 1.4 * onda)
+
+
+@peca("aurora_do_mar_profundo", "tentaculo")
+def _(bm, rng):
+    n = 14
+    tubo(bm, [(0.12 * math.sin(i * 0.7), -2.6 * i / (n - 1), 0.1 * math.cos(i * 0.5)) for i in range(n)], [0.07 * (1 - i / (n - 1)) + 0.008 for i in range(n)], lados=5)
+
+
+@peca("imperatriz_de_porcelana", "leque")
+def _(bm, rng):
+    for k in range(11):
+        a = -75 + k * 15
+        placa(bm, [(-0.04, 0), (0.04, 0), (0.17, 1.6), (0, 1.75), (-0.17, 1.6)], 0.035, rot(0, 0, a) @ rot(5 * (k % 2), 0, 0))
+    anel(bm, 1.5, 0.03, n=30, a0=math.radians(15), a1=math.radians(165))
+
+
+@peca("trono_de_raios", "relampago")
+def _(bm, rng):
+    pts = [(0, 1.6), (0.25, 0.6), (0.08, 0.55), (0.32, -0.5), (0.12, -0.52), (0.28, -1.6), (-0.2, -0.3), (-0.02, -0.28), (-0.22, 0.65), (-0.05, 0.68)]
+    placa(bm, pts, 0.1)
+
+
+@peca("trono_de_raios", "aro")
+def _(bm, rng):
+    anel(bm, 1.3, 0.07, n=36, a0=0.4, a1=2 * math.pi - 1.0, lados=6)
+    for k in range(5):
+        a = 0.6 + k * 1.0
+        caixa(bm, (math.cos(a) * 1.3, 0, math.sin(a) * 1.3), (0.12, 0.2, 0.12), rot(0, -math.degrees(a), 0))
+
+
+@peca("relicario_do_inverno", "altar")
+def _(bm, rng):
+    caixa(bm, (0, -0.4, 0), (0.7, 0.12, 0.45))
+    for s in (-1, 1):
+        prisma_ponta(bm, (s * 0.3, 0.05, 0), (0, 1, 0), 0.7, 0.07, 0.15, rng=rng)
+    tubo(bm, arco_pts(0.32, 0, math.pi, 14, y=0) and [(math.cos(math.pi * i / 13) * 0.32, 0.45 + math.sin(math.pi * i / 13) * 0.4, 0) for i in range(14)], 0.05, lados=5)
+    bipiramide(bm, (0, 0.95, 0), (0, 1, 0), 0.35, 0.05, 0.08, lados=6, rng=rng)
+
+
+@peca("relicario_do_inverno", "sino_gelo")
+def _(bm, rng):
+    tubo(bm, [(0, 0.3, 0), (0, 0.2, 0), (0, 0.0, 0), (0, -0.2, 0)], [0.02, 0.1, 0.14, 0.2], lados=8, fechar=False)
+
+
+@peca("atlas_fragmentado", "ilha")
+def _(bm, rng):
+    contorno = [(math.cos(a) * (0.6 + 0.2 * math.sin(a * 3 + 1)), math.sin(a) * (0.45 + 0.15 * math.cos(a * 2))) for a in [2 * math.pi * i / 14 for i in range(14)]]
+    placa(bm, contorno, 0.18, rot(90, 0, 0))
+    for k in range(3):
+        bipiramide(bm, (rng.uniform(-0.3, 0.3), 0.18, rng.uniform(-0.2, 0.2)), (0, 1, 0), rng.uniform(0.2, 0.4), 0.02, 0.1, lados=4, rng=rng)
+    tubo(bm, [(-0.5, 0.1, 0.0), (-0.1, 0.1, 0.1), (0.3, 0.1, -0.05)], 0.035, lados=4, achatar=0.3)
+    bipiramide(bm, (0, -0.15, 0), (0, -1, 0), 0.4, 0.05, 0.35, lados=6, rng=rng)
+
+
+@peca("serpente_de_cristal", "corpo")
+def _(bm, rng):
+    n = 22
+    for i in range(n):
+        t = i / (n - 1)
+        x = -3.0 + 6.0 * t
+        p = (x, 0.9 * math.sin(t * math.pi * 2), 0.6 * math.cos(t * math.pi * 2))
+        r = 0.32 * math.sin(math.pi * min(1, t * 1.15)) ** 0.5 + 0.06
+        bipiramide(bm, p, (1, 0.2, 0), r * 0.9, r * 0.9, r, lados=5, rng=rng)
+    bipiramide(bm, (-3.3, 0.0, 0.6), (-1, 0, 0), 0.6, 0.2, 0.35, lados=5, rng=rng)
+
+
+@peca("serpente_de_cristal", "olho")
+def _(bm, rng):
+    bolha(bm, (0, 0, 0), 0.12, sub=1, rng=rng)
+
+
+@peca("horizonte_rasgado", "fenda")
+def _(bm, rng):
+    placa(bm, [(-0.9, -1.3), (-0.4, -1.4), (0.5, -1.25), (0.95, -0.6), (0.8, 0.4), (1.0, 1.2), (0.2, 1.4), (-0.6, 1.3), (-0.95, 0.5), (-0.8, -0.5)], 0.05)
+
+
+@peca("horizonte_rasgado", "borda")
+def _(bm, rng):
+    for (a, b) in (((-0.9, -1.3), (-0.95, 0.5)), ((-0.6, 1.3), (1.0, 1.2)), ((0.95, -0.6), (0.8, 0.4)), ((-0.4, -1.4), (0.5, -1.25))):
+        m = [(a[0] + (b[0] - a[0]) * t + rng.uniform(-0.08, 0.08), a[1] + (b[1] - a[1]) * t, 0.04) for t in (0, 0.33, 0.66, 1)]
+        tubo(bm, m, [0.02, 0.06, 0.06, 0.02], lados=5)
+
+
+@peca("arauto_dos_mil_sinos", "halo")
+def _(bm, rng):
+    anel(bm, 1.1, 0.06, n=40, lados=6)
+    for k in range(10):
+        a = 2 * math.pi * k / 10
+        x, z = math.cos(a) * 1.1, math.sin(a) * 1.1
+        comp = 0.25 + 0.2 * (k % 3)
+        tubo(bm, [(x, 0, z), (x, -comp, z)], 0.01, lados=4)
+        tubo(bm, [(x, -comp, z), (x, -comp - 0.1, z), (x, -comp - 0.25, z)], [0.04, 0.09, 0.13], lados=7, fechar=False)
+
+
+@peca("orquestra_das_estrelas", "harpa")
+def _(bm, rng):
+    tubo(bm, [(-0.9, -1.0, 0), (-1.0, 0.2, 0), (-0.4, 1.2, 0), (0.6, 1.3, 0), (1.0, 0.6, 0)], 0.06, lados=6)
+    for k in range(8):
+        x = -0.85 + 0.24 * k
+        topo = 1.2 - 0.12 * max(0, k - 4) ** 1.3
+        tubo(bm, [(x, -0.9 + 0.15 * k, 0), (x, topo, 0)], 0.012, lados=4)
+        placa(bm, estrela(4, 0.09, 0.03), 0.02, Matrix.Translation(Vector((x, -0.9 + 0.15 * k + 0.5 * (topo + 0.9 - 0.15 * k), 0.03))))
+
+
+@peca("orquestra_das_estrelas", "nota")
+def _(bm, rng):
+    placa(bm, estrela(5, 0.2, 0.08), 0.06)
+
+
+@peca("majestade_de_cobre", "leao")
+def _(bm, rng):
+    bolha(bm, (0, 0, 0), 0.5, sub=2, achatar=(0.9, 1.0, 0.8), rng=rng)
+    caixa(bm, (0, -0.25, -0.4), (0.4, 0.3, 0.35))
+    for s in (-1, 1):
+        bipiramide(bm, (s * 0.2, 0.15, -0.42), (0, 0, -1), 0.03, 0.03, 0.07, lados=4, rng=rng)
+        bipiramide(bm, (s * 0.35, 0.5, -0.05), (s * 0.3, 1, 0), 0.2, 0.05, 0.1, lados=4, rng=rng)
+    for k in range(16):  # crina de lâminas
+        a = 2 * math.pi * k / 16
+        placa(bm, [(-0.07, 0), (0.07, 0), (0, 0.55 + 0.15 * (k % 2))], 0.04, Matrix.Translation(Vector((0, 0, 0.15))) @ rot(0, 0, math.degrees(a)) @ Matrix.Translation(Vector((0, 0.5, 0))))
+
+
+@peca("majestade_de_cobre", "relogio")
+def _(bm, rng):
+    anel(bm, 0.32, 0.04, n=24, achatar=1.0)
+    placa(bm, [(-0.02, 0), (0.02, 0), (0, 0.25)], 0.02, rot(90, 0, 0) and rot(0, 0, -30))
+    placa(bm, [(-0.02, 0), (0.02, 0), (0, 0.18)], 0.02, rot(0, 0, 80))
+
+
+# Peças reaproveitadas entre auras (cada .rbxm leva sua própria cópia do template)
+for _destino, _origem in (
+    (("imperatriz_de_porcelana", "caco"), ("fenda_de_porcelana", "caco")),
+    (("relicario_do_inverno", "prisma"), ("gelo_de_neon", "prisma")),
+    (("arauto_dos_mil_sinos", "onda"), ("sinos_do_crepusculo", "onda")),
+    (("arauto_dos_mil_sinos", "sino"), ("sinos_do_crepusculo", "sino")),
+):
+    PECAS[_destino] = PECAS[_origem]
+
 # ---------------------------------------------------------------- comportamento (vai para o Luau)
 # modo: "ancora" (pos local), "orbita" (rx, rz, altura, ang, vel), "pendulo" (arco atrás: centro, abertura)
 # rot = graus (X, Y, Z); giro = graus/s; osc = {eixo, amplitude graus, freq}; correr = pos local correndo;
@@ -1419,6 +1585,121 @@ AURAS.update({
         "especial": dict(template="mascara", n=5, origem=(0, 1.2, -1.0), raio=2.2, escala=1.8, cor=0, material="Neon", arco=True),
     },
 })
+
+
+# Lendárias
+AURAS.update({
+    "arquiduque_de_cinzas": {
+        "cores": ("FF8F69", "4A3442"),
+        "pecas": [
+            dict(template="capa", modo="ancora", pos=(0, 0.9, 1.0), cor=1, material="Slate", rigidez=30, atraso=0.7, osc=(0, 6, 0.6), escala=1.5, correrRot=(-40, 0, 0), abrirEscala=0.5),
+            dict(template="capa", modo="ancora", pos=(0, 0.9, 1.05), cor=0, material="Neon", transp=0.55, rigidez=28, atraso=0.75, osc=(0, 6, 0.6), escala=1.55, correrRot=(-40, 0, 0), detalhe=True),
+            dict(template="broche", modo="ancora", pos=(0, 1.3, -0.55), cor=0, material="Neon", rigidez=60, atraso=0.3, pulso=0.12, escala=1.3),
+        ],
+        "especial": dict(template="capa", n=2, origem=(0, 1.0, 1.0), raio=1.8, escala=1.4, cor=0, material="Neon"),
+    },
+    "aurora_do_mar_profundo": {
+        "cores": ("8DE9F5", "735AF0"),
+        "pecas": [
+            dict(template="umbrela", modo="ancora", pos=(0, 3.2, 0.9), cor=1, material="ForceField", rigidez=30, atraso=0.6, pulso=0.08, bob=0.2, escala=1.3, correrRot=(-25, 0, 0)),
+        ]
+        + [
+            dict(template="tentaculo", modo="ancora", pos=(1.3 * math.cos(a), 2.95, 0.9 + 1.2 * math.sin(a)), cor=0, material="Neon", transp=0.2, rigidez=18 + 2 * k, atraso=1.0, osc=(2, 14, 0.35 + 0.06 * k), escala=1.2, correrRot=(-50, 0, 0), detalhe=k >= 4)
+            for k, a in enumerate([k * 1.05 for k in range(6)])
+        ],
+        "especial": dict(template="umbrela", n=1, origem=(0, 3.6, 0.9), raio=0, escala=2.6, cor=0, material="ForceField"),
+    },
+    "imperatriz_de_porcelana": {
+        "cores": ("FFE3EF", "465A9E"),
+        "pecas": [
+            dict(template="leque", modo="ancora", pos=(0, 0.7, 1.2), cor=0, material="SmoothPlastic", rigidez=40, atraso=0.5, osc=(2, 4, 0.25), escala=1.5, correrRot=(0, 0, 0), abrirEscala=0.4),
+        ]
+        + [
+            dict(template="caco", modo="orbita", rx=2.2, rz=2.0, altura=0.4 + 0.7 * k, ang=k * 2.1, vel=0.4, inclinacao=0.3, cor=1, material="Neon", rigidez=34, atraso=0.6, giro=(50, 40, 0), escala=1.4, detalhe=k >= 2)
+            for k in range(3)
+        ],
+        "especial": dict(template="leque", n=3, origem=(0, 1.0, 1.6), raio=1.0, escala=1.8, cor=1, material="Neon", arco=True),
+    },
+    "trono_de_raios": {
+        "cores": ("F9D47A", "6A55A6"),
+        "pecas": [
+            dict(template="relampago", modo="ancora", pos=p, rot=r, cor=0, material="Neon", rigidez=50, atraso=0.4, osc=(1, 6, 2.2 + 0.3 * k), escala=1.4, correr=(p[0] * 0.5, p[1], 2.0), correrRot=(70, 0, 0), detalhe=k >= 3)
+            for k, (p, r) in enumerate((((-1.3, 0.6, 1.0), (0, 0, 0)), ((1.3, 0.6, 1.0), (0, 0, 0)), ((0, 2.5, 1.3), (0, 0, 90)), ((0, -0.5, 1.4), (0, 0, 90))))
+        ]
+        + [
+            dict(template="aro", modo="ancora", pos=(0, 1.0, 1.2), rot=(90, 0, 0), giro=(0, 0, 15), cor=1, material="Metal", rigidez=46, atraso=0.4, escala=1.4),
+        ],
+        "especial": dict(template="relampago", n=4, origem=(0, 1.0, 1.0), raio=1.6, escala=1.8, cor=0, material="Neon"),
+    },
+    "relicario_do_inverno": {
+        "cores": ("DCF7FF", "7591D0"),
+        "pecas": [
+            dict(template="altar", modo="ancora", pos=(0, 2.9, 0.4), giro=(0, 15, 0), cor=0, material="Glass", transp=0.15, rigidez=46, atraso=0.4, bob=0.12, escala=1.6),
+        ]
+        + [
+            dict(template="sino_gelo", modo="orbita", rx=2.0, rz=1.8, altura=0.6 + 0.6 * k, ang=k * 2.1, vel=0.35, inclinacao=0.3, cor=1, material="Glass", transp=0.1, rigidez=32, atraso=0.6, osc=(2, 12, 0.5), escala=1.8, detalhe=k >= 2)
+            for k in range(3)
+        ]
+        + [
+            dict(template="prisma", modo="orbita", rx=2.5, rz=2.2, altura=-0.4 + 0.9 * k, ang=k * 2.1 + 1.0, vel=-0.5, inclinacao=0.3, cor=0, material="Neon", rigidez=36, atraso=0.6, giro=(0, 60, 0), escala=0.9, correr=(0.4 * (k - 1), 0.8, 1.8 + 0.4 * k), detalhe=k >= 2)
+            for k in range(3)
+        ],
+        "especial": dict(template="altar", n=1, origem=(0, 1.2, 1.4), raio=0, escala=4.0, cor=0, material="Glass"),
+    },
+    "atlas_fragmentado": {
+        "cores": ("9EC5FB", "8AD69C"),
+        "pecas": [
+            dict(template="ilha", modo="orbita", rx=2.3 + 0.2 * (k % 2), rz=2.1, altura=-0.3 + 0.6 * k, ang=k * 1.57, vel=0.25 if k % 2 else -0.2, inclinacao=0.35, cor=k % 2, material="SmoothPlastic", rigidez=30, atraso=0.6, giro=(0, 15, 0), escala=1.5 - 0.1 * k, correr=(math.cos(k * 1.57) * 1.3, 0.4 + 0.4 * k, math.sin(k * 1.57) * 1.3), detalhe=k >= 3)
+            for k in range(4)
+        ],
+        "especial": dict(template="ilha", n=8, origem=(0, 1.2, 0), raio=0.6, escala=1.2, cor=1, material="SmoothPlastic"),
+    },
+    "serpente_de_cristal": {
+        "cores": ("88F2EB", "547FCB"),
+        "pecas": [
+            dict(template="corpo", modo="pendulo", raio=2.6, altura=1.2, abertura=0.9, vel=0.35, cor=0, material="Glass", transp=0.1, rigidez=14, atraso=1.6, escala=1.2, abrir=(0, 2.4, 0)),
+            dict(template="olho", modo="orbita", rx=2.6, rz=2.4, altura=1.6, ang=0, vel=0.35, inclinacao=0.2, cor=1, material="Neon", rigidez=20, atraso=1.0, escala=1.6, detalhe=True),
+        ],
+        "especial": dict(template="olho", n=10, origem=(0, 4.2, 0.4), raio=2.4, escala=1.4, cor=0, material="Neon"),
+    },
+    "horizonte_rasgado": {
+        "cores": ("FF729F", "24103F"),
+        "pecas": [
+            dict(template="fenda", modo="ancora", pos=(1.6, 1.2, 1.4), rot=(0, -25, 8), cor=1, material="SmoothPlastic", rigidez=34, atraso=0.6, pulso=0.06, osc=(0, 6, 0.3), escala=1.6, correrRot=(0, 60, 8)),
+            dict(template="borda", modo="ancora", pos=(1.6, 1.2, 1.38), rot=(0, -25, 8), cor=0, material="Neon", rigidez=34, atraso=0.6, pulso=0.06, osc=(0, 6, 0.3), escala=1.6, correrRot=(0, 60, 8)),
+        ],
+        "especial": dict(template="borda", n=4, origem=(1.6, 1.2, 1.4), raio=1.8, escala=1.6, cor=0, material="Neon"),
+    },
+    "arauto_dos_mil_sinos": {
+        "cores": ("FDE7A1", "8760AD"),
+        "pecas": [
+            dict(template="halo", modo="ancora", pos=(0, 2.9, 0.3), rot=(12, 0, 0), giro=(0, 18, 0), cor=0, material="Metal", rigidez=46, atraso=0.4, bob=0.1, escala=1.5, correrRot=(30, 0, 0)),
+            dict(template="onda", modo="ancora", pos=(0, 2.6, 0.3), rot=(0, 0, 0), cor=1, material="Neon", transp=0.3, rigidez=46, atraso=0.4, pulso=0.35, escala=3.0, detalhe=True),
+        ],
+        "especial": dict(template="sino", n=10, origem=(0, 3.0, 0.3), raio=2.8, escala=1.4, cor=0, material="Neon"),
+    },
+    "orquestra_das_estrelas": {
+        "cores": ("B7A5FF", "FFC2EC"),
+        "pecas": [
+            dict(template="harpa", modo="ancora", pos=(0, 1.2, 1.4), rot=(0, 0, 0), cor=0, material="Neon", rigidez=40, atraso=0.5, osc=(1, 6, 0.25), escala=1.5, correrRot=(0, 70, 0)),
+        ]
+        + [
+            dict(template="nota", modo="orbita", rx=2.1 + 0.2 * (k % 2), rz=1.9, altura=0.3 + 0.55 * k, ang=k * 1.6, vel=0.5 if k % 2 else -0.4, inclinacao=0.4, cor=1, material="Neon", rigidez=32, atraso=0.6, giro=(0, 0, 90), escala=1.6, detalhe=k >= 3)
+            for k in range(4)
+        ],
+        "especial": dict(template="nota", n=10, origem=(0, 2.6, 0.6), raio=3.0, escala=1.6, cor=0, material="Neon", arco=True),
+    },
+    "majestade_de_cobre": {
+        "cores": ("FFCA80", "854F50"),
+        "pecas": [
+            dict(template="leao", modo="ancora", pos=(0, 2.3, 1.3), rot=(0, 180, 0), cor=0, material="Metal", rigidez=46, atraso=0.4, pulso=0.04, escala=1.5, abrirGiro=(-30, 0, 0)),
+            dict(template="relogio", modo="ancora", pos=(0, 0.6, -0.6), giro=(0, 0, 30), cor=1, material="Neon", rigidez=60, atraso=0.3, escala=1.3),
+        ],
+        "especial": dict(template="engrenagem", n=0, origem=(0, 2.3, 1.3), raio=0, escala=1, cor=0, material="Neon"),
+    },
+})
+# Majestade: o especial usa engrenagens da própria aura (crina) — reaproveita o leão em rajada
+AURAS["majestade_de_cobre"]["especial"] = dict(template="relogio", n=8, origem=(0, 2.3, 1.3), raio=2.6, escala=1.6, cor=0, material="Neon")
 
 
 # Ajuste de leitura das Comuns/Incomuns (rodada 2): peças maiores e mais afastadas do corpo,
