@@ -103,18 +103,19 @@ task.spawn(function()
 		warn(
 			"[Nexo] kit 3D indisponível; mantendo o cenário provisório: " .. tostring(resultado)
 		)
-		return
-	end
-	kit = resultado
-	-- Esconde as peças provisórias da praça e do Núcleo (a colisão delas continua valendo)
-	for _, inst in nexo:GetDescendants() do
-		if inst:IsA("BasePart") and inst:GetAttribute("Provisorio") then
-			inst.Transparency = 1
+	else
+		kit = resultado
+		-- As peças do servidor mantêm a colisão após a montagem.
+		for _, inst in nexo:GetDescendants() do
+			if inst:IsA("BasePart") and inst:GetAttribute("Provisorio") then
+				inst.Transparency = 1
+			end
 		end
+		coracao.Transparency = 1
+		casca.Transparency = 1
+		nexo:SetAttribute("EstadoKit3D", "Carregado")
 	end
-	coracao.Transparency = 1 -- segue como referência de posição e dono da luz
-	casca.Transparency = 1
-	nexo:SetAttribute("EstadoKit3D", "Carregado")
+	PrimeiroSoberano.iniciar()
 end)
 
 local BRANCO = Color3.new(1, 1, 1)
@@ -227,7 +228,6 @@ Estado.aoMudar(function(estado)
 		movimentoReduzido = estado.configuracoes.movimentoReduzido == true,
 	})
 end)
-task.spawn(PrimeiroSoberano.iniciar)
 
 -- Interações do mapa
 ProximityPromptService.PromptTriggered:Connect(function(prompt, jogador)
@@ -237,6 +237,8 @@ ProximityPromptService.PromptTriggered:Connect(function(prompt, jogador)
 	local acao = prompt:GetAttribute("Acao")
 	if acao == "indice" then
 		Navegacao.abrir("Indice")
+	elseif acao == "incursoes" then
+		Navegacao.abrir("Incursoes")
 	elseif acao == "em_construcao" or acao == "eco" then
 		local texto = prompt:GetAttribute("Texto")
 		if type(texto) == "string" then

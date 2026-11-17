@@ -17,7 +17,8 @@ function PermissaoDev.autoriza(
 	lugar: number,
 	studioTeste: boolean,
 	dono: number?,
-	jogador: number
+	jogador: number,
+	contaDev: number?
 ): boolean
 	if PermissaoDev.copiaLocal(universo, lugar, studioTeste) then
 		-- O primeiro cliente do teste local usa -1. O Play Solo pode usar a conta do Studio.
@@ -26,7 +27,8 @@ function PermissaoDev.autoriza(
 	if not PermissaoDev.experienciaPrivada(universo, lugar) then
 		return false
 	end
-	return (dono ~= nil and dono > 0 and jogador == dono) or (studioTeste and jogador == -1)
+	return (jogador > 0 and (jogador == dono or jogador == contaDev))
+		or (studioTeste and jogador == -1)
 end
 
 return PermissaoDev

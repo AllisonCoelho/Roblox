@@ -7,6 +7,7 @@ local RunService = game:GetService("RunService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Auras = require(Shared.Dados.Auras)
+local Incursoes = require(Shared.Dados.Incursoes)
 local Perfil = require(Shared.Dados.Perfil)
 local Acoes = require(script.Parent.Acoes)
 local AuraVisual = require(script.Parent.AuraVisual)
@@ -14,16 +15,26 @@ local Dados = require(script.Parent.Dados)
 local PermissaoDev = require(script.Parent.PermissaoDev)
 local Sorteio = require(script.Parent.Sorteio)
 local Nexo = require(script.Parent.Parent.Mundo.Nexo)
+local ServicoIncursoes = require(script.Parent.Parent.Incursoes.Servico)
 
 local PainelDev = {}
+local NOME_CONTA_DEV = "umrnoobzz"
 local studioTeste = RunService:IsStudio() and Config.ModoTeste
 local privada = PermissaoDev.experienciaPrivada(game.GameId, game.PlaceId)
 local dono: number? = if game.CreatorType == Enum.CreatorType.User then game.CreatorId else nil
+local contaDev: number? = nil
 local renascendo: { [Player]: boolean } = {}
 
 local function autorizado(player: Player): boolean
 	return player.Parent == Players
-		and PermissaoDev.autoriza(game.GameId, game.PlaceId, studioTeste, dono, player.UserId)
+		and PermissaoDev.autoriza(
+			game.GameId,
+			game.PlaceId,
+			studioTeste,
+			dono,
+			player.UserId,
+			contaDev
+		)
 end
 
 local function estadoDeTeste(player: Player): Perfil.Estado?
@@ -62,8 +73,16 @@ local function perfil(player: Player, modo: any): (boolean, string?)
 				completo.auras[aura.id] = 1
 			end
 		end
+		local inc = completo.incursoes
+		for _, universo in Incursoes.UNIVERSOS do
+			inc.concluidas[universo.id] = math.max(1, inc.concluidas[universo.id] or 0)
+			inc.melhor[universo.id] = Incursoes.ANDARES
+		end
+		for _, reliquia in Incursoes.RELIQUIAS do
+			inc.reliquias[reliquia.id] = #reliquia.custos
+		end
 		estado = completo
-		mensagem = "Coleção completa liberada nesta sessão"
+		mensagem = "Auras, universos e relíquias liberados nesta sessão"
 	else
 		return false, "Perfil de teste desconhecido"
 	end
@@ -135,6 +154,32 @@ local function girar(player: Player, id: any): (boolean, string?, { [string]: an
 	return Sorteio.simular(player, aura)
 end
 
+local function fragmentos(player: Player, total: any): (boolean, string?)
+	if not inteiro(total) then
+		return false, "Informe um inteiro de 0 a 1 bilhão"
+	end
+	local estado = estadoDeTeste(player)
+	if not estado then
+		return false, "Aguardando o perfil carregar"
+	end
+	estado.incursoes.fragmentos = total
+	Dados.enviar(player)
+	return true, "Fragmentos atualizados na sessão de teste"
+end
+
+local function incursao(player: Player, universo: any, andar: any): (boolean, string?)
+	if type(universo) ~= "string" or not Incursoes.porId[universo] then
+		return false, "Universo desconhecido"
+	end
+	if not inteiro(andar) or andar < 1 or andar > Incursoes.ANDARES then
+		return false, "Andar inválido"
+	end
+	if not estadoDeTeste(player) then
+		return false, "Aguardando o perfil carregar"
+	end
+	return ServicoIncursoes.iniciarTeste(player, universo, andar)
+end
+
 local function ir(player: Player, lugar: any): (boolean, string?)
 	local destino = if type(lugar) == "string" then Nexo.destinoDev(lugar) else nil
 	if not destino then
@@ -178,6 +223,8 @@ local comandos: { [string]: Comando } = {
 	giros = giros,
 	quantidade = quantidade,
 	girar = girar,
+	fragmentos = fragmentos,
+	incursao = incursao,
 	previa = AuraVisual.definirPrevia,
 	ritual = function(_, indice)
 		return Sorteio.testeVisual(indice)
@@ -194,10 +241,17 @@ local function executar(player: Player, nome: any, ...: any): (boolean, string?,
 	if not comando then
 		return false, "Comando desconhecido"
 	end
+	if nome ~= "previa" and ServicoIncursoes.ocupado(player) then
+		return false, "Saia da fila ou aguarde o retorno ao Bastião para usar este comando."
+	end
 	return comando(player, ...)
 end
 
 local function marcar(player: Player)
+	-- A conta de teste é vinculada ao UserId do Player autenticado pelo Roblox.
+	if privada and string.lower(player.Name) == NOME_CONTA_DEV and player.UserId > 0 then
+		contaDev = player.UserId
+	end
 	if autorizado(player) then
 		player:SetAttribute("PainelDev", true)
 	end

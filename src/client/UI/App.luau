@@ -20,6 +20,7 @@ local Avisos = require(Telas.Avisos)
 local HUD = require(Telas.HUD)
 local Indice = require(Telas.Indice)
 local PainelDev = require(Telas.PainelDev)
+local IncursoesUI = require(Telas.Incursoes)
 local Revelacao = require(Telas.Revelacao)
 local Mundo = script.Parent.Parent:WaitForChild("Mundo")
 local Despertar = require(Mundo:WaitForChild("Despertar"))
@@ -34,6 +35,7 @@ local FOLGA = 0.05
 local INTERVALO = Config.CooldownGiro + FOLGA
 
 local girando = false
+local emIncursao = false
 local proximoGiro = 0
 local ocupadoAte = 0 -- fim do ritual em andamento (auras sem cartão)
 local hud: HUD.Api
@@ -47,6 +49,7 @@ local function podeGirar(): boolean
 	local agora = os.clock()
 	return Estado.atual ~= nil
 		and Navegacao.aberto() == nil
+		and not emIncursao
 		and not PainelDev.pendente()
 		and not girando
 		and not Revelacao.ativa()
@@ -224,7 +227,7 @@ function App.iniciar()
 		end,
 		aoPular = Despertar.pular,
 		aoMudar = function(ativa)
-			hud.definirVisivel(not ativa)
+			hud.definirVisivel(not ativa and not emIncursao)
 		end,
 	})
 	Avisos.montar(raiz)
@@ -232,7 +235,10 @@ function App.iniciar()
 	Ajustes.montar(Avisos.toast)
 	PainelDev.iniciar(hud.quadro, {
 		podeAbrir = function()
-			return not girando and not Revelacao.ativa() and os.clock() >= ocupadoAte
+			return not girando
+				and not emIncursao
+				and not Revelacao.ativa()
+				and os.clock() >= ocupadoAte
 		end,
 		aoRitual = function(id, dados)
 			local aura = Auras.porId[id]
@@ -242,6 +248,14 @@ function App.iniciar()
 			end
 		end,
 	})
+	IncursoesUI.montar(raiz, Avisos.toast, function(emPartida)
+		emIncursao = emPartida
+		if emPartida then
+			Despertar.pular()
+			Revelacao.fechar()
+		end
+		hud.definirVisivel(not emPartida and not Revelacao.ativa())
+	end)
 	Navegacao.ajustar()
 
 	EfeitosAlheios.iniciar()

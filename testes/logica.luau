@@ -33,6 +33,10 @@ igual("cópia preserva as auras reais", salvarReal.auras.faisca, 3)
 igual("cópia preserva os giros reais", salvarReal.giros, 0)
 igual("cópia preserva as configurações reais", salvarReal.configuracoes.animacoes, true)
 igual("cópia isola dados aninhados", salvarReal.progressoExtra.andares[1], 1)
+perfilTeste.incursoes.fragmentos = 800
+perfilTeste.incursoes.concluidas.cinzas = 1
+igual("cópia isola saldo de fragmentos", salvarReal.incursoes.fragmentos, 0)
+igual("cópia isola vitórias das incursões", salvarReal.incursoes.concluidas.cinzas, nil)
 
 local Dev = req("PermissaoDev")
 local universoTeste, lugarTeste = 10771776655, 112360499723635
@@ -57,6 +61,9 @@ igual(
 igual("dev primeiro cliente do Studio", Dev.autoriza(0, 0, true, nil, -1), true)
 igual("dev segundo cliente do Studio", Dev.autoriza(0, 0, true, nil, -2), false)
 igual("dev IDs vazios fora do Studio", Dev.autoriza(0, 0, false, nil, 42), false)
+igual("dev conta designada no Roblox Player", Dev.autoriza(universoTeste, lugarTeste, false, 42, 43, 43), true)
+igual("dev visitante com conta designada cadastrada", Dev.autoriza(universoTeste, lugarTeste, false, 42, 44, 43), false)
+igual("dev conta designada em outro lugar", Dev.autoriza(universoTeste, 730, false, 42, 43, 43), false)
 
 local Sessao = req("Sessao")
 local t = 1000
@@ -245,4 +252,43 @@ igual("bordas entre as maos", Trilha.meiaLarguraPelasMaos(tp, 2.5, 2.4, 0.2), 1.
 igual("abre junto com os bracos", Trilha.meiaLarguraPelasMaos(tp, 3.5, 6, 1) > Trilha.meiaLarguraPelasMaos(tp, 2.5, 2.4, 0.2), true)
 igual("fecha depois da revelacao", Trilha.meiaLarguraPelasMaos(tp, 3.9, 6, 0), 0)
 igual("meio fechada no retorno", Trilha.meiaLarguraPelasMaos(tp, 3.7, 4, 0.5), 2 * Trilha.FOLGA_MAOS * 0.5)
+-- Incursões
+local Inc = req("Incursoes")
+local pi = Perfil.padrao().incursoes
+igual("inc fragmentos iniciais", pi.fragmentos, 0)
+igual("inc cinzas aberto", Inc.liberado(pi, "cinzas"), true)
+igual("inc mare fechado", Inc.liberado(pi, "mare"), false)
+igual("inc universo invalido", Inc.liberado(pi, "nada"), false)
+pi.concluidas.cinzas = 1
+igual("inc mare aberto depois de cinzas", Inc.liberado(pi, "mare"), true)
+igual("inc umbral ainda fechado", Inc.liberado(pi, "umbral"), false)
+igual("inc nivel inicial", Inc.nivel(pi, "pulso"), 0)
+igual("inc custo nivel 1", Inc.custo(pi, "pulso"), 25)
+pi.reliquias.alcance = 3
+igual("inc custo no maximo", Inc.custo(pi, "alcance"), nil)
+igual("inc custo reliquia invalida", Inc.custo(pi, "nada"), nil)
+igual("inc ressonancia minima", Inc.ressonancia(nil), 1)
+igual("inc ressonancia 1 milhao", math.floor(Inc.ressonancia(1000000) * 100 + 0.5), 136)
+igual("inc ressonancia cresce", Inc.ressonancia(1000) > Inc.ressonancia(10), true)
+pi.reliquias.pulso = 2
+igual("inc dano com reliquia", math.floor(Inc.danoPulso(pi, 1) * 100 + 0.5), math.floor(22 * 1.24 * 100 + 0.5))
+igual("inc raio com reliquia", math.floor(Inc.raioPulso(pi) * 100 + 0.5), math.floor(14 * 1.24 * 100 + 0.5))
+igual("inc vida base", Inc.vidaMax(Inc.padrao()), 100)
+igual("inc grupo 1", Inc.bonusGrupo(1), 1)
+igual("inc grupo 0", Inc.bonusGrupo(0), 0)
+igual("inc grupo cresce", Inc.bonusGrupo(4) > Inc.bonusGrupo(2), true)
+local a1, a5 = Inc.andar("cinzas", 1, 1), Inc.andar("cinzas", 5, 1)
+igual("inc andar 1 tem nucleos", a1.nucleos > 0, true)
+igual("inc andar 1 sem guardiao", a1.guardiao, false)
+igual("inc andar 5 guardiao", a5.guardiao, true)
+igual("inc andar 5 sem nucleos", a5.nucleos, 0)
+igual("inc grupo maior mais sombras", Inc.andar("cinzas", 2, 4).sombras > Inc.andar("cinzas", 2, 1).sombras, true)
+igual("inc universo mais dificil", Inc.andar("umbral", 2, 1).vidaSombra > Inc.andar("cinzas", 2, 1).vidaSombra, true)
+igual("inc vidas", Inc.vidas(2), 5)
+igual("inc recompensa 0 andares", Inc.recompensa("cinzas", 0, false, false), 0)
+igual("inc recompensa 2 andares", Inc.recompensa("cinzas", 2, false, false), 6 + 8)
+igual("inc vitoria vale mais", Inc.recompensa("cinzas", 5, true, true) > Inc.recompensa("cinzas", 5, true, false), true)
+igual("inc andares limitados", Inc.recompensa("cinzas", 99, false, false), Inc.recompensa("cinzas", 5, false, false))
+igual("inc 3 universos", #Inc.UNIVERSOS, 3)
+
 print(string.format("%d testes, %d falhas", total, falhas))

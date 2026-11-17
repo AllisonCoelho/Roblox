@@ -42,10 +42,16 @@ local envioPendente: { [Player]: boolean } = {}
 local revisao: { [Player]: number } = {}
 -- Lista simples de funções (BindableEvent copiaria a tabela do estado e as mudanças se perderiam)
 local aoCarregar: { (Player, Estado) -> () } = {}
+local aoSair: { (Player) -> () } = {}
 
 -- Registra uma função chamada quando os dados de um jogador terminam de carregar
 function Dados.quandoCarregar(fn: (Player, Estado) -> ())
 	table.insert(aoCarregar, fn)
+end
+
+-- Fecha atividades que ainda precisam registrar progresso antes do salvamento final.
+function Dados.quandoSair(fn: (Player) -> ())
+	table.insert(aoSair, fn)
 end
 
 -- Funções chamadas depois de cada envio do estado (ex.: atualizar a vitrine no mundo)
@@ -263,6 +269,16 @@ function Dados.alterar(player: Player, fn: (Estado) -> (boolean, string?)): (boo
 	return ok, msg
 end
 
+local function salvarSaida(player: Player)
+	for _, fn in aoSair do
+		local ok, erro = pcall(fn, player)
+		if not ok then
+			warn("[Dados] erro ao finalizar a sessão: " .. tostring(erro))
+		end
+	end
+	Dados.salvar(player, true)
+end
+
 function Dados.iniciar()
 	-- O cliente pede o estado ao abrir; se ainda está carregando, recebe nil e tenta de novo
 	Remotos.funcao("ObterEstado").OnServerInvoke = function(player: Player)
@@ -281,7 +297,7 @@ function Dados.iniciar()
 		task.spawn(Dados.carregar, player)
 	end
 	Players.PlayerRemoving:Connect(function(player)
-		Dados.salvar(player, true)
+		salvarSaida(player)
 		estados[player] = nil
 		perfisTeste[player] = nil
 		semSalvar[player] = nil
@@ -294,7 +310,7 @@ function Dados.iniciar()
 		for player in estados do
 			pendentes += 1
 			task.spawn(function()
-				Dados.salvar(player, true)
+				salvarSaida(player)
 				pendentes -= 1
 			end)
 		end

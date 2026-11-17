@@ -9,6 +9,7 @@ local Apresentacao = require(Shared.Dados.Apresentacao)
 local Auras = require(Shared.Dados.Auras)
 local AurasVfx = require(Shared.Dados.AurasVfx)
 local Formato = require(Shared.Formato)
+local Incursoes = require(Shared.Dados.Incursoes)
 local Tema = require(Shared.Tema)
 local Cores = Tema.Orbita
 local Escala = require(script.Parent.Parent.Escala)
@@ -19,7 +20,7 @@ local Avisos = require(script.Parent.Avisos)
 
 local PainelDev = {}
 local NOME = "PainelDev"
-local ABAS = { "Sessão", "Auras", "VFX", "Rituais", "Mapa" }
+local ABAS = { "Sessão", "Auras", "VFX", "Rituais", "Mapa", "Incursões" }
 local DESTINOS = {
 	{ "praca", "Praça do Núcleo" },
 	{ "arquivo", "Arquivo dos Ecos" },
@@ -197,8 +198,6 @@ local function montar(paiHud: Frame, op: Opcoes)
 		local guia = botao(abas, nome, function()
 			abrirPagina(i)
 		end)
-		guia.placa.quadro.Position = UDim2.new((i - 1) / #ABAS, 2, 0, 0)
-		guia.placa.quadro.Size = UDim2.new(1 / #ABAS, -4, 1, 0)
 		botoes[i] = guia
 
 		local pagina = Kit.rolagem(painel.conteudo)
@@ -211,6 +210,22 @@ local function montar(paiHud: Frame, op: Opcoes)
 		})
 		paginas[i] = pagina
 	end
+	Escala.aoMudar(function()
+		local porLinha = if Escala.tamanho.X < 664 then 3 else #ABAS
+		local altura = 68 * math.ceil(#ABAS / porLinha)
+		abas.Size = UDim2.new(1, -24, 0, altura)
+		for i, b in botoes do
+			local linha = math.floor((i - 1) / porLinha)
+			local coluna = (i - 1) % porLinha
+			b.placa.quadro.Position = UDim2.new(coluna / porLinha, 2, 0, linha * 68)
+			b.placa.quadro.Size = UDim2.new(1 / porLinha, -4, 0, 64)
+		end
+		sessao.Position = UDim2.fromOffset(12, altura + 5)
+		for _, pagina in paginas do
+			pagina.Position = UDim2.fromOffset(12, altura + 43)
+			pagina.Size = UDim2.new(1, -24, 1, -altura - 51)
+		end
+	end)
 
 	local function pedir(comando: string, ...: any)
 		if ocupado then
@@ -235,10 +250,7 @@ local function montar(paiHud: Frame, op: Opcoes)
 	end
 
 	local perfil = paginas[1]
-	texto(
-		perfil,
-		"Escolha um perfil de teste para usar o HUD, o Índice e os Ajustes como jogador."
-	)
+	texto(perfil, "Use a sessão de teste para liberar auras, universos e relíquias.")
 	local modos, ajustarModos = grade(perfil, 2)
 	botao(modos, "Liberar tudo", function()
 		pedir("perfil", "completo")
@@ -399,6 +411,32 @@ local function montar(paiHud: Frame, op: Opcoes)
 				tostring(estadoKit or "aguardando")
 			)
 			tempo, quadros = 0, 0
+		end
+	end)
+
+	local inc = paginas[6]
+	texto(inc, "Escolha um universo e o andar para começar uma Incursão solo de teste.")
+	local andar =
+		entrada(inc, string.format("Andar inicial de 1 a %d (padrão 1)", Incursoes.ANDARES))
+	local universos, ajustarUniversos = grade(inc, 3)
+	for i, universo in Incursoes.UNIVERSOS do
+		botao(universos, universo.nome, function()
+			local numero = if andar.Text == "" then 1 else tonumber(andar.Text)
+			if numero then
+				pedir("incursao", universo.id, numero)
+			else
+				Avisos.toast("Digite o número do andar")
+			end
+		end, i, "lilas")
+	end
+	ajustarUniversos()
+	local saldo = entrada(inc, "Fragmentos de teste")
+	botao(inc, "Definir fragmentos", function()
+		local total = tonumber(saldo.Text)
+		if total then
+			pedir("fragmentos", total)
+		else
+			Avisos.toast("Digite a quantidade de fragmentos")
 		end
 	end)
 

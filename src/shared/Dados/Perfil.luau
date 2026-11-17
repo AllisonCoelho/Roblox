@@ -8,6 +8,9 @@ export type Estado = {
 	auras: { [string]: number }, -- id da aura -> quantas vezes saiu
 	equipada: string?,
 	configuracoes: { [string]: boolean },
+	-- Incursões (Dados/Incursoes.luau): fragmentos, melhor andar, vitórias e relíquias.
+	-- Dados antigos ganham o padrão ao carregar (Dados.completar).
+	incursoes: { [string]: any },
 }
 
 Perfil.VERSAO = 1
@@ -42,6 +45,7 @@ function Perfil.padrao(): Estado
 			ocultarEfeitosAlheios = false,
 			pularRepetidas = false,
 		},
+		incursoes = { fragmentos = 0, melhor = {}, concluidas = {}, reliquias = {} },
 	}
 end
 

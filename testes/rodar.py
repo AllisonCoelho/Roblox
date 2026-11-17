@@ -12,6 +12,7 @@ MODULOS = {
     "Trilha": "src/shared/Dados/Trilha.luau",
     "Sessao": "src/server/Servicos/Sessao.luau",
     "PermissaoDev": "src/server/Servicos/PermissaoDev.luau",
+    "Incursoes": "src/shared/Dados/Incursoes.luau",
 }
 codigo = ["""
 local MODULOS, CACHE = {}, {}

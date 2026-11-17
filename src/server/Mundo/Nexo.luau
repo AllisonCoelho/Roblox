@@ -752,7 +752,7 @@ end
 
 -- Bastião das Incursões: base de preparação para expedições a universos destruídos, entre os
 -- Portais e a Arena. Mesmos valores de BASTIAO em assets/nexo/source/generate_nexo.py.
--- Só cenário: nada de teleporte, fila ou recompensa.
+-- A Mesa dos Cartógrafos abre o painel das Incursões (src/server/Incursoes).
 local BASTIAO = { graus = 157, dist = 173 }
 
 local function construirBastiao(pasta: Instance)
@@ -788,18 +788,12 @@ local function construirBastiao(pasta: Instance)
 		Size = Vector3.new(2, 2, 2),
 		CFrame = olhar * CFrame.new(0, 3.2, -3),
 	})
-	interacao(
-		mesa,
-		"em_construcao",
-		"Ler o mapa",
-		"Mesa dos Cartógrafos",
-		"Incursões — em preparação. Daqui partirão as expedições a universos em ruína."
-	)
+	interacao(mesa, "incursoes", "Planejar incursão", "Mesa dos Cartógrafos")
 	placa(
 		pasta,
 		(olhar * CFrame.new(0, 29, 11)).Position,
 		"Bastião das Incursões",
-		"Em preparação",
+		"Expedições a universos em ruína",
 		COR.energia
 	)
 end
