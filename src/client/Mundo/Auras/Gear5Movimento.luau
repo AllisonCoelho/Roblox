@@ -1,28 +1,47 @@
--- Quadros do quique no lugar: contato, impulso, ápice e extensão antes do próximo contato.
 local Movimento = {}
 
-local DURACAO = 0.92
+local TEMPO_PARADO = 4.8
 
-function Movimento.avancar(fase: number, dt: number): (number, boolean)
-	local total = fase + dt / DURACAO
-	return total % 1, total >= 1
-end
-
-local function suavizar(t: number): number
+local function suave(t: number): number
 	return t * t * (3 - 2 * t)
 end
 
--- Altura em studs e compressão de 0 a 1. O marcador de contato é o início do ciclo.
-function Movimento.amostrar(fase: number): (number, number)
-	if fase < 0.17 then
-		local t = suavizar(fase / 0.17)
-		return -0.30 + 0.30 * t, 1 - t
-	elseif fase < 0.81 then
-		local t = (fase - 0.17) / 0.64
-		return 0.92 * math.sin(math.pi * t), 0
+-- Segura a silhueta de cada pose antes de passar para a outra.
+function Movimento.parado(tempo: number): (number, number)
+	local t = tempo % TEMPO_PARADO
+	local relaxado = suave(math.clamp((t - 1.55) / 0.72, 0, 1))
+		* (1 - suave(math.clamp((t - 3.89) / 0.80, 0, 1)))
+	local flutuar = 0.075 * math.sin(2 * math.pi * t / TEMPO_PARADO * 3)
+	return relaxado, flutuar
+end
+
+function Movimento.passo(fase: number, dt: number, velocidade: number): (number, string?)
+	if velocidade <= 0 then
+		return fase, nil
+	end
+	local ciclosPorSegundo = math.clamp(0.41 + velocidade * 0.052, 0.47, 1.48)
+	local total = fase + dt * ciclosPorSegundo
+	local meiosPassos = math.floor(total * 2)
+	local contato = if meiosPassos > math.floor(fase * 2)
+		then (if meiosPassos % 2 == 0 then "D" else "E")
+		else nil
+	return total % 1, contato
+end
+
+-- Em cada meio passo: toca o chão, dobra o joelho, ganha altura e troca o pé de apoio.
+-- A altura acompanha os mesmos quadros que mudam os braços e as pernas.
+function Movimento.corrida(fase: number): (boolean, number, number, number)
+	local esquerda = fase >= 0.5
+	local t = (fase * 2) % 1
+	if t < 0.19 then
+		local peso = suave(t / 0.19)
+		return esquerda, 1, peso, -0.19 * peso
+	elseif t < 0.63 then
+		local peso = suave((t - 0.19) / 0.44)
+		return esquerda, 2, peso, -0.19 + 0.77 * peso
 	else
-		local t = suavizar((fase - 0.81) / 0.19)
-		return -0.30 * t, t
+		local peso = suave((t - 0.63) / 0.37)
+		return esquerda, 3, peso, 0.58 * (1 - peso)
 	end
 end
 

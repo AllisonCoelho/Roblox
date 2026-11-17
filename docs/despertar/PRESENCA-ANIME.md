@@ -4,9 +4,9 @@
 Uma **aura de anime não é apenas um emissor VFX**: modifica a postura do avatar, sua movimentação aparente e a forma como o mundo *parece* reagir ao poder. Isto é diferente das 67 auras originais, que podem usar VFX sem pose exclusiva.
 
 ## Fase 1 — Gear 5
-- Silhueta de risada: tronco para trás, uma mão na cabeça, outro braço solto/aberto, pescoço inclinado, pernas em passos irregulares.
-- Parado, o avatar dobra as pernas, sobe visualmente até 0,92 stud e cai agachando. O ciclo manipula apenas pose e mantém a física do pulo padrão.
-- Em deslocamento, o balanço dos braços acompanha a passada. A onda de borracha dispara na fase de contato do quique parado e também na aterrissagem de um salto real.
+- Parado, sustenta duas silhuetas e alterna entre elas suavemente. Na risada, a mão direita cobre a testa, a esquerda fica sobre o abdômen e uma perna fica mais alta. No repouso, as mãos vão atrás da cabeça, os cotovelos se abrem e o corpo reclina.
+- Ao andar ou correr, usa uma passada própria com compressão do joelho, braços opostos e fase aérea. A cadência acompanha a velocidade real e a mistura com as poses paradas é gradual.
+- A borracha aparece sob o pé de apoio no instante do contato e também no pouso de um salto real. Os quiques e o reclinar são visuais e preservam a física do jogador.
 - A reação segue a superfície real por raycast e dura ~1 s, sem deixar peças no mapa. Jogadores próximos veem o mesmo estilo calculado localmente. O servidor continua autoritativo para gameplay.
 - A pose usa `Transform` nas juntas `Motor6D` do R6/R15 e `AnimationConstraint` do R15 com Avatar Joint Upgrade. O ciclo procedural está no código.
 - Não sobrepõe ataques e guarda das Incursões quando `Poses.ocupada(personagem)` está ativo.
@@ -16,8 +16,8 @@ Uma **aura de anime não é apenas um emissor VFX**: modifica a postura do avata
 ## Acessibilidade e desempenho
 - Distância da câmera: pose até 90 studs e efeito de chão até 85 studs.
 - No máximo 14 marcas ativas por cliente, até duas Parts por marca, com autodestruição em ~1 s.
-- `qualidadeBaixa`: elimina borda extra, desliga marcas do idle/passos; o pouso continua básico.
-- `movimentoReduzido`: mantém uma pose mais leve, sem quique vertical nem marcas de idle/passos; a aterrissagem tem duração menor.
+- `qualidadeBaixa`: elimina borda extra, desliga marcas dos passos; o pouso continua básico.
+- `movimentoReduzido`: mantém uma pose mais leve, com quique vertical suavizado e sem marcas dos passos; a aterrissagem tem duração menor.
 - `ocultarEfeitosAlheios`: não ativa a presença dos outros jogadores.
 - Sem rede adicional, remotes ou DataStore; os efeitos são observados através de `AuraVfx` definido pelo servidor. A Gear 5 continua somente prévia dev enquanto não for integrada ao catálogo.
 
@@ -28,9 +28,9 @@ Criar props de cenário com atributo/tag de interação elástica, idealmente po
 Cada uma receberá controladores de: pose idle, caminhada/corrida, salto, reação a pouso, entrada especial e campo ambiental. Exemplos futuros: Naruto — chakra e poeira/chão vibrando; Monarca — sombra se espalha sob os pés e soldados emergindo; Senbonzakura — pétalas cortando o vento e jardim de pétalas temporário.
 
 ## Playtest obrigatório no Studio
-1. Ativar Gear 5 no Painel Dev / `Alt+G`; observar pose característica parado, andando e pulando.
+1. Ativar Gear 5 no Painel Dev / `Alt+G`. Ficar parado por pelo menos cinco segundos e conferir as duas silhuetas e a transição.
 2. Testar R15 com Avatar Joint Upgrade e R6 em terceira pessoa e com dois jogadores. Desligar a aura e confirmar o retorno à pose padrão.
-3. Parado, conferir a onda no instante em que o corpo comprime. Caminhar, saltar e pousar em pisos diferentes. A onda deve aparecer no local de contato e desaparecer.
+3. Andar devagar, correr, mudar de direção e soltar o controle. Conferir a passada saltitante, a onda no pé de apoio e a transição suave para a pose parada. Saltar e conferir a onda no pouso.
 4. Iniciar Incursão e lançar combos/guarda: as poses de combate têm prioridade e retornam ao idle ao terminar.
 5. Testar `qualidadeBaixa`, `movimentoReduzido`, ocultar efeitos dos outros e celulares.
 6. Confirmar que não cria peças permanentemente e não interfere com o RNG, a economia ou o salvamento.
