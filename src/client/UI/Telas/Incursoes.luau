@@ -16,6 +16,8 @@ local Escala = require(script.Parent.Parent.Escala)
 local Navegacao = require(script.Parent.Parent.Navegacao)
 local Estado = require(script.Parent.Parent.Estado)
 local Combate = require(script.Parent.IncursoesCombate)
+local RunUI = require(script.Parent.IncursoesRunUI)
+local Run = require(Shared.Dados.IncursoesRun)
 local Visual = require(
 	script.Parent.Parent.Parent
 		:WaitForChild("Mundo")
@@ -496,10 +498,13 @@ local function aoEvento(d: any)
 	elseif d.tipo == "andar" and u then
 		definirPartida(u.id)
 		local nome = if type(d.titulo) == "string" then d.titulo else nil
-		aviso(
-			if nome
-				then "Andar final: " .. nome .. " espera por vocês!"
-				else string.format("%s — andar %d", u.nome, d.andar)
+		RunUI.banner(
+			string.format(
+				"Andar %d · %s",
+				tonumber(d.andar) or 1,
+				if nome then nome else tostring(d.nomeAndar or "Purificação")
+			),
+			tostring(d.descricao or "")
 		)
 	elseif d.tipo == "estado" and u then
 		if not emPartida then
@@ -516,7 +521,11 @@ local function aoEvento(d: any)
 		if (d.nucleosTotal or 0) > 0 then
 			table.insert(partes, string.format("Núcleos %d/%d", d.nucleos or 0, d.nucleosTotal))
 		end
-		table.insert(partes, string.format("Sombras %d", d.sombras or 0))
+		local objetivo = RunUI.objetivo(d)
+		if objetivo then
+			table.insert(partes, objetivo)
+		end
+		table.insert(partes, string.format("Inimigos %d", d.sombras or 0))
 		table.insert(partes, string.format("Vidas do grupo %d", d.vidas or 0))
 		if d.fenda then
 			table.insert(
@@ -539,6 +548,23 @@ local function aoEvento(d: any)
 		end
 	elseif d.tipo == "pulso" and typeof(d.origem) == "Vector3" and type(d.raio) == "number" then
 		Visual.pulso(d.origem, d.raio, emPartida)
+	elseif d.tipo == "nota" and type(d.nota) == "string" then
+		RunUI.nota(d.nota, d.mult, d.tempo, d.quedas)
+	elseif d.tipo == "bencaos" and type(d.cartas) == "table" then
+		RunUI.bencaos(d.cartas)
+	elseif d.tipo == "bencaoAtiva" and type(d.lista) == "table" then
+		local nomes = {}
+		for _, id in d.lista do
+			local b = Run.bencaoPorId[id]
+			if b then
+				table.insert(nomes, b.nome)
+			end
+		end
+		RunUI.bencaosAtivas(nomes)
+	elseif d.tipo == "sequencia" and type(d.n) == "number" then
+		RunUI.sequencia(d.n)
+	elseif d.tipo == "elite" and type(d.texto) == "string" then
+		RunUI.elite(d.texto)
 	elseif d.tipo == "combate" or d.tipo == "combateEstado" or d.tipo == "guardaQuebrou" then
 		Combate.evento(d)
 	elseif d.tipo == "aviso" and type(d.texto) == "string" then
@@ -549,6 +575,7 @@ local function aoEvento(d: any)
 			aviso(itens)
 		end
 	elseif d.tipo == "fim" then
+		RunUI.limpar()
 		definirPartida(nil)
 		Visual.definirPartida(nil)
 		resultado.Visible = true
@@ -574,6 +601,7 @@ function IncursoesUI.montar(raiz: Frame, aoAviso: (string) -> (), aoMudarPartida
 	montarPainel()
 	montarHud(raiz)
 	Combate.montar(hud)
+	RunUI.montar(hud, aviso)
 	Remotos.evento("Incursao").OnClientEvent:Connect(aoEvento)
 	task.spawn(Visual.iniciar)
 	UserInputService.InputBegan:Connect(function(input, processado)

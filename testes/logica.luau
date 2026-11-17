@@ -69,6 +69,63 @@ do
 	igual("guarda: pelas costas", C.deFrente(o, f, V3.new(0, 0, 5)), false)
 end
 
+-- Incursões 2.0: andares variados, inimigos, Bênçãos e nota
+do
+	local R = req("IncursoesRun")
+	local semente = 0
+	local function aleatorio()
+		semente = (semente * 1103515245 + 12345) % 2147483648
+		return semente / 2147483648
+	end
+	for rodada = 1, 50 do
+		local andares = R.sortearAndares(5, aleatorio)
+		igual("run: 5 andares", #andares, 5)
+		igual("run: último é o Guardião", andares[5], "guardiao")
+		igual("run: 1º andar nunca é Cofre", andares[1] ~= "cofre" and andares[1] ~= "caca", true)
+		for n = 2, 4 do
+			if andares[n] == andares[n - 1] then
+				igual("run: não repete em seguida (rodada " .. rodada .. ")", false, true)
+			end
+		end
+	end
+	for _ = 1, 30 do
+		igual(
+			"run: andar 1 só Sombra/Corredor",
+			({ sombra = true, corredor = true })[R.sortearArquetipo(1, aleatorio)],
+			true
+		)
+		local afixos = R.sortearAfixos(3, aleatorio)
+		igual("run: 2 afixos no andar 3", #afixos, 2)
+		igual("run: afixos diferentes", afixos[1] ~= afixos[2], true)
+	end
+	local tem = {}
+	for _ = 1, #R.BENCAOS do
+		local ofertas = R.ofertas(tem, aleatorio, 1)
+		igual("run: sempre há oferta enquanto sobra Bênção", #ofertas, 1)
+		tem[ofertas[1]] = true
+	end
+	igual("run: sem repetição de Bênção", #R.ofertas(tem, aleatorio), 0)
+	local tres = R.ofertas({}, aleatorio)
+	igual("run: 3 ofertas", #tres, 3)
+	igual(
+		"run: ofertas distintas",
+		tres[1] ~= tres[2] and tres[2] ~= tres[3] and tres[1] ~= tres[3],
+		true
+	)
+	local m = R.modificadores({ furia = true, ganancia = true, vigor = true })
+	igual("run: dano somado", m.dano, 0.2)
+	igual("run: vida soma vigor e ganância", math.floor(m.vidaMax * 100 + 0.5), 15)
+	igual("run: nota S", R.nota("purificacao", 60, 0), "S")
+	igual("run: nota A com uma queda", R.nota("purificacao", 60, 1), "A")
+	igual("run: nota B lenta", R.nota("purificacao", 400, 0), "B")
+	igual("run: Horda só conta quedas", R.nota("horda", 999, 0), "S")
+	igual(
+		"run: nota S paga mais",
+		R.MULT_NOTA.S > R.MULT_NOTA.A and R.MULT_NOTA.A > R.MULT_NOTA.B,
+		true
+	)
+end
+
 local Perfil = req("Perfil")
 local p = Perfil.padrao()
 igual("versao", p.versao, 1)

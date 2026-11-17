@@ -204,6 +204,76 @@ local function montar(parte: BasePart)
 			Visual.avisoGolpe(parte, raio, quando - Workspace:GetServerTimeNow(), corLuz)
 		end
 	end)
+	-- nome sobre Elites e inimigos especiais (Corredor, Atirador, Explosivo, Escudeiro)
+	local rotulo = parte:GetAttribute("Rotulo")
+	if type(rotulo) == "string" then
+		local elite = parte:GetAttribute("Elite") == true
+		local bb = Instance.new("BillboardGui")
+		bb.Name = "Rotulo"
+		bb.Adornee = parte
+		bb.AlwaysOnTop = true
+		bb.Size = UDim2.fromOffset(if elite then 260 else 150, if elite then 46 else 28)
+		bb.StudsOffsetWorldSpace = Vector3.new(0, parte.Size.Y * 0.75 + 1.5, 0)
+		bb.MaxDistance = if elite then 140 else 70
+		local t = Instance.new("TextLabel")
+		t.BackgroundTransparency = 1
+		t.Size = UDim2.fromScale(1, 1)
+		t.Font = Enum.Font.GothamBlack
+		t.TextScaled = true
+		t.Text = (if elite then "👑 " else "") .. rotulo
+		t.TextColor3 = if elite then Color3.fromHex("FFD36B") else corLuz
+		t.TextStrokeTransparency = 0.25
+		t.Parent = bb
+		bb.Parent = parte
+	end
+	-- Atirador: risco vermelho até o ponto mirado, depois o disparo (dá para sair da mira)
+	aoMudar("MiraEm", function()
+		local para = parte:GetAttribute("Mira")
+		local quando = parte:GetAttribute("MiraEm")
+		if typeof(para) ~= "Vector3" or type(quando) ~= "number" then
+			return
+		end
+		local espera = math.max(quando - Workspace:GetServerTimeNow(), 0.05)
+		local de = (parte.CFrame * pivoLocal).Position + Vector3.new(0, 2.5, 0)
+		local alvo = para - Vector3.new(0, 2, 0)
+		local risco = Instance.new("Part")
+		risco.Anchored = true
+		risco.CanCollide = false
+		risco.CanQuery = false
+		risco.CanTouch = false
+		risco.CastShadow = false
+		risco.Material = Enum.Material.Neon
+		risco.Color = Color3.fromHex("FF3344")
+		risco.Transparency = 0.5
+		local comp = (alvo - de).Magnitude
+		risco.Size = Vector3.new(0.15, 0.15, comp)
+		risco.CFrame = CFrame.lookAt((de + alvo) / 2, alvo)
+		risco.Parent = efeitos
+		local marca = Instance.new("Part")
+		marca.Shape = Enum.PartType.Cylinder
+		marca.Anchored = true
+		marca.CanCollide = false
+		marca.CanQuery = false
+		marca.CanTouch = false
+		marca.CastShadow = false
+		marca.Material = Enum.Material.Neon
+		marca.Color = Color3.fromHex("FF3344")
+		marca.Transparency = 0.55
+		marca.Size = Vector3.new(0.12, 6.4, 6.4)
+		marca.CFrame = CFrame.new(alvo + Vector3.new(0, 0.5, 0)) * CFrame.Angles(0, 0, math.rad(90))
+		marca.Parent = efeitos
+		task.delay(espera, function()
+			risco.Color = corLuz
+			risco.Transparency = 0
+			risco.Size = Vector3.new(0.6, 0.6, comp)
+			Visual.onda(alvo, 3.4, corLuz, 0.3)
+			TweenService:Create(risco, TweenInfo.new(0.2), { Transparency = 1 }):Play()
+			task.delay(0.25, function()
+				risco:Destroy()
+				marca:Destroy()
+			end)
+		end)
+	end)
 	aoMudar("Impacto", function()
 		local raio = parte:GetAttribute("GolpeRaio")
 		Visual.onda(
