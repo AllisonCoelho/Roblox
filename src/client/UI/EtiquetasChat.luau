@@ -24,6 +24,9 @@ function EtiquetasChat.prefixo(player: Player, prefixo: string): string
 	if type(tit) == "string" and hexValido(titCor) then
 		table.insert(partes, string.format('<font color="#%s">[%s]</font>', titCor, escapar(tit)))
 	end
+	if player:GetAttribute("DonoServidorPrivado") == true then
+		table.insert(partes, '<font color="#B7FFD9">🏠</font>')
+	end
 	local nome = prefixo
 	if player:GetAttribute("CosVip") == true then
 		nome = '<font color="#FFD36B">' .. prefixo .. "</font>"

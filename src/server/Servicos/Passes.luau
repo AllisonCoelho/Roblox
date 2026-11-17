@@ -54,6 +54,19 @@ function Passes.atualizar(player: Player)
 				tem = ok and possui == true
 			end
 			definir(player, produto.id, tem)
+		elseif produto.tipo == "assinatura" then
+			-- Assinatura do Nexo: status mensal consultado no Roblox
+			local tem = dev(player)
+			if not tem and produto.subscriptionId then
+				local ok, status = pcall(
+					MarketplaceService.GetUserSubscriptionStatusAsync,
+					MarketplaceService,
+					player,
+					produto.subscriptionId
+				)
+				tem = ok and type(status) == "table" and status.IsSubscribed == true
+			end
+			definir(player, produto.id, tem)
 		end
 	end
 	avisar(player)
@@ -83,6 +96,10 @@ function Passes.iniciar()
 	end
 	Players.PlayerRemoving:Connect(function(player)
 		cache[player] = nil
+	end)
+	-- Assinou ou cancelou: consulta de novo
+	Players.UserSubscriptionStatusChanged:Connect(function(player)
+		Passes.atualizar(player)
 	end)
 	MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, gamePassId, comprou)
 		if not comprou then
