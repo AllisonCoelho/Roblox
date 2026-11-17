@@ -15,3 +15,9 @@
 
 # Cache do Python (geradores do Blender)
 __pycache__/
+
+# Pipeline de vídeos curtos: gravações, saídas e cache ficam só na máquina local
+marketing/videos/entradas/*
+!marketing/videos/entradas/.gitkeep
+marketing/videos/saida/
+marketing/videos/.cache/

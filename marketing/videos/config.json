@@ -1,0 +1,12 @@
+{
+  "saida": {"largura": 1080, "altura": 1920, "fps": 30, "crf": 19, "preset": "medium", "audio_kbps": 192, "lufs": -14},
+  "duracao": {"min": 8, "max": 25},
+  "zona_segura": {"topo": 220, "base": 420, "esquerda": 70, "direita": 170},
+  "audio": {"volume_jogo": 0.9, "volume_efeitos": 1.0},
+  "jogo": {
+    "nome": "Despertar",
+    "chamada_video": "Despertar · Roblox",
+    "chamada_legenda": "🔮 Despertar no Roblox",
+    "hashtags_fixas": ["#roblox", "#despertar"]
+  }
+}
