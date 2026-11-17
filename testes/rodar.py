@@ -1,11 +1,13 @@
 """Testes da infraestrutura compartilhada. Requer o executável luau no PATH."""
 from pathlib import Path
+import re
 import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parent.parent
 MODULOS = {
     "Formato": "src/shared/Formato.luau",
+    "LootIncursoes": "src/shared/Dados/LootIncursoes.luau",
     "Itens": "src/shared/Dados/Itens.luau",
     "Perfil": "src/shared/Dados/Perfil.luau",
     "Probabilidades": "src/shared/Dados/Probabilidades.luau",
@@ -26,6 +28,7 @@ end
 """]
 for nome, caminho in MODULOS.items():
     fonte = (ROOT / caminho).read_text(encoding="utf-8").replace("export type", "type")
+    fonte = re.sub(r'require\(script\.Parent\.(\w+)\)', r'req("\1")', fonte)
     if nome in ("Auras", "Catalogo67Probabilidades"):
         fonte = fonte.replace("require(script.Parent.Probabilidades)", 'req("Probabilidades")')
     codigo.append('MODULOS["' + nome + '"] = function()\n' + fonte + '\nend\n')

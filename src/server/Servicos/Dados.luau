@@ -228,6 +228,11 @@ function Dados.real(player: Player): Estado?
 	return estados[player]
 end
 
+-- Um perfil de contingência nunca deve confirmar progresso que não pode ser salvo.
+function Dados.podeProgredir(player: Player): boolean
+	return Dados.de(player) ~= nil and (Dados.emTeste(player) or not semSalvar[player])
+end
+
 function Dados.emTeste(player: Player): boolean
 	return perfisTeste[player] ~= nil
 end

@@ -71,7 +71,7 @@ local function atualizar()
 	if #ids == 0 then
 		linha(
 			if next(anterior) == nil
-				then "Seu inventário está vazio. Conclua andares de incursão no Bastião para receber materiais quando o loot estiver disponível."
+				then "Seu inventário está vazio. Conclua andares de incursão no Bastião para receber seus primeiros materiais."
 				else "Nenhum item nesta categoria.",
 			lista,
 			Cores.TextoSuave

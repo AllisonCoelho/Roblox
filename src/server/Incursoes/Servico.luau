@@ -10,6 +10,7 @@ local Workspace = game:GetService("Workspace")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Auras = require(Shared.Dados.Auras)
 local Incursoes = require(Shared.Dados.Incursoes)
+local Loot = require(Shared.Dados.LootIncursoes)
 local Remotos = require(Shared.Remotos)
 local Servicos = script.Parent.Parent:WaitForChild("Servicos")
 local Acoes = require(Servicos:WaitForChild("Acoes"))
@@ -30,6 +31,7 @@ local ESPERA_REFORCO = 2.2
 local ESPERA_VOLTA = 5 -- depois do fim, até voltar ao Bastião
 
 type Membro = {
+	recompensas: Loot.Registro,
 	ressonancia: number,
 	proximoPulso: number,
 	reviver: boolean,
@@ -174,12 +176,13 @@ end
 
 -- ===================================================================== recompensas
 
-local function premiar(player: Player, run: Run, venceu: boolean): number
-	if Dados.emTeste(player) ~= run.teste then
-		return 0
+local function premiar(player: Player, run: Run, membro: Membro, concluiu: boolean, venceu: boolean)
+	if Dados.emTeste(player) ~= run.teste or not Dados.podeProgredir(player) then
+		return
 	end
+	local itensAndar = nil
 	local ganho = 0
-	Dados.alterar(player, function(estado)
+	local ok = Dados.alterar(player, function(estado)
 		if type(estado.incursoes) ~= "table" then
 			estado.incursoes = Incursoes.padrao()
 		end
@@ -187,17 +190,33 @@ local function premiar(player: Player, run: Run, venceu: boolean): number
 		inc.melhor = inc.melhor or {}
 		inc.concluidas = inc.concluidas or {}
 		local u = run.universo
-		local primeira = venceu and (inc.concluidas[u] or 0) == 0
-		ganho = Incursoes.recompensa(u, run.andaresConcluidos, venceu, primeira)
-		inc.fragmentos = (inc.fragmentos or 0) + ganho
-		local alcancado = if venceu then Incursoes.ANDARES else run.andar
-		inc.melhor[u] = math.max(inc.melhor[u] or 0, alcancado)
+		if concluiu then
+			itensAndar = Loot.creditar(
+				membro.recompensas,
+				estado.inventario.itens,
+				u,
+				run.andar,
+				function()
+					return rng:NextNumber()
+				end
+			)
+			if itensAndar == nil then
+				return false
+			end
+			ganho = Incursoes.fragmentosAndar(u, run.andar)
+		end
 		if venceu then
+			ganho += Incursoes.bonusVitoria(u, (inc.concluidas[u] or 0) == 0)
 			inc.concluidas[u] = (inc.concluidas[u] or 0) + 1
 		end
+		inc.fragmentos = (inc.fragmentos or 0) + ganho
+		inc.melhor[u] = math.max(inc.melhor[u] or 0, run.andar)
+		membro.recompensas.fragmentos += ganho
 		return true
 	end)
-	return ganho
+	if ok and itensAndar and player.Parent then
+		enviar(player, { tipo = "loot", itens = itensAndar, fragmentos = ganho })
+	end
 end
 
 -- ===================================================================== partidas
@@ -236,7 +255,8 @@ end
 
 -- Um jogador sai da partida (saiu, caiu sem vidas ou desconectou): leva o que já ganhou
 local function sair(run: Run, player: Player, motivo: string)
-	if not run.membros[player] then
+	local membro = run.membros[player]
+	if not membro then
 		return
 	end
 	if run.estado == "fim" then
@@ -246,7 +266,7 @@ local function sair(run: Run, player: Player, motivo: string)
 		end
 		return
 	end
-	local ganho = premiar(player, run, false)
+	premiar(player, run, membro, false, false)
 	desligar(player, run)
 	if motivo ~= "desconectou" then
 		definirVida(player, Incursoes.VIDA_BASE)
@@ -256,7 +276,8 @@ local function sair(run: Run, player: Player, motivo: string)
 			universo = run.universo,
 			venceu = false,
 			andares = run.andaresConcluidos,
-			fragmentos = ganho,
+			fragmentos = membro.recompensas.fragmentos,
+			itens = membro.recompensas.itens,
 			motivo = motivo,
 		})
 	end
@@ -279,13 +300,15 @@ local function terminar(run: Run, venceu: boolean)
 		table.insert(lista, player)
 	end
 	for _, player in lista do
-		local ganho = premiar(player, run, venceu)
+		local membro = run.membros[player]
+		premiar(player, run, membro, venceu, venceu)
 		enviar(player, {
 			tipo = "fim",
 			universo = run.universo,
 			venceu = venceu,
 			andares = run.andaresConcluidos,
-			fragmentos = ganho,
+			fragmentos = membro.recompensas.fragmentos,
+			itens = membro.recompensas.itens,
 			motivo = if venceu then "vitoria" else "derrota",
 		})
 	end
@@ -371,6 +394,9 @@ local function abrirFenda(run: Run)
 	fenda:SetAttribute("Fenda", true)
 	run.fenda = fenda
 	run.andaresConcluidos = math.max(run.andaresConcluidos, run.andar)
+	for player, membro in run.membros do
+		premiar(player, run, membro, true, false)
+	end
 	for _, i in run.inimigos do
 		Inimigos.ferir(i, math.huge) -- as Sombras se desfazem quando o andar é purificado
 	end
@@ -476,6 +502,7 @@ local function lancar(
 	runs[slot] = run
 	for _, player in jogadores do
 		local m: Membro = {
+			recompensas = Loot.novo(),
 			ressonancia = ressonanciaDe(player),
 			proximoPulso = 0,
 			reviver = false,
