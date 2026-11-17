@@ -37,10 +37,11 @@ CI e build verde. Sem erros no Output do Studio. Testes com dois jogadores (aura
 
 ## Painel Dev
 
-- Abra pelo botão **DEV** ao lado da engrenagem ou pelo atalho **F8**. O servidor libera o painel à conta proprietária da experiência privada de testes. Na cópia local do Studio, o primeiro cliente simulado pode usar as ferramentas.
-- Em **Sessão**, **Liberar tudo** preenche a coleção temporária. Também é possível copiar a conta real ou começar vazia para repetir a primeira entrada. **Voltar ao perfil real** encerra a simulação.
+- Abra pelo botão **DEV** ao lado da engrenagem ou pelo atalho **F8** no Roblox Player. O servidor libera o painel da experiência privada para a conta proprietária e para a conta de testes `UmrnoobZz`. O primeiro cliente simulado também pode abrir o painel na cópia local do Studio.
+- Em **Sessão**, **Liberar tudo** preenche a coleção temporária, abre os três universos e maximiza as relíquias. Também é possível copiar a conta real ou começar vazia para repetir a primeira entrada. **Voltar ao perfil real** encerra a simulação.
 - **Auras** equipa qualquer aura do catálogo, altera quantidades e força o próximo resultado. **VFX** aplica as prévias disponíveis no personagem. **Rituais** faz um giro aleatório de teste ou encena uma categoria sem conceder a aura.
 - **Mapa** leva às entradas dos lugares do Nexo e permite renascer. A aba também mostra a versão do place, FPS e o estado de montagem do kit 3D local.
+- **Incursões** abre uma partida solo de teste em qualquer um dos 15 andares e permite definir o saldo de fragmentos da sessão. Use o perfil real na Mesa dos Cartógrafos para jogar na fila cooperativa.
 - As alterações da sessão ficam na memória da conta que está testando. O salvamento e os rankings leem o perfil real. Os anúncios de giros simulados aparecem só para quem fez o giro.
 
 

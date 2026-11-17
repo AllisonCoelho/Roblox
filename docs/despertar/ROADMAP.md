@@ -8,10 +8,10 @@
 2. **Identidade por aura**: hoje a aura equipada varia por estilo (brilho/chama/névoa) e raridade. Falta dar padrão de movimento próprio a cada uma (pétalas, órbitas, cinzas, constelação), reconhecível de longe.
 3. **Polimento**: sons próprios, limite de efeitos simultâneos, ajustes de duração após playtest, checklist mobile.
 
-## Cenários prontos à espera de sistema (nada funcional ainda)
+## Arena e Incursões
 
-- **Arena do Trono** (ex-Arena dos Despertos): cenário com portão, trono e coroa. O **Primeiro Soberano** já ocupa o trono (repouso, reação e conversa). Falta o duelo por turnos e a sucessão do rei por servidor (`NPC_OCUPANTE -> DESAFIO -> JOGADOR_REI -> RETORNO_DO_NPC`). O título de rei não persiste entre servidores. Nada disso está implementado.
-- **Bastião das Incursões**: cenário com o portal-fenda, três marcos de universos (Cinzas, Maré Morta, Crepúsculo Umbral) e a Mesa dos Cartógrafos. Falta tudo o que é sistema: fila/partida, incursão por andares, materiais e recompensas.
+- **Arena do Trono** — o Primeiro Soberano já ocupa o trono com repouso, reação e conversa. Duelo por turnos e sucessão do rei são etapas futuras.
+- **Bastião das Incursões** — a Mesa dos Cartógrafos abre a fila para os três universos. Os andares, Guardiões e relíquias estão descritos em `docs/despertar/INCURSOES.md`.
 
 ## V2
 
