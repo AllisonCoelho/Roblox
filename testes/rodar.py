@@ -1,12 +1,20 @@
 """Testes da infraestrutura compartilhada. Requer o executável luau no PATH."""
 from pathlib import Path
+import re
 import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parent.parent
 MODULOS = {
     "Formato": "src/shared/Formato.luau",
+    "LootIncursoes": "src/shared/Dados/LootIncursoes.luau",
+    "Receitas": "src/shared/Dados/Receitas.luau",
+    "Transcendencia": "src/shared/Dados/Transcendencia.luau",
+    "Artefatos": "src/shared/Dados/Artefatos.luau",
+    "Itens": "src/shared/Dados/Itens.luau",
     "Perfil": "src/shared/Dados/Perfil.luau",
+    "Probabilidades": "src/shared/Dados/Probabilidades.luau",
+    "Catalogo67Probabilidades": "src/shared/Dados/Catalogo67Probabilidades.luau",
     "Auras": "src/shared/Dados/Auras.luau",
     "Apresentacao": "src/shared/Dados/Apresentacao.luau",
     "Trilha": "src/shared/Dados/Trilha.luau",
@@ -24,6 +32,9 @@ end
 """]
 for nome, caminho in MODULOS.items():
     fonte = (ROOT / caminho).read_text(encoding="utf-8").replace("export type", "type")
+    fonte = re.sub(r'require\(script\.Parent\.(\w+)\)', r'req("\1")', fonte)
+    if nome in ("Auras", "Catalogo67Probabilidades"):
+        fonte = fonte.replace("require(script.Parent.Probabilidades)", 'req("Probabilidades")')
     codigo.append('MODULOS["' + nome + '"] = function()\n' + fonte + '\nend\n')
 codigo.append((ROOT / "testes/logica.luau").read_text(encoding="utf-8"))
 saida = ROOT / "dist" / "testes.luau"

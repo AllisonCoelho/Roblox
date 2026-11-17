@@ -237,6 +237,8 @@ ProximityPromptService.PromptTriggered:Connect(function(prompt, jogador)
 	local acao = prompt:GetAttribute("Acao")
 	if acao == "indice" then
 		Navegacao.abrir("Indice")
+	elseif acao == "altar" then
+		Navegacao.abrir("Altar")
 	elseif acao == "incursoes" then
 		Navegacao.abrir("Incursoes")
 	elseif acao == "em_construcao" or acao == "eco" then

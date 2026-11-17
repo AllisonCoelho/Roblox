@@ -7,6 +7,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Auras = require(Shared.Dados.Auras)
+local Itens = require(ReplicatedStorage.Shared.Dados.Itens)
 local Dados = require(Shared.Dados.Incursoes)
 local Remotos = require(Shared.Remotos)
 local Tema = require(Shared.Tema)
@@ -391,8 +392,8 @@ local function montarHud(raiz: Frame)
 		Text = "",
 		TextSize = 24,
 		TextWrapped = true,
-		Position = UDim2.fromOffset(30, 90),
-		Size = UDim2.new(1, -60, 0, 90),
+		Position = UDim2.fromOffset(20, 72),
+		Size = UDim2.new(1, -40, 0, 138),
 		ZIndex = 21,
 		Parent = resultado,
 	})
@@ -427,7 +428,8 @@ local function montarHud(raiz: Frame)
 		textoPulso.TextSize = if compacto then 22 else 26
 		local ySair = if largura < 980 then 182 else 24
 		sairBotao.placa.quadro.Position = UDim2.new(1, -14, 0, ySair)
-		resultado.Size = UDim2.fromOffset(math.min(620, borda), 260)
+		resultado.Size = UDim2.fromOffset(math.min(620, borda), 292)
+		resultadoTexto.TextSize = if compacto then 15 else 20
 		resultadoTitulo.TextSize = if compacto then 32 else 46
 	end)
 end
@@ -445,6 +447,21 @@ local function definirPartida(universo: string?)
 			Navegacao.fechar()
 		end
 	end
+end
+
+local function textoItens(ganhos: any): string
+	local nomes = {}
+	if type(ganhos) == "table" then
+		for id, qtd in ganhos do
+			local item = Itens.porId[id]
+			if item and type(qtd) == "number" and qtd > 0 then
+				local tier = Itens.Tiers[item.raridade]
+				table.insert(nomes, string.format("%s +%d %s", tier.icone, qtd, item.nome))
+			end
+		end
+	end
+	table.sort(nomes)
+	return table.concat(nomes, "  ·  ")
 end
 
 local function aoEvento(d: any)
@@ -522,6 +539,11 @@ local function aoEvento(d: any)
 		Visual.pulso(d.origem, d.raio, emPartida)
 	elseif d.tipo == "aviso" and type(d.texto) == "string" then
 		aviso(d.texto)
+	elseif d.tipo == "loot" then
+		local itens = textoItens(d.itens)
+		if itens ~= "" then
+			aviso(itens)
+		end
 	elseif d.tipo == "fim" then
 		definirPartida(nil)
 		Visual.definirPartida(nil)
@@ -532,11 +554,12 @@ local function aoEvento(d: any)
 			else (if d.motivo == "saiu" then "VOCÊ SAIU" else "A INCURSÃO CAIU")
 		resultadoTitulo.TextColor3 = if venceu then Cores.Menta else Cores.Aviso
 		resultadoTexto.Text = string.format(
-			"%s  ·  andares concluídos: %d/%d\n+%d fragmentos",
+			"%s  ·  andares concluídos: %d/%d\n+%d Fragmentos de Incursão\n%s",
 			if u then u.nome else "",
 			d.andares or 0,
 			Dados.ANDARES,
-			d.fragmentos or 0
+			d.fragmentos or 0,
+			textoItens(d.itens)
 		)
 	end
 end

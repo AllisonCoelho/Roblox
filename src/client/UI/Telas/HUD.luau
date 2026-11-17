@@ -5,6 +5,7 @@ local Shared = ReplicatedStorage.Shared
 local Auras = require(Shared.Dados.Auras)
 local Formato = require(Shared.Formato)
 local Perfil = require(Shared.Dados.Perfil)
+local Transcendencia = require(Shared.Dados.Transcendencia)
 local Cores = require(Shared.Tema).Orbita
 local Escala = require(script.Parent.Parent.Escala)
 local Kit = require(script.Parent.Parent.Kit)
@@ -20,13 +21,14 @@ export type Api = {
 	definirVisivel: (visivel: boolean) -> (),
 	definirPerfilTeste: (ativo: boolean) -> (),
 	atualizar: (estado: Perfil.Estado) -> (),
-	registrarResultado: (aura: Auras.Aura, nova: boolean, simulado: boolean) -> (),
+	registrarResultado: (aura: Auras.Aura, nova: boolean, simulado: boolean, chance: number) -> (),
 }
 
 type Opcoes = {
 	aoDespertar: () -> (),
 	aoAlternarAuto: () -> (),
 	aoAbrirIndice: () -> (),
+	aoAbrirInventario: () -> (),
 	aoAbrirAjustes: () -> (),
 }
 
@@ -86,8 +88,8 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 	})
 	type Linha = { quadro: Frame, nome: TextLabel, chance: TextLabel, marca: TextLabel }
 	local linhas: { Linha } = {}
-	local recentes: { Auras.Aura } = {}
-	local recentesTeste: { Auras.Aura } = {}
+	local recentes: { { aura: Auras.Aura, chance: number } } = {}
+	local recentesTeste: { { aura: Auras.Aura, chance: number } } = {}
 	local emTeste = false
 	for i = 1, RECENTES do
 		local quadro = Kit.novo("Frame", {
@@ -136,6 +138,15 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 	ajustes.placa.quadro.AnchorPoint = Vector2.new(1, 0)
 	ajustes.placa.quadro.Position = UDim2.new(1, -22, 0, 16)
 	ajustes.botao.Text = "Ajustes"
+
+	local inventario = Kit.botaoPlaca({
+		texto = "Inventário",
+		tamanho = UDim2.fromOffset(146, 50),
+		tamanhoTexto = 18,
+		pai = hud,
+		aoClicar = op.aoAbrirInventario,
+	})
+	inventario.placa.quadro.AnchorPoint = Vector2.new(1, 0)
 
 	local placaAura = Kit.placa({
 		nome = "AuraEquipada",
@@ -368,12 +379,12 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 		feed.quadro.Visible = not Escala.compacto and #lista > 0
 		feed.quadro.Size = UDim2.fromOffset(258, 32 + 36 * #lista)
 		for i, linha in linhas do
-			local aura = lista[i]
-			linha.quadro.Visible = aura ~= nil
-			if aura then
-				linha.nome.Text = aura.nome
-				linha.chance.Text = "1/" .. Formato.chanceCurta(aura.chance)
-				linha.marca.TextColor3 = corTier(aura)
+			local giro = lista[i]
+			linha.quadro.Visible = giro ~= nil
+			if giro then
+				linha.nome.Text = giro.aura.nome
+				linha.chance.Text = "1/" .. Formato.chanceCurta(giro.chance)
+				linha.marca.TextColor3 = corTier(giro.aura)
 			end
 		end
 	end
@@ -405,6 +416,7 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 		local larguraAura = if estreito then 202 elseif compacto then 230 else 292
 		placaAura.quadro.Size = UDim2.fromOffset(larguraAura, if compacto then 112 else 96)
 		placaAura.quadro.Position = UDim2.new(1, -14, 0, 84)
+		inventario.placa.quadro.Position = UDim2.new(1, -14, 0, if compacto then 202 else 186)
 		local textoX = if estreito then 46 else 70
 		iconeAura.Size = UDim2.fromOffset(if estreito then 30 else 48, if estreito then 30 else 48)
 		iconeAura.Position = UDim2.new(0, 10, 0.5, 0)
@@ -484,7 +496,9 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 				then string.format(
 					"%s · 1 em %s",
 					Auras.Tiers[aura.tier].nome,
-					Formato.chance(aura.chance)
+					Formato.chance(
+						Auras.chanceEfetiva(aura, Transcendencia.sorte(estado.transcendencia.nivel))
+					)
 				)
 				else "Desperte uma aura"
 			raridade.TextColor3 = if aura then Kit.corLegivel(cor) else Cores.TextoSuave
@@ -503,9 +517,14 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 			valorIndice.Text = string.format("%d / %d", descobertas, #Auras.lista)
 			progresso.Size = UDim2.fromScale(descobertas / #Auras.lista, 1)
 		end,
-		registrarResultado = function(aura: Auras.Aura, nova: boolean, simulado: boolean)
+		registrarResultado = function(
+			aura: Auras.Aura,
+			nova: boolean,
+			simulado: boolean,
+			chance: number
+		)
 			local lista = if simulado then recentesTeste else recentes
-			table.insert(lista, 1, aura)
+			table.insert(lista, 1, { aura = aura, chance = chance })
 			if #lista > RECENTES then
 				table.remove(lista)
 			end
@@ -518,7 +537,7 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 				if simulado then "Teste · " else "",
 				if nova then "Nova · " else "",
 				aura.nome,
-				Formato.chance(aura.chance)
+				Formato.chance(chance)
 			)
 			resultado.definirCor(Cores.Painel, corTier(aura))
 			resultado.quadro.Visible = true

@@ -241,6 +241,9 @@ local function executar(player: Player, nome: any, ...: any): (boolean, string?,
 	if not comando then
 		return false, "Comando desconhecido"
 	end
+	if Dados.emTransacao(player) then
+		return false, "Aguarde a confirmação no Altar."
+	end
 	if player:GetAttribute("EmDueloArena") then
 		return false, "Encerre o duelo antes de usar o Painel Dev."
 	end
