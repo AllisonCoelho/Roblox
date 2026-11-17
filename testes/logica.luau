@@ -124,6 +124,154 @@ do
 	)
 end
 
+-- Incursões 2.0: andares variados, inimigos, Bênçãos e nota
+do
+	local R = req("IncursoesRun")
+	local semente = 0
+	local function aleatorio()
+		semente = (semente * 1103515245 + 12345) % 2147483648
+		return semente / 2147483648
+	end
+	for rodada = 1, 50 do
+		local andares = R.sortearAndares(5, aleatorio)
+		igual("run: 5 andares", #andares, 5)
+		igual("run: último é o Guardião", andares[5], "guardiao")
+		igual("run: 1º andar nunca é Cofre", andares[1] ~= "cofre" and andares[1] ~= "caca", true)
+		for n = 2, 4 do
+			if andares[n] == andares[n - 1] then
+				igual("run: não repete em seguida (rodada " .. rodada .. ")", false, true)
+			end
+		end
+	end
+	for _ = 1, 30 do
+		igual(
+			"run: andar 1 só Sombra/Corredor",
+			({ sombra = true, corredor = true })[R.sortearArquetipo(1, aleatorio)],
+			true
+		)
+		local afixos = R.sortearAfixos(3, aleatorio)
+		igual("run: 2 afixos no andar 3", #afixos, 2)
+		igual("run: afixos diferentes", afixos[1] ~= afixos[2], true)
+	end
+	local tem = {}
+	for _ = 1, #R.BENCAOS do
+		local ofertas = R.ofertas(tem, aleatorio, 1)
+		igual("run: sempre há oferta enquanto sobra Bênção", #ofertas, 1)
+		tem[ofertas[1]] = true
+	end
+	igual("run: sem repetição de Bênção", #R.ofertas(tem, aleatorio), 0)
+	local tres = R.ofertas({}, aleatorio)
+	igual("run: 3 ofertas", #tres, 3)
+	igual(
+		"run: ofertas distintas",
+		tres[1] ~= tres[2] and tres[2] ~= tres[3] and tres[1] ~= tres[3],
+		true
+	)
+	local m = R.modificadores({ furia = true, ganancia = true, vigor = true })
+	igual("run: dano somado", m.dano, 0.2)
+	igual("run: vida soma vigor e ganância", math.floor(m.vidaMax * 100 + 0.5), 15)
+	igual("run: nota S", R.nota("purificacao", 60, 0), "S")
+	igual("run: nota A com uma queda", R.nota("purificacao", 60, 1), "A")
+	igual("run: nota B lenta", R.nota("purificacao", 400, 0), "B")
+	igual("run: Horda só conta quedas", R.nota("horda", 999, 0), "S")
+	igual(
+		"run: nota S paga mais",
+		R.MULT_NOTA.S > R.MULT_NOTA.A and R.MULT_NOTA.A > R.MULT_NOTA.B,
+		true
+	)
+	-- Fase B: preparo (Marcas e Pesadelo) vindo do cliente é sempre validado
+	local vazio = R.preparo(nil)
+	igual("preparo: padrão sem Pesadelo", vazio.pesadelo, false)
+	igual("preparo: padrão normal", R.descreverPreparo(vazio), "Normal")
+	igual("preparo: padrão x1", R.multPreparo(vazio), 1)
+	local lixo =
+		R.preparo({ pesadelo = "sim", marcas = { inventada = true, densas = 1, vidro = true } })
+	igual("preparo: pesadelo só com true", lixo.pesadelo, false)
+	igual("preparo: ignora marca inventada", lixo.marcas.inventada, nil)
+	igual("preparo: ignora valor não booleano", lixo.marcas.densas, nil)
+	igual("preparo: aceita marca válida", lixo.marcas.vidro, true)
+	local tudo = R.preparo({ pesadelo = true, marcas = { densas = true, semVidas = true } })
+	igual(
+		"preparo: pesadelo dobra e marcas somam",
+		math.floor(R.multPreparo(tudo) * 100 + 0.5),
+		350
+	)
+	igual(
+		"preparo: descrição",
+		R.descreverPreparo(tudo),
+		"PESADELO · Hordas Densas · Sem Reviver"
+	)
+	igual("guardião: fases em ordem", R.FASES_GUARDIAO[1] > R.FASES_GUARDIAO[2], true)
+end
+
+-- Incursões fase C: Fenda do Dia, desafios semanais, reviver
+do
+	local D = req("IncursoesDesafios")
+	local R = req("IncursoesRun")
+	local t = 1763337600 -- 17/11/2025 00:00 UTC (segunda-feira)
+	igual("diaria: mesmo dia, mesmo número", D.dia(t), D.dia(t + 86399))
+	igual("diaria: dia seguinte muda", D.dia(t + 86400), D.dia(t) + 1)
+	igual("semana: segunda a domingo iguais", D.semana(t), D.semana(t + 6 * 86400 + 86399))
+	igual("semana: próxima segunda muda", D.semana(t + 7 * 86400), D.semana(t) + 1)
+	local a, b = D.fendaDoDia(D.dia(t)), D.fendaDoDia(D.dia(t))
+	igual("diaria: determinística (universo)", a.universo, b.universo)
+	igual("diaria: determinística (semente)", a.semente, b.semente)
+	local n = 0
+	for id in a.marcas do
+		n += 1
+		igual("diaria: marca válida " .. id, R.marcaPorId[id] ~= nil, true)
+		igual("diaria: nunca Sem Reviver", id ~= "semVidas", true)
+	end
+	igual("diaria: 2 marcas", n, 2)
+	local x, y = D.gerador(5), D.gerador(5)
+	igual("diaria: gerador repetível", x(), y())
+	local s1 = R.sortearAndares(5, D.gerador(a.semente))
+	local s2 = R.sortearAndares(5, D.gerador(a.semente))
+	igual("diaria: mesmos andares para todos", table.concat(s1, ","), table.concat(s2, ","))
+	igual(
+		"diaria: vitória vale mais",
+		D.pontuacao(5, true, 2, 50, 600) > D.pontuacao(5, false, 2, 50, 600),
+		true
+	)
+	igual("diaria: pontuação nunca negativa", D.pontuacao(0, false, 0, 0, 99999) >= 0, true)
+	igual("diaria: recompensa por nível", D.recompensaDia(2), 240)
+	local semana = D.semana(t)
+	local tres = D.desafiosDaSemana(semana)
+	igual("semana: 3 desafios", #tres, 3)
+	igual(
+		"semana: distintos",
+		tres[1] ~= tres[2] and tres[2] ~= tres[3] and tres[1] ~= tres[3],
+		true
+	)
+	local st = D.semanaDe({}, semana)
+	local alvo = D.desafioPorId[tres[1]]
+	igual(
+		"semana: progresso parcial sem prêmio",
+		D.progredir(st, semana, alvo.id, alvo.meta - 1, alvo.id == "sequencia"),
+		0
+	)
+	igual(
+		"semana: completar dá prêmio",
+		D.progredir(st, semana, alvo.id, alvo.meta, alvo.id == "sequencia"),
+		alvo.recompensa
+	)
+	igual("semana: não paga duas vezes", D.progredir(st, semana, alvo.id, 999, false), 0)
+	local fora
+	for _, d in D.DESAFIOS do
+		if not table.find(tres, d.id) then
+			fora = d.id
+			break
+		end
+	end
+	igual(
+		"semana: desafio de outra semana não conta",
+		D.progredir(st, semana, fora, 9999, false),
+		0
+	)
+	igual("semana: semana nova zera", next(D.semanaDe({ semana = st }, semana + 1).progresso), nil)
+	igual("reviver: tempos coerentes", D.REVIVER_TEMPO < D.ABATIDO_ESPERA, true)
+end
+
 local Perfil = req("Perfil")
 local p = Perfil.padrao()
 igual("versao", p.versao, 1)

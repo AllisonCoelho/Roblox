@@ -882,6 +882,26 @@ function EfeitosCombate.evento(d: { [string]: any }, kitDuracao: (string) -> num
 				escudos[d.userId] = p
 			end
 		end
+	elseif acao == "eco" and typeof(d.origem) == "Vector3" then
+		-- Bênção Eco do Golpe: onda em volta no último golpe do combo
+		local cor = if typeof(d.cor) == "Color3" then d.cor else BRANCO
+		anel(CFrame.new(d.origem - Vector3.new(0, 2.4, 0)), 8, cor, 0.35, 0.5)
+		rajada(d.origem, cor, 14, 16)
+	elseif
+		acao == "rastro"
+		and typeof(d.origem) == "Vector3"
+		and typeof(d.dir) == "Vector3"
+		and type(d.distancia) == "number"
+	then
+		-- Bênção Rastro de Brasas: fogo pelo caminho da esquiva
+		local fogo = Color3.fromHex("FF7A3D")
+		for k = 0, 5 do
+			local pos = d.origem + d.dir * (k / 5 * d.distancia) - Vector3.new(0, 2.3, 0)
+			task.delay(k * 0.03, function()
+				esfera(pos, 1.6, fogo, 0.6)
+				rajada(pos, fogo, 4, 6, FUMACA, 0.8)
+			end)
+		end
 	elseif acao == "guardaQuebrou" and typeof(d.origem) == "Vector3" then
 		rajada(d.origem, BRANCO, 18, 16)
 		anel(CFrame.new(d.origem), 5, Color3.fromHex("FF6B6B"), 0.3)
