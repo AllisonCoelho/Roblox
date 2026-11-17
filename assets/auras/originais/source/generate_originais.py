@@ -1,0 +1,669 @@
+"""Gera as malhas do LOTE INICIAL das auras originais v2 (testado com bpy 5.3).
+
+Pipeline v2: Blender (este script) -> FBX -> Studio (3D Importer + upload) -> <id>.rbxm
+-> Rojo (ReplicatedStorage.AurasOriginais.<id>) -> Mundo/Auras/Originais/Motor.luau clona e anima.
+
+Uso:
+    python assets/auras/originais/source/generate_originais.py            # FBX, .blend, manifestos, Luau
+    python assets/auras/originais/source/generate_originais.py --render   # também as prévias (Blender, não Roblox)
+
+As peças são modeladas direto em eixos ROBLOX (x, y = cima, z = trás; frente do avatar = -Z) e convertidas
+para o Blender em V(). Pivô de cada peça = origem. Cor e material de cada instância vêm do Luau gerado
+(src/client/Mundo/Auras/Originais/Definicoes.luau), não de textura. Semente fixa.
+"""
+
+import json
+import math
+import os
+import random
+import sys
+
+import bpy
+
+import bmesh  # noqa: E402
+from mathutils import Matrix, Vector  # noqa: E402
+
+RAIZ = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", ".."))
+DIR_BASE = os.path.join(RAIZ, "assets", "auras", "originais")
+DIR_LUAU = os.path.join(RAIZ, "src", "client", "Mundo", "Auras", "Originais")
+
+
+def V(x, y, z):
+    """Roblox -> Blender."""
+    return Vector((x, -z, y))
+
+
+# ---------------------------------------------------------------- primitivas (coordenadas Roblox)
+
+
+def bipiramide(bm, centro, eixo, comp_cima, comp_baixo, raio, lados=6, rng=None, torcer=0.0, achatar=1.0):
+    """Cristal facetado: anel de 'lados' vértices e duas pontas (assimétricas)."""
+    rng = rng or random.Random(0)
+    e = Vector(eixo).normalized()
+    a = e.orthogonal().normalized()
+    b = e.cross(a)
+    c = Vector(centro)
+    anel = []
+    for i in range(lados):
+        t = 2 * math.pi * i / lados + torcer
+        r = raio * rng.uniform(0.85, 1.15)
+        p = c + (a * math.cos(t) * r + b * math.sin(t) * r * achatar)
+        anel.append(bm.verts.new(V(*p)))
+    topo = bm.verts.new(V(*(c + e * comp_cima)))
+    base = bm.verts.new(V(*(c - e * comp_baixo)))
+    for i in range(lados):
+        j = (i + 1) % lados
+        bm.faces.new((anel[i], anel[j], topo))
+        bm.faces.new((anel[j], anel[i], base))
+
+
+def prisma_ponta(bm, centro, eixo, comp, raio, ponta, lados=6, rng=None):
+    """Prisma de gelo: corpo hexagonal com ponta facetada nas duas extremidades."""
+    rng = rng or random.Random(0)
+    e = Vector(eixo).normalized()
+    a = e.orthogonal().normalized()
+    b = e.cross(a)
+    c = Vector(centro)
+    aneis = []
+    for k, h in enumerate((-comp / 2, comp / 2)):
+        anel = []
+        for i in range(lados):
+            t = 2 * math.pi * i / lados
+            r = raio * (1 + 0.12 * math.sin(i * 2.3 + k))
+            anel.append(bm.verts.new(V(*(c + e * h + a * math.cos(t) * r + b * math.sin(t) * r))))
+        aneis.append(anel)
+    topo = bm.verts.new(V(*(c + e * (comp / 2 + ponta))))
+    base = bm.verts.new(V(*(c - e * (comp / 2 + ponta * 0.45))))
+    for i in range(lados):
+        j = (i + 1) % lados
+        bm.faces.new((aneis[0][i], aneis[0][j], aneis[1][j], aneis[1][i]))
+        bm.faces.new((aneis[1][i], aneis[1][j], topo))
+        bm.faces.new((aneis[0][j], aneis[0][i], base))
+
+
+def tubo(bm, pts, raios, lados=8, achatar=1.0, fechar=True):
+    """Tubo ao longo de uma polilinha (pontos Roblox), com raio variável."""
+    pts = [Vector(p) for p in pts]
+    aneis = []
+    anterior = None
+    for k, p in enumerate(pts):
+        t = (pts[min(k + 1, len(pts) - 1)] - pts[max(k - 1, 0)]).normalized()
+        if anterior is None:
+            n = t.orthogonal().normalized()
+        else:
+            n = (anterior - t * anterior.dot(t)).normalized()
+        anterior = n
+        bi = t.cross(n)
+        r = raios[k] if isinstance(raios, (list, tuple)) else raios
+        anel = []
+        for i in range(lados):
+            a = 2 * math.pi * i / lados
+            anel.append(bm.verts.new(V(*(p + n * math.cos(a) * r + bi * math.sin(a) * r * achatar))))
+        aneis.append(anel)
+    for k in range(len(aneis) - 1):
+        for i in range(lados):
+            j = (i + 1) % lados
+            bm.faces.new((aneis[k][i], aneis[k][j], aneis[k + 1][j], aneis[k + 1][i]))
+    if fechar:
+        for anel, ponta in ((aneis[0], pts[0]), (aneis[-1], pts[-1])):
+            c = bm.verts.new(V(*ponta))
+            for i in range(lados):
+                j = (i + 1) % lados
+                bm.faces.new((anel[i], anel[j], c) if anel is aneis[-1] else (anel[j], anel[i], c))
+
+
+def placa(bm, contorno, espessura, matriz=Matrix.Identity(4)):
+    """Polígono (lista de (x, y) no plano local XY) extrudado em Z, transformado por 'matriz' (Roblox)."""
+    n = len(contorno)
+    cima, baixo = [], []
+    for x, y in contorno:
+        cima.append(bm.verts.new(V(*(matriz @ Vector((x, y, espessura / 2))))))
+        baixo.append(bm.verts.new(V(*(matriz @ Vector((x, y, -espessura / 2))))))
+    cc = bm.verts.new(V(*(matriz @ Vector((sum(p[0] for p in contorno) / n, sum(p[1] for p in contorno) / n, espessura / 2)))))
+    cb = bm.verts.new(V(*(matriz @ Vector((sum(p[0] for p in contorno) / n, sum(p[1] for p in contorno) / n, -espessura / 2)))))
+    for i in range(n):
+        j = (i + 1) % n
+        bm.faces.new((cima[i], cima[j], cc))
+        bm.faces.new((baixo[j], baixo[i], cb))
+        bm.faces.new((cima[j], cima[i], baixo[i], baixo[j]))
+
+
+def caixa(bm, centro, tam, matriz=Matrix.Identity(4)):
+    t = bmesh.ops.create_cube(bm, size=1.0)
+    for v in t["verts"]:
+        p = Vector((v.co.x * tam[0], v.co.y * tam[1], v.co.z * tam[2])) + Vector(centro)
+        v.co = V(*(matriz @ p))
+
+
+def arco_pts(raio, a0, a1, n, y=0.0, onda=0.0):
+    return [(math.cos(a0 + (a1 - a0) * i / (n - 1)) * raio, y + onda * math.sin(math.pi * i / (n - 1)), math.sin(a0 + (a1 - a0) * i / (n - 1)) * raio) for i in range(n)]
+
+
+def estrela(pontas, r_ext, r_int, irregular=0.0, rng=None):
+    rng = rng or random.Random(0)
+    pts = []
+    for i in range(pontas * 2):
+        a = math.pi / 2 + math.pi * i / pontas
+        r = (r_ext * rng.uniform(1 - irregular, 1 + irregular)) if i % 2 == 0 else r_int
+        pts.append((math.cos(a) * r, math.sin(a) * r))
+    return pts
+
+
+def rot(rx=0, ry=0, rz=0):
+    """Euler em graus, ordem Roblox (X, Y, Z) aplicada em coordenadas Roblox."""
+    return (Matrix.Rotation(math.radians(rx), 4, "X") @ Matrix.Rotation(math.radians(ry), 4, "Y") @ Matrix.Rotation(math.radians(rz), 4, "Z"))
+
+
+# ---------------------------------------------------------------- peças por aura
+
+PECAS = {}  # (aura, nome) -> função(bm, rng)
+
+
+def peca(aura, nome):
+    def reg(fn):
+        PECAS[(aura, nome)] = fn
+        return fn
+
+    return reg
+
+
+# 01 Centelha do Nexo — losango dourado, lascas, halo interrompido
+@peca("centelha_do_nexo", "nucleo")
+def _(bm, rng):
+    bipiramide(bm, (0, 0, 0), (0, 1, 0), 0.62, 0.48, 0.34, lados=4, rng=random.Random(1))
+    bipiramide(bm, (0, 0, 0), (0, 1, 0), 0.32, 0.25, 0.42, lados=4, torcer=math.pi / 4, rng=random.Random(2), achatar=0.4)
+
+
+@peca("centelha_do_nexo", "lasca")
+def _(bm, rng):
+    bipiramide(bm, (0, 0, 0), (0.15, 1, 0.05), 0.55, 0.22, 0.12, lados=5, rng=rng, achatar=0.6)
+
+
+@peca("centelha_do_nexo", "halo")
+def _(bm, rng):
+    for a0, a1, r in ((0.2, 1.7, 2.3), (2.1, 3.3, 2.35), (3.8, 5.6, 2.28)):
+        n = max(6, int((a1 - a0) * 9))
+        tubo(bm, arco_pts(r, a0, a1, n, onda=0.08), [0.025 + 0.055 * math.sin(math.pi * i / (n - 1)) for i in range(n)], lados=6, achatar=0.5)
+
+
+# 06 Gelo de Néon — quatro prismas laterais e uma lasca alta atrás da cabeça
+@peca("gelo_de_neon", "prisma")
+def _(bm, rng):
+    prisma_ponta(bm, (0, 0, 0), (0, 1, 0), 0.9, 0.2, 0.45, rng=rng)
+    bipiramide(bm, (0.17, -0.25, 0.05), (0.5, 1, 0.1), 0.35, 0.1, 0.07, lados=5, rng=rng)
+
+
+@peca("gelo_de_neon", "lasca_alta")
+def _(bm, rng):
+    prisma_ponta(bm, (0, 0, 0), (0, 1, 0), 1.9, 0.22, 0.75, rng=rng)
+    for k, (dx, dy, s) in enumerate(((0.3, -0.5, 0.6), (-0.28, -0.2, 0.5), (0.22, 0.4, 0.4))):
+        bipiramide(bm, (dx, dy, 0.05), (dx * 1.6, 1, 0.1), 0.5 * s + 0.2, 0.12, 0.09, lados=5, rng=random.Random(k))
+
+
+@peca("gelo_de_neon", "estrela")
+def _(bm, rng):
+    placa(bm, estrela(6, 1.0, 0.32, 0.08, rng), 0.08)
+
+
+# 17 Prisma Partilhado — seis cunhas de cristal em volta de um centro vazio
+@peca("prisma_partilhado", "cunha")
+def _(bm, rng):
+    placa(bm, [(-0.28, -0.5), (0.28, -0.5), (0.12, 0.5), (-0.05, 0.62)], 0.22)
+
+
+@peca("prisma_partilhado", "raio")
+def _(bm, rng):
+    bipiramide(bm, (0, 1.6, 0), (0, 1, 0), 1.6, 1.6, 0.07, lados=4, rng=random.Random(3))
+
+
+# 30 Arquivista Espectral — pergaminhos vivos e mãos caligráficas
+@peca("arquivista_espectral", "pergaminho")
+def _(bm, rng):
+    tubo(bm, [(-0.65, 0.55, 0), (0.65, 0.55, 0)], 0.13, lados=10)
+    folha = []
+    for i in range(9):
+        t = i / 8
+        folha.append((0, 0.5 - t * 1.35, 0.12 * math.sin(t * math.pi * 1.5)))
+    # folha pendurada: faixa ondulada
+    esquerda = [bm.verts.new(V(-0.58, y, z)) for _, y, z in folha]
+    direita = [bm.verts.new(V(0.58, y, z + 0.02)) for _, y, z in folha]
+    esq_v = [bm.verts.new(V(-0.58, y, z + 0.025)) for _, y, z in folha]  # verso (dupla face real)
+    dir_v = [bm.verts.new(V(0.58, y, z + 0.045)) for _, y, z in folha]
+    for i in range(len(folha) - 1):
+        bm.faces.new((esquerda[i], direita[i], direita[i + 1], esquerda[i + 1]))
+        bm.faces.new((esq_v[i + 1], dir_v[i + 1], dir_v[i], esq_v[i]))
+    for k in range(3):  # linhas de "texto" que se escrevem sozinhas
+        y = 0.25 - k * 0.32
+        caixa(bm, (0.0 - 0.1 * (k % 2), y, 0.12 * math.sin((0.5 - y) / 1.35 * math.pi * 1.5) - 0.025), (0.8 - 0.2 * k, 0.04, 0.02))
+
+
+@peca("arquivista_espectral", "mao")
+def _(bm, rng):
+    caixa(bm, (0, 0, 0), (0.5, 0.55, 0.16))
+    for k, (x, comp, curva) in enumerate(((-0.18, 0.55, 0.2), (-0.06, 0.65, 0.15), (0.06, 0.62, 0.12), (0.18, 0.5, 0.18))):
+        pts = [(x, 0.27 + comp * t, -curva * t * t) for t in (0, 0.33, 0.66, 1.0)]
+        tubo(bm, pts, [0.055, 0.05, 0.045, 0.03], lados=6)
+    tubo(bm, [(0.25, 0.0, 0), (0.42, 0.18, -0.08), (0.5, 0.36, -0.15)], [0.06, 0.05, 0.035], lados=6)
+    # pena de caligrafia presa entre os dedos
+    tubo(bm, [(-0.05, 0.1, -0.15), (0.1, 0.9, -0.35), (0.2, 1.35, -0.45)], [0.02, 0.035, 0.005], lados=5)
+
+
+@peca("arquivista_espectral", "pagina")
+def _(bm, rng):
+    placa(bm, [(-0.35, -0.45), (0.35, -0.45), (0.35, 0.45), (-0.35, 0.45)], 0.02)
+
+
+# 50 Coração de Fênix — costelas douradas, asas de penas triangulares, núcleo
+@peca("coracao_de_fenix", "costelas")
+def _(bm, rng):
+    tubo(bm, [(0, -0.9, 0), (0, 0, 0.12), (0, 0.9, 0.05), (0, 1.3, -0.1)], [0.05, 0.08, 0.07, 0.04], lados=6)
+    for k in range(5):
+        y = 0.75 - k * 0.36
+        larg = 0.75 - abs(k - 1.5) * 0.12
+        for s in (-1, 1):
+            pts = [(0, y, 0.1), (s * larg * 0.6, y - 0.05, 0.0), (s * larg, y - 0.15, -0.3), (s * larg * 0.8, y - 0.25, -0.55)]
+            tubo(bm, pts, [0.045, 0.04, 0.03, 0.012], lados=5)
+
+
+def asa(bm, lado, rng):
+    for k in range(8):
+        a = math.radians(-15 + k * 13)
+        comp = 1.1 + 0.9 * math.sin(math.pi * (k + 1) / 9) + rng.uniform(-0.1, 0.1)
+        larg = 0.22 + 0.06 * (k % 2)
+        m = Matrix.Translation(Vector((lado * 0.15 * k, 0.05 * k, 0.04 * k))) @ rot(0, 0, lado * (math.degrees(a) - 90)) @ rot(lado * 8, 0, 0)
+        placa(bm, [(-larg * 0.3, 0), (larg, comp * 0.35), (0, comp), (-larg, comp * 0.4)], 0.05, m)
+    tubo(bm, [(0, 0, 0), (lado * 0.55, 0.3, 0.05), (lado * 1.15, 0.45, 0.15)], [0.07, 0.06, 0.03], lados=6)
+
+
+@peca("coracao_de_fenix", "asa_esq")
+def _(bm, rng):
+    asa(bm, -1, rng)
+
+
+@peca("coracao_de_fenix", "asa_dir")
+def _(bm, rng):
+    asa(bm, 1, rng)
+
+
+@peca("coracao_de_fenix", "nucleo")
+def _(bm, rng):
+    bipiramide(bm, (0, 0, 0), (0, 1, 0), 0.32, 0.4, 0.26, lados=7, rng=rng)
+
+
+# 61 Leviatã Astral — baleia cósmica translúcida
+@peca("leviata_astral", "baleia")
+def _(bm, rng):
+    n = 16
+    pts, raios = [], []
+    for i in range(n):
+        t = i / (n - 1)
+        pts.append((0, 0.25 * math.sin(t * math.pi) - 0.15 * t * t, -3.0 + 6.0 * t))  # cabeça na frente (-Z)
+        raios.append(0.08 + 0.75 * math.sin(math.pi * min(t * 1.25, 1.0)) ** 0.7 * (1 - 0.85 * t ** 2))
+    tubo(bm, pts, raios, lados=12, achatar=0.8)
+    for s in (-1, 1):  # nadadeiras peitorais enormes
+        placa(bm, [(0, 0), (1.9, -0.5), (2.3, -0.9), (0.6, -0.55)], 0.08, Matrix.Translation(Vector((s * 0.55, -0.2, -1.4))) @ rot(90, 0, 0) @ rot(0, 0, 0) @ Matrix.Scale(-1 if s < 0 else 1, 4, Vector((1, 0, 0))))
+    for s in (-1, 1):  # cauda
+        placa(bm, [(0, 0), (1.2, 0.35), (1.35, -0.1), (0.4, -0.2)], 0.06, Matrix.Translation(Vector((0, -0.2, 3.0))) @ rot(90, 0, 0) @ Matrix.Scale(-1 if s < 0 else 1, 4, Vector((1, 0, 0))))
+    placa(bm, [(0, 0), (0.15, 0.55), (0.6, 0.05)], 0.05, Matrix.Translation(Vector((0, 0.55, 0.3))) @ rot(0, 90, 0))  # dorsal
+
+
+@peca("leviata_astral", "estrela")
+def _(bm, rng):
+    placa(bm, estrela(4, 0.3, 0.07), 0.05)
+
+
+# 67 Soberania do Vazio — coroa branca, monólitos negros, estrela de vazio
+@peca("soberania_do_vazio", "coroa")
+def _(bm, rng):
+    n = 28
+    tubo(bm, arco_pts(0.75, 0, 2 * math.pi, n), 0.05, lados=6, fechar=False)
+    for k in range(7):
+        a = 2 * math.pi * k / 7
+        alto = 0.75 if k % 2 == 0 else 0.45
+        m = Matrix.Translation(Vector((math.cos(a) * 0.75, 0.0, math.sin(a) * 0.75))) @ rot(0, -math.degrees(a) + 90, 0)
+        placa(bm, [(-0.14, 0), (0.14, 0), (0.03, alto * 0.6), (0, alto), (-0.03, alto * 0.6)], 0.05, m)
+
+
+@peca("soberania_do_vazio", "monolito")
+def _(bm, rng):
+    placa(bm, [(-0.22, -1.0), (0.2, -1.0), (0.24, 0.75), (0.0, 1.05), (-0.24, 0.8)], 0.26)
+
+
+@peca("soberania_do_vazio", "estrela_vazio")
+def _(bm, rng):
+    placa(bm, estrela(8, 1.5, 0.45, 0.15, random.Random(9)), 0.06)
+
+
+@peca("soberania_do_vazio", "estrela_borda")
+def _(bm, rng):
+    pts = estrela(8, 1.58, 0.5, 0.15, random.Random(9))
+    pts3 = [(x, y, 0) for x, y in pts] + [(pts[0][0], pts[0][1], 0)]
+    tubo(bm, [(x, y, z) for x, y, z in pts3], 0.035, lados=5, fechar=False)
+
+
+# ---------------------------------------------------------------- comportamento (vai para o Luau)
+# modo: "ancora" (pos local), "orbita" (rx, rz, altura, ang, vel), "pendulo" (arco atrás: centro, abertura)
+# rot = graus (X, Y, Z); giro = graus/s; osc = {eixo, amplitude graus, freq}; correr = pos local correndo;
+# abrir = deslocamento no pico/manifestação; abrirGiro = graus no pico; apontar = pontas para o movimento.
+
+AURAS = {
+    "centelha_do_nexo": {
+        "cores": ("FFE6A0", "8F71FF"),
+        "pecas": [
+            dict(template="nucleo", modo="ancora", pos=(0, 3.1, 0.25), giro=(0, 45, 0), bob=0.15, cor=0, material="Neon", rigidez=40, atraso=0.5, pulso=0.06),
+            dict(template="halo", modo="ancora", pos=(0, -0.45, 0), rot=(6, 0, -4), giro=(0, 14, 0), cor=1, material="Neon", rigidez=60, atraso=0.4, transp=0.15),
+            dict(template="lasca", modo="orbita", rx=2.1, rz=1.9, altura=0.9, ang=0.4, vel=0.9, inclinacao=0.25, cor=0, material="Neon", rigidez=36, atraso=0.7, correr=(0, 0.9, 2.0)),
+            dict(template="lasca", modo="orbita", rx=2.4, rz=2.1, altura=-0.1, ang=2.5, vel=-0.6, inclinacao=0.3, cor=0, material="Neon", rigidez=30, atraso=0.8, correr=(0.55, 0.55, 2.8), escala=0.85),
+            dict(template="lasca", modo="orbita", rx=1.8, rz=1.7, altura=1.7, ang=4.4, vel=1.3, inclinacao=0.2, cor=0, material="Neon", rigidez=44, atraso=0.6, correr=(-0.55, 0.55, 2.8), escala=0.75, detalhe=True),
+        ],
+        "especial": dict(template="lasca", n=6, origem=(0, 3.1, 0.25), raio=1.6, escala=0.6, cor=0, material="Neon"),
+    },
+    "gelo_de_neon": {
+        "cores": ("77F7FF", "1758D9"),
+        "pecas": [
+            dict(template="lasca_alta", modo="ancora", pos=(0, 2.4, 1.0), rot=(-14, 0, 4), cor=0, material="Glass", transp=0.15, rigidez=34, atraso=0.6, osc=(2, 3, 0.35)),
+            dict(template="prisma", modo="ancora", pos=(-2.0, 1.0, 0.2), rot=(0, 0, 22), cor=0, material="Glass", transp=0.1, rigidez=40, atraso=0.55, apontar=True, osc=(0, 4, 0.5), bob=0.12),
+            dict(template="prisma", modo="ancora", pos=(2.0, 0.85, 0.25), rot=(0, 30, -20), cor=0, material="Glass", transp=0.1, rigidez=42, atraso=0.55, apontar=True, osc=(0, 4, 0.45), bob=0.12),
+            dict(template="prisma", modo="ancora", pos=(-1.7, -0.7, 0.5), rot=(0, 60, 30), cor=1, material="Neon", rigidez=36, atraso=0.65, apontar=True, osc=(2, 5, 0.55), bob=0.1, escala=0.8, detalhe=True),
+            dict(template="prisma", modo="ancora", pos=(1.75, -0.6, 0.45), rot=(0, -40, -28), cor=1, material="Neon", rigidez=38, atraso=0.65, apontar=True, osc=(2, 5, 0.6), bob=0.1, escala=0.8, detalhe=True),
+        ],
+        "especial": dict(template="estrela", n=1, origem=(0, 0.9, 1.3), raio=0, escala=2.2, cor=0, material="Neon", girar=180),
+    },
+    "prisma_partilhado": {
+        "cores": ("C4B6FF", "FBE09A"),
+        "pecas": [
+            dict(template="cunha", modo="orbita", rx=2.4, rz=2.2, altura=0.2 + 0.45 * (k % 2) + 0.15 * k, ang=k * math.pi / 3, vel=0.5, inclinacao=0.35 * (1 if k % 2 else -1), cor=k % 2, material="Glass", transp=0.2, rigidez=40, atraso=0.6, correr=(math.cos(k * math.pi / 3) * 0.9, 0.7 + math.sin(k * math.pi / 3) * 0.9, 1.6), detalhe=k >= 5)
+            for k in range(6)
+        ],
+        "especial": dict(template="raio", n=6, origem=(0, 0.6, -0.3), raio=0.2, escala=1.0, cor=1, material="Neon", arco_iris=True),
+    },
+    "arquivista_espectral": {
+        "cores": ("A1F4E7", "6359B1"),
+        "pecas": [
+            dict(template="pergaminho", modo="ancora", pos=(-1.9, 1.1, 0.7), rot=(0, 35, 8), cor=0, material="Neon", transp=0.25, rigidez=30, atraso=0.7, osc=(0, 6, 0.3), bob=0.18, correr=(-1.3, 1.3, 1.5), correrRot=(0, 70, 25)),
+            dict(template="pergaminho", modo="ancora", pos=(1.9, 0.9, 0.7), rot=(0, -35, -8), cor=0, material="Neon", transp=0.25, rigidez=32, atraso=0.7, osc=(0, 6, 0.35), bob=0.18, correr=(1.3, 1.3, 1.5), correrRot=(0, -70, -25)),
+            dict(template="pergaminho", modo="ancora", pos=(0, 2.6, 1.3), rot=(-20, 0, 0), cor=1, material="Neon", transp=0.2, rigidez=26, atraso=0.8, osc=(0, 4, 0.25), bob=0.12, escala=1.15, detalhe=True),
+            dict(template="mao", modo="ancora", pos=(-1.5, 0.1, -0.5), rot=(-30, 20, 10), cor=0, material="ForceField", rigidez=24, atraso=0.8, osc=(0, 12, 0.6), bob=0.15),
+            dict(template="mao", modo="ancora", pos=(1.5, 0.3, -0.4), rot=(-30, -20, -10), cor=0, material="ForceField", rigidez=24, atraso=0.8, osc=(0, 12, 0.55), bob=0.15, espelhar=True),
+        ],
+        "especial": dict(template="pagina", n=10, origem=(0, 1.2, 1.2), raio=2.6, escala=1.0, cor=0, material="Neon", arco=True),
+    },
+    "coracao_de_fenix": {
+        "cores": ("FFD46A", "E74747"),
+        "pecas": [
+            dict(template="costelas", modo="ancora", pos=(0, 0.6, 1.0), rot=(0, 180, 0), cor=0, material="Neon", rigidez=60, atraso=0.35, pulso=0.03),
+            dict(template="nucleo", modo="ancora", pos=(0, 0.75, 0.9), cor=1, material="Neon", rigidez=60, atraso=0.35, pulso=0.15, giro=(0, 30, 0)),
+            dict(template="asa_esq", modo="ancora", pos=(-0.5, 1.1, 1.1), rot=(10, 30, 0), cor=1, material="Neon", rigidez=40, atraso=0.5, osc=(2, 9, 0.45), correrRot=(10, 75, 25), abrirGiro=(0, -40, -35)),
+            dict(template="asa_dir", modo="ancora", pos=(0.5, 1.1, 1.1), rot=(10, -30, 0), cor=1, material="Neon", rigidez=40, atraso=0.5, osc=(2, -9, 0.45), correrRot=(10, -75, -25), abrirGiro=(0, 40, 35)),
+        ],
+        "especial": dict(template="nucleo", n=8, origem=(0, 0.75, 0.9), raio=2.2, escala=0.45, cor=0, material="Neon"),
+    },
+    "leviata_astral": {
+        "cores": ("7CB4F4", "A274E7"),
+        "pecas": [
+            dict(template="baleia", modo="pendulo", raio=4.2, altura=3.0, abertura=1.15, vel=0.28, cor=1, material="ForceField", rigidez=10, atraso=2.0, escala=1.0, abrir=(0, 3.0, -2.0)),
+            dict(template="estrela", modo="orbita", rx=2.0, rz=1.8, altura=2.2, ang=0.0, vel=0.7, inclinacao=0.4, cor=0, material="Neon", rigidez=40, atraso=0.6, giro=(0, 0, 90), detalhe=True),
+            dict(template="estrela", modo="orbita", rx=2.6, rz=2.3, altura=0.4, ang=3.0, vel=-0.5, inclinacao=0.3, cor=0, material="Neon", rigidez=40, atraso=0.6, giro=(0, 0, -70), escala=0.7, detalhe=True),
+        ],
+        "especial": dict(template="estrela", n=8, origem=(0, 3.5, 0.5), raio=2.5, escala=0.8, cor=0, material="Neon"),
+    },
+    "soberania_do_vazio": {
+        "cores": ("F4F3FF", "160B26"),
+        "pecas": [
+            dict(template="coroa", modo="ancora", pos=(0, 3.0, 0), rot=(4, 0, 0), giro=(0, 12, 0), cor=0, material="Neon", rigidez=50, atraso=0.4, bob=0.08, abrirEscala=0.6),
+            dict(template="estrela_vazio", modo="ancora", pos=(0, 1.2, 1.8), giro=(0, 0, 8), cor=1, material="SmoothPlastic", rigidez=30, atraso=0.6, abrirEscala=0.5),
+            dict(template="estrela_borda", modo="ancora", pos=(0, 1.2, 1.76), giro=(0, 0, 8), cor=0, material="Neon", rigidez=30, atraso=0.6, abrirEscala=0.5, detalhe=True),
+        ]
+        + [
+            dict(template="monolito", modo="orbita", rx=3.1, rz=2.8, altura=0.6 + 0.5 * math.sin(k * 2.1), ang=k * math.pi / 3 + 0.3, vel=0.22, inclinacao=0.15, cor=1, material="SmoothPlastic", rigidez=34, atraso=0.7, correr=(0, 1.0, 1.5 + 0.6 * k), correrRot=(90, 0, 0), escala=0.85 + 0.1 * (k % 3), detalhe=k >= 4, abrir=(0, 0.8, 0))
+            for k in range(6)
+        ],
+        "especial": dict(template="monolito", n=6, origem=(0, 1.0, 0), raio=6.0, escala=1.2, cor=1, material="SmoothPlastic"),
+    },
+}
+
+
+# ---------------------------------------------------------------- saída
+
+
+def lua(x):
+    if isinstance(x, bool):
+        return "true" if x else "false"
+    if isinstance(x, (int, float)):
+        return ("%.4f" % x).rstrip("0").rstrip(".") if abs(x) > 5e-5 else "0"
+    if isinstance(x, str):
+        return '"%s"' % x
+    if isinstance(x, (tuple, list)):
+        return "{ " + ", ".join(lua(v) for v in x) + " }"
+    if isinstance(x, dict):
+        return "{ " + ", ".join("%s = %s" % (k, lua(v)) for k, v in sorted(x.items())) + " }"
+    raise TypeError(x)
+
+
+def escrever_luau(info):
+    linhas = [
+        "-- GERADO por assets/auras/originais/source/generate_originais.py — edite lá e rode de novo.",
+        "-- Lote inicial das auras originais v2: tamanho/centro das malhas (eixos Roblox) e comportamento.",
+        "-- Vetores como tabelas { x, y, z }; graus para rotações. cor = índice em cores (0 = principal).",
+        "return {",
+    ]
+    for aura, cfg in AURAS.items():
+        tpl = {nome: {"tamanho": d["tamanho"], "centro": d["centro"]} for (a, nome), d in info.items() if a == aura}
+        linhas.append("\t%s = {" % aura)
+        linhas.append("\t\tcores = %s," % lua(list(cfg["cores"])))
+        linhas.append("\t\ttemplates = {")
+        for nome, d in tpl.items():
+            linhas.append("\t\t\t%s = %s," % (nome, lua(d)))
+        linhas.append("\t\t},")
+        linhas.append("\t\tpecas = {")
+        for p in cfg["pecas"]:
+            linhas.append("\t\t\t%s," % lua(p))
+        linhas.append("\t\t},")
+        linhas.append("\t\tespecial = %s," % lua(cfg["especial"]))
+        linhas.append("\t},")
+    linhas += ["}", ""]
+    os.makedirs(DIR_LUAU, exist_ok=True)
+    with open(os.path.join(DIR_LUAU, "Definicoes.luau"), "w", encoding="utf-8") as f:
+        f.write("\n".join(linhas))
+
+
+def gerar():
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    objs, info = {}, {}
+    for (aura, nome), fn in PECAS.items():
+        for pasta in ("exports", "previews"):
+            os.makedirs(os.path.join(DIR_BASE, aura, pasta), exist_ok=True)
+        bm = bmesh.new()
+        fn(bm, random.Random(hash((aura, nome)) % 10007 if False else len(aura) * 31 + len(nome)))
+        bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
+        bmesh.ops.triangulate(bm, faces=bm.faces)
+        bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+        me = bpy.data.meshes.new(aura + "_" + nome)
+        bm.to_mesh(me)
+        bm.free()
+        for p in me.polygons:
+            p.use_smooth = False
+        obj = bpy.data.objects.new(nome, me)
+        bpy.context.scene.collection.objects.link(obj)
+        objs[(aura, nome)] = obj
+        xs = [v.co for v in me.vertices]
+        lo = Vector((min(v.x for v in xs), min(v.y for v in xs), min(v.z for v in xs)))
+        hi = Vector((max(v.x for v in xs), max(v.y for v in xs), max(v.z for v in xs)))
+        t, c = hi - lo, (hi + lo) / 2
+        info[(aura, nome)] = {"tamanho": (round(t.x, 4), round(t.z, 4), round(t.y, 4)), "centro": (round(c.x, 4), round(c.z, 4), round(-c.y, 4)), "triangulos": len(me.polygons)}
+        print("%-22s %-14s %5d tri" % (aura, nome, len(me.polygons)))
+    escrever_luau(info)
+    for aura, cfg in AURAS.items():
+        dados = {
+            "auraId": aura,
+            "runtimeTemplate": "ReplicatedStorage/AurasOriginais/" + aura,
+            "templateFile": "assets/roblox/auras_originais/%s.rbxm" % aura,
+            "status": "AWAITING_STUDIO_IMPORT",
+            "creatorId": None,
+            "revision": 1,
+            "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+            "pieces": [
+                {"name": nome, "triangles": d["triangulos"], "sizeStuds": d["tamanho"], "centerFromPivot": d["centro"], "meshId": None}
+                for (a, nome), d in info.items()
+                if a == aura
+            ],
+            "instancesInScene": len(cfg["pecas"]),
+        }
+        with open(os.path.join(DIR_BASE, aura, "manifest.json"), "w", encoding="utf-8") as f:
+            json.dump(dados, f, ensure_ascii=False, indent=2)
+            f.write("\n")
+    for (aura, nome), obj in objs.items():
+        bpy.ops.object.select_all(action="DESELECT")
+        obj.select_set(True)
+        bpy.context.view_layer.objects.active = obj
+        bpy.ops.export_scene.fbx(filepath=os.path.join(DIR_BASE, aura, "exports", nome + ".fbx"), use_selection=True, axis_forward="-Z", axis_up="Y", apply_scale_options="FBX_SCALE_UNITS", mesh_smooth_type="FACE")
+    return objs
+
+
+# ---------------------------------------------------------------- prévias
+
+
+def hexcor(h):
+    return tuple((int(h[i : i + 2], 16) / 255) ** 2.2 for i in (0, 2, 4))
+
+
+def material(cor, tipo, transp=0.0):
+    m = bpy.data.materials.new("m")
+    m.use_nodes = True
+    b = m.node_tree.nodes["Principled BSDF"]
+    b.inputs["Base Color"].default_value = (*cor, 1)
+    if tipo == "Neon":
+        b.inputs["Emission Color"].default_value = (*cor, 1)
+        b.inputs["Emission Strength"].default_value = 4.0
+    elif tipo in ("Glass", "ForceField"):
+        b.inputs["Transmission Weight"].default_value = 0.85
+        b.inputs["Roughness"].default_value = 0.08
+        b.inputs["Emission Color"].default_value = (*cor, 1)
+        b.inputs["Emission Strength"].default_value = 0.8 if tipo == "Glass" else 1.6
+        b.inputs["Alpha"].default_value = 0.75 if tipo == "ForceField" else 1.0
+    else:
+        b.inputs["Roughness"].default_value = 0.35
+        b.inputs["Specular IOR Level"].default_value = 1.0
+        b.inputs["Coat Weight"].default_value = 1.0
+    return m
+
+
+def rb_cf(pos, graus):
+    return Matrix.Translation(V(pos[0], pos[1] + 3.0, pos[2])) @ conv_rot(graus)
+
+
+def conv_rot(graus):
+    # rotação Roblox (X, Y, Z em graus) expressa no Blender
+    r = rot(*graus).to_3x3()
+    p = Matrix(((1, 0, 0), (0, 0, -1), (0, 1, 0)))  # Roblox -> Blender
+    return (p @ r @ p.inverted()).to_4x4()
+
+
+def pose(cfg, t):
+    """Posição/rotação de cada peça no idle (aproximação do Motor.luau, sem molas)."""
+    saida = []
+    for p in cfg["pecas"]:
+        g = [p.get("rot", (0, 0, 0))[i] + p.get("giro", (0, 0, 0))[i] * t for i in range(3)]
+        if "osc" in p:
+            e, amp, fr = p["osc"]
+            g[e] += amp * math.sin(t * fr * 6.28)
+        if p["modo"] == "ancora":
+            pos = p["pos"]
+        elif p["modo"] == "orbita":
+            a = p["ang"] + p["vel"] * t
+            pos = (math.cos(a) * p["rx"], p["altura"] + p["inclinacao"] * math.sin(a + 0.8), math.sin(a) * p["rz"])
+            g[1] += -math.degrees(a) - (90 if p["vel"] > 0 else -90)
+        else:
+            a = math.pi / 2 + p["abertura"] * math.sin(t * p["vel"])
+            pos = (math.cos(a) * p["raio"], p["altura"], math.sin(a) * p["raio"])
+            g[1] += -math.degrees(a) + (180 if math.cos(t * p["vel"]) > 0 else 0)
+        saida.append((p, pos, g))
+    return saida
+
+
+def renderizar(objs):
+    cena = bpy.context.scene
+    cena.render.engine = "CYCLES"
+    cena.cycles.samples = 32
+    cena.cycles.device = "CPU"
+    cena.view_settings.view_transform = "AgX"
+    cena.view_settings.look = "AgX - Punchy"
+    mundo = bpy.data.worlds.new("w")
+    mundo.use_nodes = True
+    mundo.node_tree.nodes["Background"].inputs["Color"].default_value = (0.03, 0.04, 0.1, 1)
+    cena.world = mundo
+    for o in objs.values():
+        o.hide_render = True
+    fixa = bpy.data.collections.new("dummy")
+    cena.collection.children.link(fixa)
+    av = material((0.09, 0.09, 0.11), "x")
+    for c, t in (((-0.5, 0, 1), (0.9, 0.9, 2)), ((0.5, 0, 1), (0.9, 0.9, 2)), ((0, 0, 3), (2, 1, 2)), ((-1.5, 0, 3), (0.95, 0.95, 2)), ((1.5, 0, 3), (0.95, 0.95, 2)), ((0, 0, 4.6), (1.2, 1.2, 1.2))):
+        bm = bmesh.new()
+        bmesh.ops.create_cube(bm, size=1.0)
+        for v in bm.verts:
+            v.co = Vector((v.co.x * t[0] + c[0], v.co.y * t[1] + c[1], v.co.z * t[2] + c[2]))
+        me = bpy.data.meshes.new("d")
+        bm.to_mesh(me)
+        o = bpy.data.objects.new("d", me)
+        me.materials.append(av)
+        fixa.objects.link(o)
+    bm = bmesh.new()
+    bmesh.ops.create_grid(bm, x_segments=1, y_segments=1, size=150)
+    me = bpy.data.meshes.new("chao")
+    bm.to_mesh(me)
+    chao = bpy.data.objects.new("chao", me)
+    me.materials.append(material((0.02, 0.025, 0.06), "x"))
+    fixa.objects.link(chao)
+    for nome, e, pos in (("k", 700, (6, 8, 9)), ("r", 600, (-7, -6, 7))):
+        l = bpy.data.lights.new(nome, "AREA")
+        l.energy, l.size = e, 6
+        ol = bpy.data.objects.new(nome, l)
+        ol.location = pos
+        ol.rotation_euler = (Vector((0, 0, 3)) - ol.location).to_track_quat("-Z", "Y").to_euler()
+        fixa.objects.link(ol)
+    cam = bpy.data.cameras.new("c")
+    cam.lens = 40
+    oc = bpy.data.objects.new("c", cam)
+    fixa.objects.link(oc)
+    cena.camera = oc
+    for aura, cfg in AURAS.items():
+        col = bpy.data.collections.new(aura)
+        cena.collection.children.link(col)
+        cores = [hexcor(c) for c in cfg["cores"]]
+        for p, pos, g in pose(cfg, 2.0):
+            fonte = objs[(aura, p["template"])]
+            o = bpy.data.objects.new("i", fonte.data.copy())
+            o.data.materials.append(material(cores[p["cor"]], p["material"]))
+            esc = p.get("escala", 1.0)
+            o.matrix_world = rb_cf(pos, g) @ Matrix.Scale(esc, 4) @ (Matrix.Scale(-1, 4, Vector((1, 0, 0))) if p.get("espelhar") else Matrix.Identity(4))
+            col.objects.link(o)
+        for nome, graus in (("front", 0), ("three_quarter", 35), ("side", 90), ("back", 180)):
+            a = math.radians(graus)
+            cena.render.resolution_x, cena.render.resolution_y = 520, 680
+            oc.location = (math.sin(a) * 13, math.cos(a) * 13, 4.6)
+            oc.rotation_euler = (Vector((0, 0, 3.9)) - oc.location).to_track_quat("-Z", "Y").to_euler()
+            cena.render.filepath = os.path.join(DIR_BASE, aura, "previews", nome + ".png")
+            bpy.ops.render.render(write_still=True)
+        print("prévias", aura)
+        for o in list(col.objects):
+            bpy.data.objects.remove(o)
+        bpy.data.collections.remove(col)
+    folha()
+
+
+def folha():
+    from PIL import Image
+
+    imgs = [Image.open(os.path.join(DIR_BASE, a, "previews", "three_quarter.png")).convert("RGB") for a in AURAS]
+    w, h = imgs[0].size
+    f = Image.new("RGB", (w * len(imgs), h))
+    for i, im in enumerate(imgs):
+        f.paste(im, (i * w, 0))
+    f.save(os.path.join(DIR_BASE, "lote_inicial_three_quarter.png"))
+
+
+if __name__ == "__main__":
+    objetos = gerar()
+    if "--render" in sys.argv:
+        renderizar(objetos)
+    bpy.ops.wm.save_as_mainfile(filepath=os.path.join(DIR_BASE, "source", "originais_lote_inicial.blend"), compress=True)

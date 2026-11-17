@@ -1,0 +1,57 @@
+{
+  "auraId": "gelo_de_neon",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/gelo_de_neon",
+  "templateFile": "assets/roblox/auras_originais/gelo_de_neon.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "prisma",
+      "triangles": 34,
+      "sizeStuds": [
+        0.5243,
+        1.5525,
+        0.3702
+      ],
+      "centerFromPivot": [
+        0.0638,
+        0.1238,
+        0.0065
+      ],
+      "meshId": null
+    },
+    {
+      "name": "lasca_alta",
+      "triangles": 54,
+      "sizeStuds": [
+        0.9787,
+        2.9875,
+        0.4072
+      ],
+      "centerFromPivot": [
+        0.0261,
+        0.2063,
+        0.0072
+      ],
+      "meshId": null
+    },
+    {
+      "name": "estrela",
+      "triangles": 48,
+      "sizeStuds": [
+        1.831,
+        1.9539,
+        0.08
+      ],
+      "centerFromPivot": [
+        0.0116,
+        -0.0519,
+        -0.0
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 5
+}

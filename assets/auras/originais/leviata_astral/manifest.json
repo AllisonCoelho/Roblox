@@ -1,0 +1,42 @@
+{
+  "auraId": "leviata_astral",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/leviata_astral",
+  "templateFile": "assets/roblox/auras_originais/leviata_astral.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "baleia",
+      "triangles": 460,
+      "sizeStuds": [
+        5.7,
+        1.5661,
+        6.3591
+      ],
+      "centerFromPivot": [
+        0.0,
+        0.317,
+        0.1704
+      ],
+      "meshId": null
+    },
+    {
+      "name": "estrela",
+      "triangles": 32,
+      "sizeStuds": [
+        0.6,
+        0.6,
+        0.05
+      ],
+      "centerFromPivot": [
+        0.0,
+        0.0,
+        -0.0
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 3
+}

@@ -16,4 +16,13 @@ return {
 	naruto_seis = true,
 	-- Monarca das Sombras (Mundo/Auras/Monarca.luau)
 	monarca = true,
+	-- Auras originais v2, lote inicial (Mundo/Auras/Originais): SÓ prévia, fora do sorteio atual.
+	-- Sem ReplicatedStorage.AurasOriginais.<id> (importado no Studio) o cliente não monta nada.
+	centelha_do_nexo = true,
+	gelo_de_neon = true,
+	prisma_partilhado = true,
+	arquivista_espectral = true,
+	coracao_de_fenix = true,
+	leviata_astral = true,
+	soberania_do_vazio = true,
 } :: { [string]: boolean }

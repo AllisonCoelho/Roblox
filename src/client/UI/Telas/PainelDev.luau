@@ -34,6 +34,13 @@ local DESTINOS = {
 local NOMES_VFX = {
 	gear5 = "Gear 5",
 	monarca = "Monarca das Sombras",
+	centelha_do_nexo = "v2 · Centelha do Nexo",
+	gelo_de_neon = "v2 · Gelo de Néon",
+	prisma_partilhado = "v2 · Prisma Partilhado",
+	arquivista_espectral = "v2 · Arquivista Espectral",
+	coracao_de_fenix = "v2 · Coração de Fênix",
+	leviata_astral = "v2 · Leviatã Astral",
+	soberania_do_vazio = "v2 · Soberania do Vazio",
 	naruto_seis = "Modo Sábio dos Seis Caminhos",
 }
 

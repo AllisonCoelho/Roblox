@@ -58,6 +58,9 @@ do
 	igual("v2: probabilidades somam 100%", math.abs(total - 1) < 1e-9, true)
 	igual("v2: lote inicial existe", #V2.LOTE_INICIAL, 7)
 	for _, id in V2.LOTE_INICIAL do
+		igual("v2: prévia de VFX " .. id, req("AurasVfx")[id], true)
+	end
+	for _, id in V2.LOTE_INICIAL do
 		igual("v2: lote " .. id, V2.porId[id] ~= nil, true)
 	end
 end

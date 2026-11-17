@@ -12,6 +12,7 @@ local AurasVfx =
 local Caudas = require(script.Parent.Caudas)
 local Gear5 = require(script.Parent.Gear5)
 local Monarca = require(script.Parent.Monarca)
+local MotorOriginais = require(script.Parent.Originais.Motor)
 
 local Controlador = {}
 
@@ -28,6 +29,10 @@ local MODULOS: { [string]: Modulo } = {
 	gear5 = Gear5,
 	monarca = Monarca,
 }
+-- lote inicial das auras originais v2 (só prévia; templates em ReplicatedStorage.AurasOriginais)
+for _, id in MotorOriginais.IDS do
+	MODULOS[id] = MotorOriginais.modulo(id)
+end
 for _, id in Caudas.ORDEM do
 	MODULOS[id] = Caudas.estagio(id)
 end
