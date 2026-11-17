@@ -67,8 +67,10 @@ local function sincronizar(jogador: Player, personagem: Model)
 	else
 		task.spawn(function()
 			personagem:WaitForChild("HumanoidRootPart", 10)
+			personagem:WaitForChild("Humanoid", 10)
 			if
 				personagem.Parent
+				and jogador.Character == personagem
 				and personagem:GetAttribute("AuraVfx") == "gear5"
 				and permitido(jogador)
 			then
@@ -180,7 +182,8 @@ function Controlador.iniciar()
 			ativos[jogador.Character] = nil
 		end
 	end)
-	-- O Animator aplica as poses primeiro; a presenca soma offsets antes da fisica.
+	-- Retire a pose anterior, deixe o Animator avaliar e então aplique o quadro da Gear 5.
+	RunService.PreAnimation:Connect(PresencaAnime.antesDaAnimacao)
 	RunService.PreSimulation:Connect(PresencaAnime.simular)
 	-- Um unico laço de VFX para auras e efeitos locais de superficie.
 	RunService.PreRender:Connect(function(dt)
