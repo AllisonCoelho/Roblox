@@ -269,6 +269,52 @@ def fazer_espada():
     return montar(p)
 
 
+def fazer_base_duelo():
+    """Parte inferior em pé, com o quadril elevado em 1,35 studs."""
+    rng = random.Random(3112)
+    quadril = QUADRIL + 1.35
+    p = [
+        placa(2.5, 1.5, 0.95, rng, OBSIDIANA, T((0, -0.25, quadril))),
+        placa(2.9, 0.5, 0.5, rng, ACO, T((0, 0.45, quadril + 0.3))),
+        (kit.espinho((0, 0.72, quadril + 0.45), (0, 0.9, quadril - 0.7), 0.85, RUBRO, 1.0), None),
+    ]
+    for lado in (-1, 1):
+        x = lado * 0.89
+        y = lado * 0.32
+        p += membro((x, -0.1, quadril), (x * 1.1, y, 1.84), 1.15, 1.0, rng, OBSIDIANA)
+        p += membro((x * 1.1, y, 1.84), (x * 1.16, y - 0.15, 0.48), 1.2, 1.3, rng, OBSIDIANA)
+        p.append(placa(1.2, 0.75, 0.9, rng, ACO, T((x * 1.1, y + 0.45, 1.84)) @ R(lado * 8, "Z")))
+        p.append(placa(1.45, 2.1, 0.6, rng, OBSIDIANA, T((x * 1.16, y + 0.38, 0.3))))
+        p.append(placa(1.5, 0.5, 0.5, rng, ACO, T((x * 1.16, y + 1.23, 0.3))))
+    return montar(p)
+
+
+def fazer_lamina_duelo():
+    """Espadão desembainhado, com o centro do punho na origem e a lâmina para baixo."""
+    rng = random.Random(3113)
+    return montar([
+        placa(0.36, 0.36, 1.7, rng, RUBRO, T((0, 0, 0.05))),
+        placa(0.58, 0.56, 0.42, rng, OURO, T((0, 0, 0.92))),
+        placa(2.45, 0.55, 0.35, rng, ACO, T((0, 0, -0.77))),
+        placa(0.95, 0.28, 3.9, rng, ACO, T((0, 0, -2.76)), chanfro=0.11),
+        (kit.espinho((0, 0, -4.41), (0, 0, -5.26), 0.49, ACO, 1.0), None),
+        (kit.fita3d([(0, 0.17, -1.0), (0, 0.17, -4.3)], 0.11, (0, 1, 0), RUBRO), None),
+    ])
+
+
+DUEL = [
+    ("base_duelo", fazer_base_duelo),
+    ("lamina_duelo", fazer_lamina_duelo),
+]
+
+
+def escrever_duelo(metal):
+    for nome, montar_peca in DUEL:
+        obj = kit.registrar("soberano_" + nome, montar_peca(), metal)
+        vertices, triangulos = escrever_dados(nome, obj)
+        print("%-16s %6d vértices %6d triângulos" % (nome, vertices, triangulos))
+
+
 # nome, função, material no jogo, junta (ponto em torno do qual gira; None = não gira), pai
 def J(v, lado=1):
     return (lado * v.x, v.y, v.z)
@@ -356,6 +402,9 @@ def main():
         os.makedirs(os.path.join(DIR_BASE, d), exist_ok=True)
     bpy.ops.wm.read_factory_settings(use_empty=True)
     metal = kit.criar_material("Soberano_Metal", rugosidade=0.5, metalico=0.7)
+    escrever_duelo(metal)
+    if "--duelo" in sys.argv:
+        return
     tecido = kit.criar_material("Soberano_Tecido", rugosidade=0.95)
     luz = bpy.data.materials.new("Soberano_Luz")
     luz.use_nodes = True

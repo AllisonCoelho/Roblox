@@ -745,7 +745,7 @@ local function construirArena(pasta: Instance)
 		pasta,
 		(olhar * CFrame.new(0, 26, 19)).Position,
 		"Arena do Trono",
-		"Duelos por turnos — em desenvolvimento",
+		"Duelos por turnos",
 		COR.selo
 	)
 end

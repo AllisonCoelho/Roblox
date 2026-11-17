@@ -16,12 +16,15 @@ local AuraVisual = require(Servicos:WaitForChild("AuraVisual"))
 local PainelDev = require(Servicos:WaitForChild("PainelDev"))
 local Incursoes = require(script.Parent:WaitForChild("Incursoes"):WaitForChild("Servico"))
 
+local Arena = require(script.Parent:WaitForChild("Arena"):WaitForChild("Servico"))
+
 Acoes.iniciar()
 -- Os serviços registram seus ganchos antes de Dados começar a carregar jogadores
 Sorteio.iniciar()
 Ranking.iniciar()
 AuraVisual.iniciar()
 Incursoes.iniciar()
+Arena.iniciar()
 PainelDev.iniciar()
 Dados.iniciar()
 print(string.format("[Servidor] %s v%s", Config.Title, Config.Version))

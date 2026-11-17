@@ -1,8 +1,8 @@
 # Primeiro Soberano — Guardião do Trono Vazio
 
-NPC que ocupa o trono da Arena quando o servidor nasce. **Nesta fase ele só fica sentado, reage a
-quem chega e conversa.** Não há duelo, coroação, título nem recompensa — a fala termina em
-"Duelos por turnos — em desenvolvimento".
+O Primeiro Soberano ocupa o trono quando o servidor nasce e recebe o jogador com uma conversa.
+Ao ser desafiado, levanta, desembainha o espadão e assume seu lugar no ringue. Veja as regras no
+[guia da Arena](../../../docs/despertar/ARENA.md).
 
 ## O que é (e o que não é)
 
@@ -34,8 +34,8 @@ quem chega e conversa.** Não há duelo, coroação, título nem recompensa — 
 - **Alerta:** ao conversar (no máximo a cada 25 s, compartilhado), a mão direita pressiona o braço do
   trono e uma onda de luz corre pelo piso.
 - Movimento reduzido: amplitudes menores, capa parada, sem onda. Qualidade baixa: capa parada, sem onda.
-- Só nomes reservados para depois: `Levantar`, `Desembainhar`, `Desafiar`, `Derrota`,
-  `RetornoPeloPortal`, `Sentar`.
+- **Duelo:** a pose em pé reutiliza o tronco, a armadura e as articulações. A base e a lâmina
+  desembainhada usam duas malhas adicionais. O início e os ataques seguem o relógio do servidor.
 
 ## Arquivos
 
@@ -53,3 +53,5 @@ Regenerar (depois `stylua src`):
 ```bash
 python assets/npcs/primeiro_soberano/source/generate_soberano.py --render
 ```
+
+Para regenerar só as duas malhas do duelo, rode o gerador no Blender com `-- --duelo`.

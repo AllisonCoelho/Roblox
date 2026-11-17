@@ -241,6 +241,9 @@ local function executar(player: Player, nome: any, ...: any): (boolean, string?,
 	if not comando then
 		return false, "Comando desconhecido"
 	end
+	if player:GetAttribute("EmDueloArena") then
+		return false, "Encerre o duelo antes de usar o Painel Dev."
+	end
 	if nome ~= "previa" and ServicoIncursoes.ocupado(player) then
 		return false, "Saia da fila ou aguarde o retorno ao Bastião para usar este comando."
 	end
