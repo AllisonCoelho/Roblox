@@ -26,6 +26,7 @@ local IncursoesUI = require(Telas.Incursoes)
 local Revelacao = require(Telas.Revelacao)
 local Mundo = script.Parent.Parent:WaitForChild("Mundo")
 local Despertar = require(Mundo:WaitForChild("Despertar"))
+local Artefatos = require(Mundo:WaitForChild("Artefatos"))
 local AurasControlador = require(Mundo:WaitForChild("Auras"):WaitForChild("Controlador"))
 local AurasCaudas = require(Mundo:WaitForChild("Auras"):WaitForChild("Caudas"))
 local EfeitosAlheios = require(Mundo:WaitForChild("EfeitosAlheios"))
@@ -243,7 +244,7 @@ function App.iniciar()
 	})
 	Avisos.montar(raiz)
 	Indice.montar(Avisos.toast)
-	Inventario.montar()
+	Inventario.montar(Avisos.toast)
 	Altar.montar(raiz, Avisos.toast)
 	Ajustes.montar(Avisos.toast)
 	PainelDev.iniciar(hud.quadro, {
@@ -273,9 +274,15 @@ function App.iniciar()
 
 	EfeitosAlheios.iniciar()
 	AurasControlador.iniciar()
+	Artefatos.iniciar()
 	Estado.aoMudar(function(estado)
 		hud.atualizar(estado)
 		local c = estado.configuracoes
+		Artefatos.definir(
+			estado.inventario.equipados.artefato,
+			c.qualidadeBaixa == true,
+			c.ocultarEfeitosAlheios == true
+		)
 		EfeitosAlheios.definir(c.ocultarEfeitosAlheios == true)
 		AurasControlador.definir({
 			qualidadeBaixa = c.qualidadeBaixa == true,

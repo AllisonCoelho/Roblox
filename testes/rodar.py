@@ -10,6 +10,7 @@ MODULOS = {
     "LootIncursoes": "src/shared/Dados/LootIncursoes.luau",
     "Receitas": "src/shared/Dados/Receitas.luau",
     "Transcendencia": "src/shared/Dados/Transcendencia.luau",
+    "Artefatos": "src/shared/Dados/Artefatos.luau",
     "Itens": "src/shared/Dados/Itens.luau",
     "Perfil": "src/shared/Dados/Perfil.luau",
     "Auras": "src/shared/Dados/Auras.luau",

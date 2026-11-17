@@ -403,4 +403,42 @@ local rara = "trovao_jovem"
 igual("T1 aumenta raros em exatamente 5%", Auras.probabilidadeReal(rara, 1.05), 1.05 * Auras.probabilidadeReal(rara))
 igual("estoque cheio não consome ingredientes", Receitas.fabricar({ coracao_fenda = 999999, estilhaco_bruto = 8, lasca_estavel = 2, selo_purificacao = 1 }, "coracao_fenda"), false)
 
+local Artefatos = req("Artefatos")
+local pArtefato = Perfil.padrao()
+local invArtefato = pArtefato.inventario
+igual("equipar exige posse", Artefatos.equipar(invArtefato, "emblema_guardiao"), false)
+igual("equipar rejeita ID de material", Artefatos.equipar(invArtefato, "estilhaco_bruto"), false)
+invArtefato.itens = { coracao_fenda = 3, brasa_arauto = 3, selo_purificacao = 2, perola_abissal = 1, veu_ocaso = 1, fragmento_instavel = 6 }
+igual("forja Emblema", Receitas.fabricar(invArtefato.itens, "emblema_guardiao"), true)
+igual("forja Lâmina dos três mundos", Receitas.fabricar(invArtefato.itens, "lamina_nexo"), true)
+igual("equipa Emblema", Artefatos.equipar(invArtefato, "emblema_guardiao"), true)
+igual("Emblema aumenta vida", Artefatos.bonusVida(invArtefato.equipados.artefato), 0.10)
+igual("troca slot pela Lâmina", Artefatos.equipar(invArtefato, "lamina_nexo"), true)
+igual("Lâmina fica no slot único", invArtefato.equipados.artefato, "lamina_nexo")
+igual("Lâmina não aumenta vida", Artefatos.bonusVida(invArtefato.equipados.artefato), 0)
+igual("Lâmina tem visual", Artefatos.visual(invArtefato.equipados.artefato), "lamina_nexo")
+igual("slot válido sobrevive à migração", Itens.normalizarInventario(invArtefato).equipados.artefato, "lamina_nexo")
+igual("desequipar limpa slot", Artefatos.equipar(invArtefato, ""), true)
+igual("slot vazio", invArtefato.equipados.artefato, nil)
+igual("equipamento não afeta sorte", Transcendencia.sorte(pArtefato.transcendencia.nivel), 1)
+
+local pOferta = Perfil.padrao()
+for nivel = 1, 10 do
+	local custo = Transcendencia.custo(nivel - 1)
+	local estoqueOferta = table.clone(custo)
+	local id, qtd = next(custo)
+	estoqueOferta[id] = qtd - 1
+	igual("oferta incompleta é recusada no nível " .. nivel, Transcendencia.oferecer(estoqueOferta, pOferta.transcendencia), false)
+	igual("oferta incompleta mantém o nível " .. nivel, pOferta.transcendencia.nivel, nivel - 1)
+	for item, preco in custo do
+		igual("oferta recusada preserva " .. item .. "/" .. nivel, estoqueOferta[item], if item == id then preco - 1 else preco)
+	end
+	estoqueOferta[id] = qtd
+	igual("oferta completa funciona no nível " .. nivel, Transcendencia.oferecer(estoqueOferta, pOferta.transcendencia), true)
+	igual("consumo exato no nível " .. nivel, next(estoqueOferta), nil)
+	igual("nível concedido " .. nivel, pOferta.transcendencia.nivel, nivel)
+end
+igual("limite de 10 níveis", Transcendencia.custo(10), nil)
+igual("bônus máximo 1,50x", Transcendencia.sorte(10), 1.50)
+
 print(string.format("%d testes, %d falhas", total, falhas))

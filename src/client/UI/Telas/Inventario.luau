@@ -1,4 +1,5 @@
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local Artefatos = require(Shared.Dados.Artefatos)
 local Itens = require(Shared.Dados.Itens)
 local Receitas = require(Shared.Dados.Receitas)
 local Cores = require(Shared.Tema).Orbita
@@ -18,6 +19,15 @@ local anterior: Itens.Estoque = {}
 local lista: Frame
 local filtros: { Kit.BotaoPlaca } = {}
 local ordenar: Kit.BotaoPlaca
+local aviso: (string) -> ()
+local equipado: string? = nil
+local equipando = false
+local posicaoLista = 0
+
+local function proximaPosicao(): number
+	posicaoLista += 1
+	return posicaoLista
+end
 
 local function linha(texto: string, pai: Instance, cor: Color3?)
 	return Kit.texto({
@@ -28,6 +38,7 @@ local function linha(texto: string, pai: Instance, cor: Color3?)
 		TextWrapped = true,
 		AutomaticSize = Enum.AutomaticSize.Y,
 		Size = UDim2.new(1, -12, 0, 0),
+		LayoutOrder = proximaPosicao(),
 		Parent = pai,
 	})
 end
@@ -36,6 +47,7 @@ local function atualizar()
 	if Navegacao.aberto() ~= "Inventario" then
 		return
 	end
+	posicaoLista = 0
 	for _, filho in lista:GetChildren() do
 		if filho:IsA("GuiObject") then
 			filho:Destroy()
@@ -85,15 +97,17 @@ local function atualizar()
 		local cor = Color3.fromHex(tier.cor)
 		local botao = Kit.botaoPlaca({
 			texto = string.format(
-				"%s  %s  ·  %s  ×%d",
+				"%s  %s  ·  %s  ×%d%s",
 				tier.icone,
 				item.nome,
 				tier.nome,
-				anterior[id]
+				anterior[id],
+				if equipado == id then "  ·  Equipado" else ""
 			),
 			tamanho = UDim2.new(1, -12, 0, 52),
 			tamanhoTexto = 16,
 			pai = lista,
+			ordem = proximaPosicao(),
 			aoClicar = function()
 				selecionado = if selecionado == id then nil else id
 				atualizar()
@@ -118,11 +132,36 @@ local function atualizar()
 			if #receitas > 0 then
 				linha("Receitas  ·  " .. table.concat(receitas, " · "), lista, Cores.TextoSuave)
 			end
+			if Artefatos.porId[id] then
+				Kit.botaoPlaca({
+					texto = if equipado == id then "Desequipar artefato" else "Equipar artefato",
+					tamanho = UDim2.fromOffset(180, 44),
+					tamanhoTexto = 16,
+					pai = lista,
+					ordem = proximaPosicao(),
+					tom = "lilas",
+					aoClicar = function()
+						if equipando then
+							return
+						end
+						equipando = true
+						local alvo = if equipado == id then "" else id
+						task.spawn(function()
+							local _, mensagem = Estado.pedir("EquiparArtefato", alvo)
+							equipando = false
+							if mensagem then
+								aviso(mensagem)
+							end
+						end)
+					end,
+				})
+			end
 			Kit.botaoPlaca({
 				texto = if favoritos[id] then "Remover favorito" else "Favoritar",
 				tamanho = UDim2.fromOffset(180, 42),
 				tamanhoTexto = 16,
 				pai = lista,
+				ordem = proximaPosicao(),
 				aoClicar = function()
 					favoritos[id] = not favoritos[id]
 					atualizar()
@@ -136,7 +175,8 @@ function Inventario.abrir()
 	Navegacao.alternar("Inventario")
 end
 
-function Inventario.montar()
+function Inventario.montar(aoAviso: (string) -> ())
+	aviso = aoAviso
 	local painel =
 		Navegacao.criarPainel("Inventario", { titulo = "Inventário", icone = "◇" }, atualizar)
 	local barra: Frame = Kit.novo("Frame", {
@@ -185,11 +225,16 @@ function Inventario.montar()
 		Size = UDim2.new(1, 0, 0, 0),
 		Parent = rolagem,
 	})
-	Kit.novo("UIListLayout", { Padding = UDim.new(0, 6), Parent = lista })
+	Kit.novo(
+		"UIListLayout",
+		{ Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = lista }
+	)
 
 	Estado.aoMudar(function(estado)
 		local novo = estado.inventario.itens
-		local mudou = false
+		local artefato = estado.inventario.equipados.artefato
+		local mudou = artefato ~= equipado
+		equipado = artefato
 		for id, qtd in novo do
 			if qtd ~= anterior[id] then
 				mudou = true

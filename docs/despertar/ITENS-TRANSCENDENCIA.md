@@ -56,3 +56,20 @@ O catálogo das 67 auras originais está em um PR próprio. Sua entrada no sorte
 - Tente confirmar duas vezes, forjar sem ingredientes, oferecer sem Coração e interagir longe do Altar. Confira que as recusas preservam o saldo.
 - Transcenda e confira nível, bônus, Índice e resultado do giro. Pule a apresentação e confira o modo Movimento reduzido. Reconecte em ambiente de teste publicado e confirme o nível e os saldos.
 - Teste conexão instável e encerre a sessão durante uma oferta. Ao retornar, os ingredientes e o resultado devem corresponder à gravação recuperada.
+
+## Artefatos e níveis seguintes
+
+Fabrique os artefatos no Altar. Em **Inventário → Artefatos**, selecione a peça e equipe. O perfil tem um slot. A troca fica disponível fora de partidas e fora da fila.
+
+| Artefato | Receita | Efeito |
+|---|---|---|
+| Emblema do Guardião | 1 Coração da Fenda, 2 Brasas do Arauto e 2 Selos de Purificação | +10% de vida máxima na incursão, incluindo reviver durante a partida |
+| Lâmina do Nexo | 2 Corações da Fenda, 1 Brasa do Arauto, 1 Pérola Abissal, 1 Véu do Ocaso e 6 Fragmentos Instáveis | Visual nas costas, disponível a até 80 studs. A qualidade baixa oculta o visual |
+
+O Altar mostra os custos exatos da próxima oferta. As ofertas II–III usam marcas de Cinzas, IV–VI usam Maré Morta e VII–X incluem Umbral. O bônus relativo para auras Raras ou superiores soma cinco pontos percentuais por nível até +50% no nível X. Essência Primordial e Semente do Absoluto aguardam fontes futuras.
+
+### Playtest da expansão
+
+- Equipe o Emblema, confira a vida em uma incursão, morra e confira o mesmo teto ao reviver. Ao voltar, confira a vida do Nexo.
+- Fabrique e equipe a Lâmina. Confira o visual em dois clientes, à distância, ao trocar a peça, ao renascer e com Qualidade baixa.
+- Reconecte com um artefato equipado. Confirme o slot e tente gastar uma oferta incompleta sem perder nenhum item.

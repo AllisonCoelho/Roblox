@@ -283,17 +283,22 @@ function Altar.montar(raiz: Frame, avisar: (string) -> ())
 					)
 				)
 			)
-			if nivel >= Transcendencia.MAXIMO then
+			local custo = Transcendencia.custo(nivel)
+			if not custo then
 				linha("Você já alcançou o nível máximo disponível.")
 				return
 			end
-			mostrarCustos(estoque, { coracao_ressonancia = 1 })
+			linha(string.format("Oferta para o nível %d", nivel + 1), true)
+			mostrarCustos(estoque, custo)
 			linha(
-				"Ofereça um Coração da Ressonância para fortalecer seus próximos Despertares."
+				string.format(
+					"Bônus após a oferta  ·  +%.0f%% para auras raras ou superiores.",
+					(Transcendencia.sorte(nivel + 1) - 1) * 100
+				)
 			)
 			botao(
 				if armado == "Transcender" then "Confirmar oferta" else "Transcender",
-				Itens.possui(estoque, "coracao_ressonancia", 1),
+				Transcendencia.podeOferecer(estoque, custo),
 				function()
 					pedir("Transcender")
 				end
