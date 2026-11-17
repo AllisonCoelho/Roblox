@@ -149,6 +149,74 @@ do
 	igual("guardião: fases em ordem", R.FASES_GUARDIAO[1] > R.FASES_GUARDIAO[2], true)
 end
 
+-- Incursões fase C: Fenda do Dia, desafios semanais, reviver
+do
+	local D = req("IncursoesDesafios")
+	local R = req("IncursoesRun")
+	local t = 1763337600 -- 17/11/2025 00:00 UTC (segunda-feira)
+	igual("diaria: mesmo dia, mesmo número", D.dia(t), D.dia(t + 86399))
+	igual("diaria: dia seguinte muda", D.dia(t + 86400), D.dia(t) + 1)
+	igual("semana: segunda a domingo iguais", D.semana(t), D.semana(t + 6 * 86400 + 86399))
+	igual("semana: próxima segunda muda", D.semana(t + 7 * 86400), D.semana(t) + 1)
+	local a, b = D.fendaDoDia(D.dia(t)), D.fendaDoDia(D.dia(t))
+	igual("diaria: determinística (universo)", a.universo, b.universo)
+	igual("diaria: determinística (semente)", a.semente, b.semente)
+	local n = 0
+	for id in a.marcas do
+		n += 1
+		igual("diaria: marca válida " .. id, R.marcaPorId[id] ~= nil, true)
+		igual("diaria: nunca Sem Reviver", id ~= "semVidas", true)
+	end
+	igual("diaria: 2 marcas", n, 2)
+	local x, y = D.gerador(5), D.gerador(5)
+	igual("diaria: gerador repetível", x(), y())
+	local s1 = R.sortearAndares(5, D.gerador(a.semente))
+	local s2 = R.sortearAndares(5, D.gerador(a.semente))
+	igual("diaria: mesmos andares para todos", table.concat(s1, ","), table.concat(s2, ","))
+	igual(
+		"diaria: vitória vale mais",
+		D.pontuacao(5, true, 2, 50, 600) > D.pontuacao(5, false, 2, 50, 600),
+		true
+	)
+	igual("diaria: pontuação nunca negativa", D.pontuacao(0, false, 0, 0, 99999) >= 0, true)
+	igual("diaria: recompensa por nível", D.recompensaDia(2), 240)
+	local semana = D.semana(t)
+	local tres = D.desafiosDaSemana(semana)
+	igual("semana: 3 desafios", #tres, 3)
+	igual(
+		"semana: distintos",
+		tres[1] ~= tres[2] and tres[2] ~= tres[3] and tres[1] ~= tres[3],
+		true
+	)
+	local st = D.semanaDe({}, semana)
+	local alvo = D.desafioPorId[tres[1]]
+	igual(
+		"semana: progresso parcial sem prêmio",
+		D.progredir(st, semana, alvo.id, alvo.meta - 1, alvo.id == "sequencia"),
+		0
+	)
+	igual(
+		"semana: completar dá prêmio",
+		D.progredir(st, semana, alvo.id, alvo.meta, alvo.id == "sequencia"),
+		alvo.recompensa
+	)
+	igual("semana: não paga duas vezes", D.progredir(st, semana, alvo.id, 999, false), 0)
+	local fora
+	for _, d in D.DESAFIOS do
+		if not table.find(tres, d.id) then
+			fora = d.id
+			break
+		end
+	end
+	igual(
+		"semana: desafio de outra semana não conta",
+		D.progredir(st, semana, fora, 9999, false),
+		0
+	)
+	igual("semana: semana nova zera", next(D.semanaDe({ semana = st }, semana + 1).progresso), nil)
+	igual("reviver: tempos coerentes", D.REVIVER_TEMPO < D.ABATIDO_ESPERA, true)
+end
+
 local Perfil = req("Perfil")
 local p = Perfil.padrao()
 igual("versao", p.versao, 1)

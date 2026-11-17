@@ -77,5 +77,23 @@ O multiplicador final das Marcas e do Pesadelo aparece no painel antes de entrar
 - Eco do Golpe e Rastro de Brasas ganharam efeito visual.
 - Abate pelo rebote da guarda da Gear 5 agora conta na sequência e na cura.
 
+## Fase C
+
+### Fenda do Dia
+- **A run do dia:** muda à meia-noite UTC e é igual para todos: mesmo universo, as mesmas 2 Marcas, a mesma sequência de andares e os mesmos mapas.
+- **Pontuação:** andares × 1000, mais 300 por nota S, 10 por abate, e na vitória +3000 mais um bônus de rapidez.
+- **Recorde e recompensa:** o recorde do dia fica salvo no perfil (`incursoes.diaria`). A 1ª vitória do dia dá +120 × nível do universo em Fragmentos.
+- **Ranking:** é deste servidor e zera ao fim do dia. Um ranking global entre servidores precisaria de um OrderedDataStore novo e **depende da autorização do dono**.
+
+### Desafios da Semana
+- **Sorteio:** 3 desafios por semana (segunda a domingo, UTC), iguais para todos, tirados de uma lista de 10.
+- **Exemplos:** derrubar Guardiões, Elites e inimigos; notas S; Hordas; Cofres; sequência de 25; reviver aliados; vencer no Pesadelo; vencer com 2 ou mais Marcas.
+- **Progresso:** salvo em `incursoes.semana`, no fim de cada andar e da partida. Os Fragmentos são creditados ao concluir.
+
+### Reviver colega
+- **Abatido:** em grupo, quem cai renasce **abatido** onde caiu. Fica parado, os inimigos o ignoram e ele não ataca nem purifica.
+- **Reerguer:** um aliado a até 7 studs, por 2,5 s, levanta o colega com metade da vida, e isso conta para o desafio. Sem ajuda, ele levanta sozinho em 15 s.
+- **Solo:** quem joga sozinho volta direto ao combate.
+
 ## Próximas fases
-- **C:** Fenda do Dia com ranking diário, desafios semanais e reviver colega.
+- Ranking global da Fenda do Dia (precisa de autorização para um OrderedDataStore).
