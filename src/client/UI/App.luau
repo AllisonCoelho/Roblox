@@ -84,6 +84,41 @@ local function oferecer(id: string)
 	end
 end
 
+-- Item avulso (Developer Product): título, trilha, aparência, emote ou finalização
+local function oferecerItem(item: { [string]: any })
+	if os.clock() - ultimaOferta < 4 then
+		return
+	end
+	ultimaOferta = os.clock()
+	if item.developerProductId then
+		pcall(
+			MarketplaceService.PromptProductPurchase,
+			MarketplaceService,
+			Players.LocalPlayer,
+			item.developerProductId
+		)
+	else
+		Avisos.toast(
+			string.format("%s · %d Robux — em breve na loja", item.nome, item.preco or 0)
+		)
+	end
+end
+
+-- Assinatura do Nexo (Roblox Subscriptions)
+local function oferecerAssinatura()
+	local produto = Monetizacao.porId.assinatura
+	if produto.subscriptionId then
+		pcall(
+			MarketplaceService.PromptSubscriptionPurchase,
+			MarketplaceService,
+			Players.LocalPlayer,
+			produto.subscriptionId
+		)
+	else
+		Avisos.toast("Assinatura do Nexo · 99 Robux/mês — em breve")
+	end
+end
+
 -- Pular o ritual é um passe; sem ele, o toque oferece a compra
 local function pular()
 	if temPasse("pularAnimacao") then
@@ -178,6 +213,9 @@ local function girar()
 		local aura = Auras.porId[resposta]
 		if aura then
 			apresentar(aura, dados or {})
+		end
+		if dados and type(dados.autoParou) == "string" then
+			Avisos.toast(dados.autoParou)
 		end
 	elseif resposta then
 		Avisos.toast(resposta)
@@ -303,7 +341,18 @@ function App.iniciar()
 	Avisos.montar(raiz)
 	Indice.montar(Avisos.toast)
 	Inventario.montar(Avisos.toast)
-	Loja.montar({ aviso = Avisos.toast, oferecer = oferecer, temPasse = temPasse })
+	Loja.montar({
+		aviso = Avisos.toast,
+		oferecer = function(id)
+			if id == "assinatura" then
+				oferecerAssinatura()
+			else
+				oferecer(id)
+			end
+		end,
+		oferecerItem = oferecerItem,
+		temPasse = temPasse,
+	})
 	EtiquetasChat.iniciar()
 	Altar.montar(raiz, Avisos.toast)
 	Ajustes.montar(Avisos.toast)

@@ -16,6 +16,9 @@ export type Estado = {
 	-- Loja (Dados/Cosmeticos e Dados/Temporada): só aparência, nunca poder.
 	cosmeticos: { possui: { [string]: boolean }, equipados: { [string]: string } },
 	temporada: { [string]: any },
+	auto: { pararChance: number, pararNova: boolean }, -- Auto Inteligente (Dados/Conveniencia)
+	presets: { any }, -- Presets de Auras: { aura, cosmeticos }
+	compras: { [string]: boolean }, -- PurchaseId já entregues (Developer Products, sem duplicar)
 }
 
 Perfil.VERSAO = 1
@@ -60,6 +63,9 @@ function Perfil.padrao(): Estado
 			resgates = { gratis = {}, premium = {} },
 			giroDia = { dia = 0, xp = 0 },
 		},
+		auto = { pararChance = 0, pararNova = false },
+		presets = {},
+		compras = {},
 	}
 end
 
