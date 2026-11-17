@@ -1,0 +1,27 @@
+{
+  "auraId": "petalas_de_ferrugem",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/petalas_de_ferrugem",
+  "templateFile": "assets/roblox/auras_originais/petalas_de_ferrugem.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "petala",
+      "triangles": 44,
+      "sizeStuds": [
+        0.56,
+        0.9776,
+        0.3023
+      ],
+      "centerFromPivot": [
+        0.0,
+        0.0483,
+        0.0129
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 6
+}

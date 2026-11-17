@@ -1,0 +1,42 @@
+{
+  "auraId": "sinos_do_crepusculo",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/sinos_do_crepusculo",
+  "templateFile": "assets/roblox/auras_originais/sinos_do_crepusculo.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "sino",
+      "triangles": 132,
+      "sizeStuds": [
+        0.6182,
+        1.3047,
+        0.6182
+      ],
+      "centerFromPivot": [
+        0.0,
+        0.2976,
+        -0.0
+      ],
+      "meshId": null
+    },
+    {
+      "name": "onda",
+      "triangles": 420,
+      "sizeStuds": [
+        1.2304,
+        0.0432,
+        1.2294
+      ],
+      "centerFromPivot": [
+        0.0024,
+        0.0,
+        0.0012
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 6
+}
