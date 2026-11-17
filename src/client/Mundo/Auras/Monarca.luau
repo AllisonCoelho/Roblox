@@ -6,7 +6,6 @@
 --   * Andando: sombras menores (com olhos) perseguem o jogador pelo chão, em fila.
 --   * Parado por ~5,5 s: os soldados das sombras SOBEM da sombra e montam guarda em volta dele,
 --     virados para fora. Ao primeiro passo, afundam de volta.
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local Gear5 = require(script.Parent.Gear5)
@@ -60,15 +59,6 @@ type Chama = {
 	fase: number,
 }
 type Dupla = { parte: MeshPart, tam: Vector3, centro: Vector3 } -- malha solta + dados para escalar
--- Modelo detalhado importado no Studio (ReplicatedStorage.AurasModelos, ver
--- assets/auras/monarca/hq/IMPORTAR_NO_STUDIO.md). Quando existe, substitui a malha simples.
-type Importado = {
-	modelo: Model,
-	partes: { BasePart },
-	ajuste: CFrame, -- do pé do modelo até o pivô dele
-	ossos: { Bone },
-	transp: number,
-}
 type Olho = {
 	d: Dupla,
 	dx: number,
@@ -89,7 +79,6 @@ type Soldado = {
 	flutua: number,
 	balanco: number,
 	atraso: number,
-	importado: Importado?,
 	nivel: number, -- 0 = dentro da sombra .. 1 = de pé
 	cf: CFrame, -- onde está de guarda (pés)
 }
@@ -155,76 +144,6 @@ function Monarca.criar(personagem: Model, opcoes: Gear5.Opcoes): Gear5.Instancia
 		d.parte.Transparency = transp
 	end
 
-	-- Modelo importado com este nome, já na altura pedida e com os pés no pivô (nil se não houver)
-	local function importar(nome: string, altura: number): Importado?
-		local modelos = ReplicatedStorage:FindFirstChild("AurasModelos")
-		local fonte = modelos and modelos:FindFirstChild(nome)
-		if not fonte or not fonte:IsA("Model") then
-			return nil
-		end
-		local m = fonte:Clone()
-		local giro = m:GetAttribute("Giro")
-		m:PivotTo(CFrame.Angles(0, math.rad(if type(giro) == "number" then giro else 0), 0))
-		local _, tam = m:GetBoundingBox()
-		local fator = m:GetAttribute("Escala")
-		if tam.Y > 0.01 then
-			m:ScaleTo(
-				m:GetScale() * altura * (if type(fator) == "number" then fator else 1) / tam.Y
-			)
-		end
-		local caixa, tam2 = m:GetBoundingBox()
-		local pe = CFrame.new(caixa.Position - Vector3.new(0, tam2.Y / 2, 0))
-		local imp: Importado = {
-			modelo = m,
-			partes = {},
-			ajuste = pe:ToObjectSpace(m:GetPivot()),
-			ossos = {},
-			transp = -1,
-		}
-		for _, d in m:GetDescendants() do
-			if d:IsA("BasePart") then
-				d.Anchored = true
-				d.CanCollide = false
-				d.CanQuery = false
-				d.CanTouch = false
-				d.CastShadow = false
-				d.Transparency = 1
-				if string.find(d.Name, "Brilho") then
-					d.Material = Enum.Material.Neon
-					d.Color = COR_OLHOS
-				end
-				table.insert(imp.partes, d)
-			elseif
-				d:IsA("Bone") and (d.Name == "Tronco" or d.Name == "Peito" or d.Name == "Cabeca")
-			then
-				table.insert(imp.ossos, d)
-			end
-		end
-		m.Parent = pasta
-		return imp
-	end
-	local function porModelo(imp: Importado, cf: CFrame, transp: number, t: number, fase: number)
-		local alvo = if transp >= 0.98 then 1 else transp
-		if alvo ~= imp.transp then
-			imp.transp = alvo
-			for _, parte in imp.partes do
-				parte.Transparency = alvo
-			end
-		end
-		if alvo >= 1 then
-			return
-		end
-		imp.modelo:PivotTo(cf * imp.ajuste)
-		-- vida mínima nos ossos (ângulos pequenos: funcionam seja qual for o eixo do osso)
-		for i, osso in imp.ossos do
-			osso.Transform = CFrame.Angles(
-				math.rad(1.5) * math.sin(t * 1.6 + fase + i),
-				math.rad(2.5) * math.sin(t * 0.7 + fase * 2 + i),
-				0
-			)
-		end
-	end
-
 	-- chamas presas ao corpo
 	local function acharOsso(nome: string): BasePart?
 		local nomes = PARTES_OSSO[nome]
@@ -287,7 +206,6 @@ function Monarca.criar(personagem: Model, opcoes: Gear5.Opcoes): Gear5.Instancia
 	table.insert(partesCorpo, coroa.parte)
 	table.insert(partesCorpo, coroaBorda.parte)
 	table.insert(partesCorpo, gema.parte)
-	local coroaHq = importar("monarca_coroa", coroa.tam.Y * escala)
 
 	-- a sombra do jogador: poça + olhos
 	local poca = dupla("monarca_poca", COR_POCA)
@@ -324,10 +242,8 @@ function Monarca.criar(personagem: Model, opcoes: Gear5.Opcoes): Gear5.Instancia
 	-- rei-formiga. A ordem em volta do jogador é sorteada (só visual).
 	local giroInicial = aleatorio:NextInteger(0, 3)
 	for k, tipo in Pecas.soldados :: { { [string]: any } } do
-		local corpoKit = dupla(tipo.malha, COR_SOMBRA)
 		table.insert(soldados, {
-			importado = importar(tipo.malha, corpoKit.tam.Y * tipo.escala * escala),
-			corpo = corpoKit,
+			corpo = dupla(tipo.malha, COR_SOMBRA),
 			borda = dupla(tipo.malha, COR_BORDA, true, 0.05),
 			olhos = dupla(tipo.olhos, COR_OLHOS),
 			poca = dupla("monarca_poca", COR_POCA),
@@ -632,13 +548,9 @@ function Monarca.criar(personagem: Model, opcoes: Gear5.Opcoes): Gear5.Instancia
 				* CFrame.Angles(0, 0.25 * math.sin(tempo * 0.5), 0)
 			local s = Vector3.one * escala * (1 + 0.1 * fatorBurst)
 			local t = if manifestando and manifestando < 0.5 then 1 else some
-			if coroaHq then
-				porModelo(coroaHq, cf, t, tempo, 0)
-			else
-				por(coroa, cf, s, t)
-				por(coroaBorda, cf, s, t)
-				por(gema, cf, s, t)
-			end
+			por(coroa, cf, s, t)
+			por(coroaBorda, cf, s, t)
+			por(gema, cf, s, t)
 		end
 
 		-- ---------------------------------------------------------------- a sombra e os olhos
@@ -740,9 +652,6 @@ function Monarca.criar(personagem: Model, opcoes: Gear5.Opcoes): Gear5.Instancia
 				s.borda.parte.Transparency = 1
 				s.olhos.parte.Transparency = 1
 				s.poca.parte.Transparency = 1
-				if s.importado then
-					porModelo(s.importado, s.cf, 1, tempo, k)
-				end
 				continue
 			end
 			local n = s.nivel
@@ -765,13 +674,9 @@ function Monarca.criar(personagem: Model, opcoes: Gear5.Opcoes): Gear5.Instancia
 				)
 			local sv = Vector3.new(e, e * respira, e)
 			local t = some
-			if s.importado then
-				porModelo(s.importado, cf, t, tempo, k)
-			else
-				por(s.corpo, cf, sv, t + (1 - t) * 0.06)
-				por(s.borda, cf, sv, t + (1 - t) * 0.2)
-				por(s.olhos, cf, sv, if sub > 0.6 then t else 1)
-			end
+			por(s.corpo, cf, sv, t + (1 - t) * 0.06)
+			por(s.borda, cf, sv, t + (1 - t) * 0.2)
+			por(s.olhos, cf, sv, if sub > 0.6 then t else 1)
 			local rp = 2.4 * e * math.min(n / 0.25, 1)
 			por(s.poca, s.cf * CFrame.new(0, 0.04, 0), Vector3.new(rp, e, rp), t + (1 - t) * 0.05)
 		end
