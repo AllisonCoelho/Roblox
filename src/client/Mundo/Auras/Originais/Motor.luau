@@ -10,6 +10,10 @@ local Workspace = game:GetService("Workspace")
 
 local Gear5 = require(script.Parent.Parent.Gear5) -- só tipos (contrato comum das auras)
 local Definicoes = require(script.Parent.Definicoes) :: { [string]: any }
+local Efeitos = require(script.Parent.Efeitos)
+local Catalogo = require(
+	ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Dados"):WaitForChild("AurasOriginaisV2")
+) :: any
 
 local Motor = {}
 
@@ -86,27 +90,33 @@ function Motor.criar(id: string, personagem: Model, opcoes: Gear5.Opcoes): Gear5
 	if not raiz then
 		return nil
 	end
-	local templates, motivo = Motor.templates(id, if avisados[id] then nil else 3)
-	if not templates then
-		if not avisados[id] then
-			avisados[id] = true
-			warn("[AurasOriginais] " .. tostring(motivo) .. " — a aura não será montada.")
-		end
+	local aura = Catalogo.porId[id]
+	if not aura then
 		return nil
 	end
+	-- malhas 3D só quando o template importado existe; os efeitos aparecem sempre
+	local templates: { [string]: MeshPart }? = nil
 	local def = Definicoes[id]
+	if def then
+		local motivo
+		templates, motivo = Motor.templates(id, if avisados[id] then nil else 1)
+		if not templates and not avisados[id] then
+			avisados[id] = true
+			warn("[AurasOriginais] " .. tostring(motivo) .. " — mostrando só os efeitos.")
+		end
+	end
 	local cabeca = personagem:FindFirstChild("Head") :: BasePart?
 	local escala = 1
 	if cabeca then
 		escala = math.clamp((cabeca.Position - raiz.Position).Y / CABECA_PADRAO, 0.6, 2.5)
 	end
-	local cores = { Color3.fromHex(def.cores[1]), Color3.fromHex(def.cores[2]) }
+	local cores = { Color3.fromHex(aura.cores[1]), Color3.fromHex(aura.cores[2]) }
 	local aleatorio = Random.new() -- só cosmético
 	local pasta = Instance.new("Folder")
 	pasta.Name = "AuraOriginal_" .. id .. "_" .. personagem.Name
 
 	local function clonar(nome: string, cfg: { [string]: any }): (MeshPart, Vector3, Vector3)
-		local parte = templates[nome]:Clone()
+		local parte = (templates :: { [string]: MeshPart })[nome]:Clone()
 		parte.Anchored = true
 		parte.CanCollide = false
 		parte.CanTouch = false
@@ -122,7 +132,8 @@ function Motor.criar(id: string, personagem: Model, opcoes: Gear5.Opcoes): Gear5
 	end
 
 	local pecas: { Peca } = {}
-	for i, cfg in def.pecas do
+	local esp = if def and templates then def.especial else { n = 0 }
+	for i, cfg in (if def and templates then def.pecas else {}) :: { any } do
 		local parte, tamanho, centro = clonar(cfg.template, cfg)
 		table.insert(pecas, {
 			cfg = cfg,
@@ -137,7 +148,6 @@ function Motor.criar(id: string, personagem: Model, opcoes: Gear5.Opcoes): Gear5
 			ordem = i,
 		})
 	end
-	local esp = def.especial
 	local especiais: { { parte: MeshPart, tamanho: Vector3, centro: Vector3 } } = {}
 	for k = 1, esp.n do
 		local parte, tamanho, centro = clonar(esp.template, esp)
@@ -147,6 +157,10 @@ function Motor.criar(id: string, personagem: Model, opcoes: Gear5.Opcoes): Gear5
 		table.insert(especiais, { parte = parte, tamanho = tamanho, centro = centro })
 	end
 
+	local efeitos = Efeitos.criar(id, raiz, escala, cores, pasta)
+	if efeitos then
+		efeitos:definirQualidade(opcoes.qualidadeBaixa, opcoes.movimentoReduzido)
+	end
 	local brilho = Instance.new("ParticleEmitter")
 	brilho.Texture = "rbxasset://textures/particles/sparkles_main.dds"
 	brilho.Color = ColorSequence.new(cores[1], cores[2])
@@ -173,6 +187,9 @@ function Motor.criar(id: string, personagem: Model, opcoes: Gear5.Opcoes): Gear5
 		destruida = true
 		pasta:Destroy()
 		brilho:Destroy()
+		if efeitos then
+			efeitos:destruir()
+		end
 	end
 
 	local function ativa(p: Peca): boolean
@@ -184,6 +201,9 @@ function Motor.criar(id: string, personagem: Model, opcoes: Gear5.Opcoes): Gear5
 
 	function inst.definirQualidade(_self, b: boolean, r: boolean)
 		baixa, reduzido = b, r
+		if efeitos then
+			efeitos:definirQualidade(b, r)
+		end
 		if b or r then
 			pico = nil
 		end
@@ -268,6 +288,9 @@ function Motor.criar(id: string, personagem: Model, opcoes: Gear5.Opcoes): Gear5
 			if nivel == 2 and not baixa and not reduzido and not manifestando and not saindo then
 				pico = 0
 				brilho:Emit(10)
+				if efeitos then
+					efeitos:rajada(1)
+				end
 			else
 				proximoPico = tempo + 4
 			end
@@ -280,6 +303,9 @@ function Motor.criar(id: string, personagem: Model, opcoes: Gear5.Opcoes): Gear5
 			abrir = math.max(abrir, especial * 0.7)
 			if manifestando == 0 and not reduzido then
 				brilho:Emit(14)
+				if efeitos then
+					efeitos:rajada(1.5)
+				end
 			end
 			manifestando += dt
 			if manifestando >= DURACAO_MANIFESTAR then
@@ -393,7 +419,10 @@ function Motor.criar(id: string, personagem: Model, opcoes: Gear5.Opcoes): Gear5
 		end
 
 		-- efeito especial: n cópias saem da origem (radial ou em arco atrás) e voltam
-		local origem = base * CFrame.new(v3(esp.origem) * escala)
+		if efeitos then
+			efeitos:atualizar(dt, base, rapidez, nivel, opacidade)
+		end
+		local origem = base * CFrame.new(v3(esp.origem or { 0, 0, 0 }) * escala)
 		for k, e in especiais do
 			if especial <= 0.02 or nivel < 2 or (baixa and k > 2) then
 				e.parte.Transparency = 1
@@ -448,7 +477,13 @@ function Motor.modulo(id: string)
 end
 
 Motor.IDS = {} :: { string }
-for id in Definicoes do
+for id in
+	require(
+		ReplicatedStorage:WaitForChild("Shared")
+			:WaitForChild("Dados")
+			:WaitForChild("EfeitosOriginais")
+	).AURAS
+do
 	table.insert(Motor.IDS, id)
 end
 table.sort(Motor.IDS)

@@ -14,6 +14,7 @@ MODULOS = {
     "PermissaoDev": "src/server/Servicos/PermissaoDev.luau",
     "Incursoes": "src/shared/Dados/Incursoes.luau",
     "AurasVfx": "src/shared/Dados/AurasVfx.luau",
+    "EfeitosOriginais": "src/shared/Dados/EfeitosOriginais.luau",
     "AurasOriginaisV2": "src/shared/Dados/AurasOriginaisV2.luau",
 }
 codigo = ["""

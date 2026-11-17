@@ -65,6 +65,39 @@ do
 	end
 end
 
+-- Efeitos das 67: todas têm receita, presets existem e nenhuma receita repete outra
+do
+	local V2 = req("AurasOriginaisV2")
+	local E = req("EfeitosOriginais")
+	local assinaturas, repetidas, semReceita, presetFaltando = {}, 0, 0, 0
+	for _, a in V2.lista do
+		local r = E.AURAS[a.id]
+		if not r then
+			semReceita += 1
+			continue
+		end
+		local partes = {}
+		for _, c in r.camadas do
+			if not E.PRESETS[c[1]] then
+				presetFaltando += 1
+			end
+			table.insert(partes, c[1] .. ":" .. c[2])
+		end
+		table.sort(partes)
+		local chave = table.concat(partes, "|")
+		if assinaturas[chave] then
+			repetidas += 1
+			print("receita repetida: " .. a.id .. " = " .. assinaturas[chave])
+		end
+		assinaturas[chave] = a.id
+		igual("efeitos: 2+ camadas " .. a.id, #r.camadas >= 2, true)
+		igual("efeitos: prévia " .. a.id, req("AurasVfx")[a.id], true)
+	end
+	igual("efeitos: todas as 67 têm receita", semReceita, 0)
+	igual("efeitos: presets existem", presetFaltando, 0)
+	igual("efeitos: receitas únicas", repetidas, 0)
+end
+
 local Perfil = req("Perfil")
 local p = Perfil.padrao()
 igual("versao", p.versao, 1)
