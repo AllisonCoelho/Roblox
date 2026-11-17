@@ -24,6 +24,8 @@ local Avisos = require(Telas.Avisos)
 local HUD = require(Telas.HUD)
 local Indice = require(Telas.Indice)
 local Inventario = require(Telas.Inventario)
+local Loja = require(Telas.Loja)
+local EtiquetasChat = require(script.Parent.EtiquetasChat)
 local PainelDev = require(Telas.PainelDev)
 local IncursoesUI = require(Telas.Incursoes)
 local Revelacao = require(Telas.Revelacao)
@@ -281,6 +283,7 @@ function App.iniciar()
 		end,
 		aoAbrirIndice = Indice.abrir,
 		aoAbrirInventario = Inventario.abrir,
+		aoAbrirLoja = Loja.abrir,
 		aoAbrirAjustes = Ajustes.abrir,
 	})
 	Revelacao.montar(raiz, {
@@ -300,6 +303,8 @@ function App.iniciar()
 	Avisos.montar(raiz)
 	Indice.montar(Avisos.toast)
 	Inventario.montar(Avisos.toast)
+	Loja.montar({ aviso = Avisos.toast, oferecer = oferecer, temPasse = temPasse })
+	EtiquetasChat.iniciar()
 	Altar.montar(raiz, Avisos.toast)
 	Ajustes.montar(Avisos.toast)
 	PainelDev.iniciar(hud.quadro, {
@@ -413,6 +418,18 @@ function App.iniciar()
 			-- Só no Studio: Alt+M liga/desliga a prévia do Monarca das Sombras
 			task.spawn(function()
 				local _, msg = Estado.pedir("PreviaAura", "monarca")
+				if msg then
+					Avisos.toast(msg)
+				end
+			end)
+		elseif
+			RunService:IsStudio()
+			and UserInputService:IsKeyDown(Enum.KeyCode.LeftAlt)
+			and input.KeyCode == Enum.KeyCode.K
+		then
+			-- Só no Studio: Alt+K liga/desliga a prévia da Senbonzakura (precisa dos templates importados)
+			task.spawn(function()
+				local _, msg = Estado.pedir("PreviaAura", "senbonzakura")
 				if msg then
 					Avisos.toast(msg)
 				end

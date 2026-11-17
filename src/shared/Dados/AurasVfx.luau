@@ -85,4 +85,7 @@ return {
 	divindade_do_prisma = true,
 	ultimo_jardim = true,
 	soberania_do_vazio = true,
+	-- Senbonzakura (Mundo/Auras/Senbonzakura.luau): só prévia; NÃO está no sorteio (Dados/Auras.luau).
+	-- Sem ReplicatedStorage.AuraAssets.Senbonzakura (importado no Studio) o cliente não monta nada.
+	senbonzakura = true,
 } :: { [string]: boolean }

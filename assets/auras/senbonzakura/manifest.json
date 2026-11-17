@@ -1,0 +1,218 @@
+{
+  "auraId": "senbonzakura",
+  "nome": "Senbonzakura — Jardim de Mil Lâminas",
+  "source": "assets/auras/senbonzakura/source/senbonzakura.blend",
+  "generator": "assets/auras/senbonzakura/source/generate_senbonzakura.py",
+  "texture": "assets/auras/senbonzakura/exports/senbon_lamina.png",
+  "runtimeTemplate": "ReplicatedStorage/AuraAssets/Senbonzakura",
+  "templateFile": "assets/roblox/AuraAssets/Senbonzakura.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorType": "group_or_user_to_fill",
+  "creatorId": null,
+  "revision": 1,
+  "units": "1 Blender unit = 1 stud; FBX exported with axis_forward=-Z, axis_up=Y",
+  "axes": "Blender (x, y, z) -> Roblox (x, z, -y); sizes/centers below already in Roblox axes",
+  "triangleTotal": 4552,
+  "pieces": [
+    {
+      "name": "senbon_petal_a",
+      "role": "pétala-lâmina de destaque (ponta dupla); também solta/rastro",
+      "triangles": 72,
+      "petals": null,
+      "sizeStuds": [
+        0.1907,
+        0.058,
+        0.7
+      ],
+      "pivot": "centro de massa; fio para +Y (LookVector)",
+      "centerFromPivot": [
+        0.0,
+        0.0095,
+        -0.035
+      ],
+      "materialSuggestion": "SmoothPlastic + textura",
+      "meshId": null,
+      "textureId": null
+    },
+    {
+      "name": "senbon_petal_b",
+      "role": "variação comprida e estreita; quebra repetição",
+      "triangles": 64,
+      "petals": null,
+      "sizeStuds": [
+        0.0774,
+        0.0579,
+        0.748
+      ],
+      "pivot": "centro de massa; fio para +Y (LookVector)",
+      "centerFromPivot": [
+        -0.0006,
+        0.0103,
+        -0.0374
+      ],
+      "materialSuggestion": "SmoothPlastic + textura",
+      "meshId": null,
+      "textureId": null
+    },
+    {
+      "name": "senbon_cluster_a",
+      "role": "enxame principal (16 pétalas)",
+      "triangles": 1112,
+      "petals": 16,
+      "sizeStuds": [
+        1.3284,
+        1.2422,
+        2.4581
+      ],
+      "pivot": "ponto de controle do enxame; fluxo para +Y",
+      "centerFromPivot": [
+        0.1999,
+        0.1158,
+        -0.0222
+      ],
+      "materialSuggestion": "SmoothPlastic + textura",
+      "meshId": null,
+      "textureId": null
+    },
+    {
+      "name": "senbon_cluster_b",
+      "role": "enxame alongado (15 pétalas)",
+      "triangles": 1040,
+      "petals": 15,
+      "sizeStuds": [
+        0.9439,
+        1.4413,
+        3.0196
+      ],
+      "pivot": "ponto de controle do enxame; fluxo para +Y",
+      "centerFromPivot": [
+        0.0865,
+        0.0173,
+        0.1293
+      ],
+      "materialSuggestion": "SmoothPlastic + textura",
+      "meshId": null,
+      "textureId": null
+    },
+    {
+      "name": "senbon_cluster_c",
+      "role": "espiral assimétrica (11 pétalas)",
+      "triangles": 560,
+      "petals": 8,
+      "sizeStuds": [
+        0.7579,
+        1.6326,
+        2.3305
+      ],
+      "pivot": "ponto de controle do enxame; fluxo para +Y",
+      "centerFromPivot": [
+        -0.2796,
+        0.1567,
+        -0.1633
+      ],
+      "materialSuggestion": "SmoothPlastic + textura",
+      "meshId": null,
+      "textureId": null
+    },
+    {
+      "name": "senbon_lance_a",
+      "role": "lança vertical do pico/manifestação",
+      "triangles": 104,
+      "petals": null,
+      "sizeStuds": [
+        0.4,
+        2.6,
+        0.0465
+      ],
+      "pivot": "base da lâmina (no chão); sobe em +Y Roblox",
+      "centerFromPivot": [
+        0.0,
+        1.3,
+        0.0058
+      ],
+      "materialSuggestion": "Neon #FF9BDF",
+      "meshId": null,
+      "textureId": null
+    },
+    {
+      "name": "senbon_lance_b",
+      "role": "lança arqueada/inclinada do pico",
+      "triangles": 104,
+      "petals": null,
+      "sizeStuds": [
+        0.7761,
+        2.9569,
+        0.0407
+      ],
+      "pivot": "base da lâmina (no chão); sobe em +Y Roblox",
+      "centerFromPivot": [
+        0.2689,
+        1.4641,
+        0.0051
+      ],
+      "materialSuggestion": "Neon #FF9BDF",
+      "meshId": null,
+      "textureId": null
+    },
+    {
+      "name": "senbon_arco_a",
+      "role": "traços de corte quebrados (3 fragmentos)",
+      "triangles": 144,
+      "petals": null,
+      "sizeStuds": [
+        3.2254,
+        0.3538,
+        3.0161
+      ],
+      "pivot": "centro do círculo (raio ~3)",
+      "centerFromPivot": [
+        1.4676,
+        0.0519,
+        -1.5081
+      ],
+      "materialSuggestion": "Neon #CF338F",
+      "meshId": null,
+      "textureId": null
+    },
+    {
+      "name": "senbon_arco_b",
+      "role": "traços cruzados (2 fragmentos)",
+      "triangles": 112,
+      "petals": null,
+      "sizeStuds": [
+        2.44,
+        0.455,
+        2.7486
+      ],
+      "pivot": "centro do círculo (raio ~2,6)",
+      "centerFromPivot": [
+        1.4648,
+        -0.0525,
+        -1.3743
+      ],
+      "materialSuggestion": "Neon #CF338F",
+      "meshId": null,
+      "textureId": null
+    },
+    {
+      "name": "senbon_selo",
+      "role": "selo de chão quebrado (opcional)",
+      "triangles": 1240,
+      "petals": null,
+      "sizeStuds": [
+        6.9701,
+        0.034,
+        6.724
+      ],
+      "pivot": "centro do círculo, no chão",
+      "centerFromPivot": [
+        -0.0392,
+        0.0066,
+        -0.2931
+      ],
+      "materialSuggestion": "Neon #CF338F",
+      "meshId": null,
+      "textureId": null
+    }
+  ]
+}

@@ -98,6 +98,10 @@ do
 	igual("efeitos: receitas únicas", repetidas, 0)
 end
 
+-- Senbonzakura: efeito de prévia, nunca entra no sorteio sem autorização do dono
+igual("senbonzakura como prévia de VFX", req("AurasVfx").senbonzakura, true)
+igual("senbonzakura fora do catálogo sorteável", req("Auras").porId.senbonzakura, nil)
+
 -- Combate das Incursões (fase 1)
 do
 	local C = req("Combate")
@@ -172,7 +176,10 @@ do
 	igual("loja: 16 produtos no catálogo", #M.PRODUTOS, 16)
 	igual("loja: giro automático 49", M.porId.autoGiro.preco, 49)
 	igual("loja: pular animação 39", M.porId.pularAnimacao.preco, 39)
-	igual("loja: 2 ativos", #M.ativos(), 2)
+	igual("loja: 5 ativos", #M.ativos(), 5)
+	igual("loja: iniciante 49", M.porId.iniciante.preco, 49)
+	igual("loja: vip 199", M.porId.vip.preco, 199)
+	igual("loja: passe de temporada 299", M.porId.passeTemporada.preco, 299)
 	local nada = function()
 		return false
 	end
@@ -1085,5 +1092,89 @@ decisivo.vida = 1
 local derrota = Arena.resolver(decisivo, "ataque")
 igual("arena derrota confirmada", derrota.resultado, "derrota")
 igual("arena vida nunca fica negativa", derrota.estado.vida, 0)
+
+-- Cosméticos e Passe de Temporada
+do
+	local C = req("Cosmeticos")
+	local T = req("Temporada")
+	local M = req("Monetizacao")
+	local vistos = {}
+	for _, i in C.ITENS do
+		igual("cosmético: id único " .. i.id, vistos[i.id], nil)
+		vistos[i.id] = true
+		igual("cosmético: tipo conhecido " .. i.id, table.find(C.TIPOS, i.tipo) ~= nil, true)
+		igual("cosmético: cor hex " .. i.id, string.match(i.cor, "^%x%x%x%x%x%x$") ~= nil, true)
+	end
+	for pacote, itens in C.PACOTES do
+		igual("cosmético: pacote é produto ativo " .. pacote, M.porId[pacote].status, "ativo")
+		for _, id in itens do
+			igual("cosmético: item do pacote existe " .. id, C.porId[id] ~= nil, true)
+		end
+	end
+	local c = C.padrao()
+	igual("cosmético: conceder novos", #C.conceder(c, { "tit_vip", "dis_coroa", "xx" }), 2)
+	igual("cosmético: conceder é idempotente", #C.conceder(c, { "tit_vip" }), 0)
+	igual("cosmético: equipar item possuído", C.podeEquipar(c, "titulo", "tit_vip"), true)
+	igual("cosmético: não equipa no tipo errado", C.podeEquipar(c, "rastro", "tit_vip"), false)
+	igual("cosmético: não equipa sem possuir", C.podeEquipar(c, "titulo", "tit_mestre"), false)
+	igual("cosmético: tirar sempre pode", C.podeEquipar(c, "titulo", ""), true)
+	igual("cosmético: tipo inválido", C.podeEquipar(c, "chapeu", ""), false)
+
+	local usados = {}
+	for n, r in T.RECOMPENSAS do
+		igual("temporada: nível válido " .. n, n >= 1 and n <= T.NIVEIS, true)
+		for _, trilha in { "gratis", "premium" } do
+			local id = r[trilha]
+			if id then
+				igual(
+					"temporada: recompensa existe " .. id,
+					C.porId[id] ~= nil and C.porId[id].origem,
+					"temporada"
+				)
+				igual("temporada: recompensa não repete " .. id, usados[id], nil)
+				usados[id] = true
+			end
+		end
+	end
+	igual("temporada: 60 dias", (T.FIM - T.INICIO) / 86400, 60)
+	igual("temporada: ativa no início", T.ativa(T.INICIO), true)
+	igual("temporada: encerrada no fim", T.ativa(T.FIM), false)
+	local t = T.de(nil)
+	igual("temporada: começa zerada", t.xp, 0)
+	igual("temporada: outra temporada zera", T.de({ id = "t0", xp = 999 }).xp, 0)
+	igual("temporada: giro dá 1 XP", T.ganhar(t, "giro", 10, false), 1)
+	igual("temporada: fonte desconhecida", T.ganhar(t, "trapaça", 10, false), 0)
+	for _ = 1, 400 do
+		T.ganhar(t, "giro", 10, false)
+	end
+	igual("temporada: teto diário dos giros", t.xp, T.TETO_GIRO_DIA)
+	igual("temporada: andar ignora o teto dos giros", T.ganhar(t, "andar", 10, false), T.XP.andar)
+	igual("temporada: novo dia libera giros", T.ganhar(t, "giro", 11, false), 1)
+	igual(
+		"temporada: VIP +10%",
+		math.abs(T.ganhar(t, "vitoria", 11, true) - T.XP.vitoria * 1.1) < 1e-9,
+		true
+	)
+	igual("temporada: nível pelo XP", T.nivel(T.XP_POR_NIVEL * 5 + 3), 5)
+	igual("temporada: nível limitado", T.nivel(10 ^ 9), T.NIVEIS)
+	local r = T.de(nil)
+	r.xp = T.XP_POR_NIVEL * 15
+	igual(
+		"temporada: resgata grátis alcançado",
+		T.resgatavel(r, 15, "gratis", false),
+		"tit_cacador"
+	)
+	igual("temporada: premium sem passe", T.resgatavel(r, 15, "premium", false), nil)
+	igual("temporada: premium com passe", T.resgatavel(r, 15, "premium", true), "ras_aurora")
+	igual("temporada: nível não alcançado", T.resgatavel(r, 20, "gratis", true), nil)
+	igual("temporada: nível sem recompensa", T.resgatavel(r, 2, "gratis", true), nil)
+	r.resgates.gratis["15"] = true
+	igual("temporada: não resgata duas vezes", T.resgatavel(r, 15, "gratis", true), nil)
+	local maximo = T.de(nil)
+	for _ = 1, 1000 do
+		T.ganhar(maximo, "vitoria", 1, true)
+	end
+	igual("temporada: XP limitado ao último nível", maximo.xp, T.NIVEIS * T.XP_POR_NIVEL)
+end
 
 print(string.format("%d testes, %d falhas", total, falhas))

@@ -15,6 +15,7 @@ local Transcendencia = require(Shared.Dados.Transcendencia)
 local Acoes = require(script.Parent.Acoes)
 local Dados = require(script.Parent.Dados)
 local Passes = require(script.Parent.Passes)
+local TemporadaServico = require(script.Parent.Temporada)
 
 local Sorteio = {}
 
@@ -41,6 +42,7 @@ local function entregar(
 	local ok, mensagem = Dados.alterar(player, function(estado)
 		local eraVazia = Perfil.colecaoVazia(estado)
 		Perfil.registrarGiro(estado, aura.id)
+		TemporadaServico.creditar(player, estado, "giro")
 		quantidade = estado.auras[aura.id]
 		-- Obter não força a troca (regras em Perfil.deveEquipar)
 		local atual = if estado.equipada then Auras.porId[estado.equipada] else nil
