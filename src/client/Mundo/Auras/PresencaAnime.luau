@@ -18,6 +18,7 @@ type Vinculo = {
 }
 
 type Ativa = {
+	personagem: Model,
 	raiz: BasePart,
 	humanoide: Humanoid,
 	fase: number,
@@ -371,6 +372,7 @@ function Presenca.definir(personagem: Model, id: string?)
 		return
 	end
 	local a: Ativa = {
+		personagem = personagem,
 		raiz = raiz,
 		humanoide = humanoide,
 		fase = 0,
