@@ -16,6 +16,7 @@ local Remotos = require(Shared.Remotos)
 local Servicos = script.Parent.Parent:WaitForChild("Servicos")
 local Acoes = require(Servicos:WaitForChild("Acoes"))
 local Dados = require(Servicos:WaitForChild("Dados"))
+local TemporadaServico = require(Servicos:WaitForChild("Temporada"))
 local Combate = require(script.Parent.Combate)
 local Inimigos = require(script.Parent.Inimigos)
 local Mapa = require(script.Parent.Mapa)
@@ -223,6 +224,12 @@ local function premiar(player: Player, run: Run, membro: Membro, concluiu: boole
 		inc.fragmentos = (inc.fragmentos or 0) + ganho
 		inc.melhor[u] = math.max(inc.melhor[u] or 0, run.andar)
 		membro.recompensas.fragmentos += ganho
+		if concluiu then
+			TemporadaServico.creditar(player, estado, "andar")
+		end
+		if venceu then
+			TemporadaServico.creditar(player, estado, "vitoria")
+		end
 		return true
 	end)
 	if ok and itensAndar and player.Parent then

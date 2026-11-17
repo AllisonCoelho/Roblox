@@ -13,6 +13,9 @@ export type Estado = {
 	incursoes: { [string]: any },
 	inventario: { itens: { [string]: number }, equipados: { artefato: string? } },
 	transcendencia: { nivel: number, totalRealizadas: number },
+	-- Loja (Dados/Cosmeticos e Dados/Temporada): só aparência, nunca poder.
+	cosmeticos: { possui: { [string]: boolean }, equipados: { [string]: string } },
+	temporada: { [string]: any },
 }
 
 Perfil.VERSAO = 1
@@ -50,6 +53,13 @@ function Perfil.padrao(): Estado
 		incursoes = { fragmentos = 0, melhor = {}, concluidas = {}, reliquias = {} },
 		inventario = { itens = {}, equipados = {} },
 		transcendencia = { nivel = 0, totalRealizadas = 0 },
+		cosmeticos = { possui = {}, equipados = {} },
+		temporada = {
+			id = "",
+			xp = 0,
+			resgates = { gratis = {}, premium = {} },
+			giroDia = { dia = 0, xp = 0 },
+		},
 	}
 end
 

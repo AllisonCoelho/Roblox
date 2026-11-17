@@ -58,7 +58,8 @@ Monetizacao.PRODUTOS = {
 		tipo = "passe",
 		beneficio = "Cosméticos iniciais permanentes e distintivo.",
 		prioridade = "altissima",
-		status = "planejado",
+		status = "ativo",
+		gamePassId = nil,
 	}),
 	p({
 		id = "autoInteligente",
@@ -98,7 +99,8 @@ Monetizacao.PRODUTOS = {
 		tipo = "passe",
 		beneficio = "Título, identificação e cosméticos exclusivos.",
 		prioridade = "altissima",
-		status = "planejado",
+		status = "ativo",
+		gamePassId = nil,
 	}),
 	p({
 		id = "fundador",
@@ -168,7 +170,8 @@ Monetizacao.PRODUTOS = {
 		tipo = "passe",
 		beneficio = "Trilha premium com recompensas definidas.",
 		prioridade = "alta",
-		status = "planejado",
+		status = "ativo",
+		gamePassId = nil,
 	}),
 	p({
 		id = "assinatura",
