@@ -63,17 +63,27 @@ local function entregar(player: Player, aura: Auras.Aura): (boolean, string?, { 
 	return true, aura.id, { quantidade = quantidade, equipou = equipou, simulado = simulado }
 end
 
+-- Le o nivel salvo APENAS no servidor. Perfis antigos nao tem esse campo: sorte 1.00.
+-- A criacao, a forja e a persistencia da Transcendencia sao tratadas em outro PR.
+local function sorteDoPerfil(estado: Perfil.Estado): number
+	local transcendencia = (estado :: any).transcendencia
+	return Auras.sorteTranscendencia(
+		if type(transcendencia) == "table" then transcendencia.nivel else nil
+	)
+end
+
 local function despertar(player: Player): (boolean, string?, { [string]: any }?)
 	local agora = os.clock()
 	local ultimo = ultimoGiro[player]
 	if ultimo and agora - ultimo < Config.CooldownGiro - TOLERANCIA then
 		return false, "Aguarde um instante..."
 	end
-	if not Dados.de(player) then
+	local estado = Dados.de(player)
+	if not estado then
 		return false, "Carregando seus dados..."
 	end
 	ultimoGiro[player] = agora
-	return entregar(player, Auras.sortear(aleatorio))
+	return entregar(player, Auras.sortear(aleatorio, sorteDoPerfil(estado)))
 end
 
 function Sorteio.simular(player: Player, aura: Auras.Aura?): (boolean, string?, { [string]: any }?)
