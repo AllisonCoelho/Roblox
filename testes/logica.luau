@@ -98,6 +98,265 @@ do
 	igual("efeitos: receitas únicas", repetidas, 0)
 end
 
+-- Combate das Incursões (fase 1)
+do
+	local C = req("Combate")
+	local V3 = Vector3
+	for _, nome in { "generico", "gear5" } do
+		local kit = C.KITS[nome]
+		for _, id in C.TECNICAS do
+			igual("combate: " .. nome .. " tem " .. id, kit.tecnicas[id] ~= nil, true)
+		end
+		igual("combate: combo de 3 " .. nome, #kit.combo, 3)
+	end
+	igual("combate: kit padrão", C.kitDe(nil).id, "generico")
+	igual("combate: kit da gear 5", C.kitDe("gear5").id, "gear5")
+	igual("combate: monarca usa o genérico por enquanto", C.kitDe("monarca").id, "generico")
+	igual(
+		"combate: braço da gear 5 alcança mais",
+		C.KITS.gear5.tecnicas.golpe.alcance > C.KITS.generico.tecnicas.golpe.alcance,
+		true
+	)
+	igual(
+		"combate: gatling acerta várias vezes",
+		(C.KITS.gear5.tecnicas.tecnica2.acertos or 1) > 1,
+		true
+	)
+	igual("combate: dano base", C.dano(10, 1), 10)
+	igual("combate: ressonância tem teto", C.dano(10, 99), 16)
+	igual("combate: ressonância nunca diminui", C.dano(10, 0.2), 10)
+	igual("combate: crítico", C.dano(10, 1, 1, true), 15)
+	igual("combate: esquiva anula", C.danoRecebido(20, C.KITS.generico, false, true, true), 0)
+	igual(
+		"combate: guarda de frente reduz",
+		math.floor(C.danoRecebido(20, C.KITS.generico, true, true, false) + 0.5),
+		6
+	)
+	igual(
+		"combate: guarda de costas não vale",
+		C.danoRecebido(20, C.KITS.generico, true, false, false),
+		20
+	)
+	local o, f = V3.new(0, 0, 0), V3.new(0, 0, -1)
+	local golpe = C.KITS.generico.tecnicas.golpe
+	igual("acerto: cone na frente", C.acerta(golpe, o, f, V3.new(0, 0, -6), 1), true)
+	igual("acerto: cone atrás erra", C.acerta(golpe, o, f, V3.new(0, 0, 6), 1), false)
+	igual("acerto: cone longe erra", C.acerta(golpe, o, f, V3.new(0, 0, -20), 1), false)
+	local linha = C.KITS.gear5.tecnicas.tecnica1
+	igual("acerto: linha longa", C.acerta(linha, o, f, V3.new(1, 0, -38), 1), true)
+	igual("acerto: linha de lado erra", C.acerta(linha, o, f, V3.new(10, 0, -20), 1), false)
+	igual(
+		"acerto: área em volta",
+		C.acerta(C.KITS.gear5.tecnicas.despertar, o, f, V3.new(0, 0, 20), 1),
+		true
+	)
+	igual("guarda: de frente", C.deFrente(o, f, V3.new(0.5, 0, -5)), true)
+	igual("guarda: pelas costas", C.deFrente(o, f, V3.new(0, 0, 5)), false)
+end
+
+-- Monetização: catálogo e passes das configurações
+do
+	local M = req("Monetizacao")
+	local Ap = req("Apresentacao")
+	local vistos = {}
+	for _, p in M.PRODUTOS do
+		igual("loja: id único " .. p.id, vistos[p.id], nil)
+		vistos[p.id] = true
+		igual("loja: preço positivo " .. p.id, p.preco > 0, true)
+		igual(
+			"loja: status conhecido " .. p.id,
+			p.status == "ativo" or p.status == "planejado",
+			true
+		)
+	end
+	igual("loja: 16 produtos no catálogo", #M.PRODUTOS, 16)
+	igual("loja: giro automático 49", M.porId.autoGiro.preco, 49)
+	igual("loja: pular animação 39", M.porId.pularAnimacao.preco, 39)
+	igual("loja: 2 ativos", #M.ativos(), 2)
+	local nada = function()
+		return false
+	end
+	local tudo = function()
+		return true
+	end
+	igual(
+		"loja: ligar auto exige passe",
+		M.passeNecessario("giroAutomatico", true, nada),
+		"autoGiro"
+	)
+	igual("loja: desligar auto é livre", M.passeNecessario("giroAutomatico", false, nada), nil)
+	igual(
+		"loja: desligar animações exige passe",
+		M.passeNecessario("animacoes", false, nada),
+		"pularAnimacao"
+	)
+	igual("loja: ligar animações é livre", M.passeNecessario("animacoes", true, nada), nil)
+	igual(
+		"loja: encurtar repetidas exige passe",
+		M.passeNecessario("pularRepetidas", true, nada),
+		"pularAnimacao"
+	)
+	igual("loja: acessibilidade é livre", M.passeNecessario("movimentoReduzido", true, nada), nil)
+	igual("loja: com passe libera", M.passeNecessario("giroAutomatico", true, tudo), nil)
+	for _, c in Ap.Categorias do
+		igual("ritual: roleta em " .. c.id, (c.roleta or 0) > 0, true)
+		igual("ritual: tempo inclui a roleta " .. c.id, Ap.tempoAteRevelacao(c) > c.roleta, true)
+	end
+	igual(
+		"ritual: raras giram mais tempo",
+		Ap.Categorias[#Ap.Categorias].roleta > Ap.Categorias[1].roleta,
+		true
+	)
+end
+
+-- Incursões 2.0: andares variados, inimigos, Bênçãos e nota
+do
+	local R = req("IncursoesRun")
+	local semente = 0
+	local function aleatorio()
+		semente = (semente * 1103515245 + 12345) % 2147483648
+		return semente / 2147483648
+	end
+	for rodada = 1, 50 do
+		local andares = R.sortearAndares(5, aleatorio)
+		igual("run: 5 andares", #andares, 5)
+		igual("run: último é o Guardião", andares[5], "guardiao")
+		igual("run: 1º andar nunca é Cofre", andares[1] ~= "cofre" and andares[1] ~= "caca", true)
+		for n = 2, 4 do
+			if andares[n] == andares[n - 1] then
+				igual("run: não repete em seguida (rodada " .. rodada .. ")", false, true)
+			end
+		end
+	end
+	for _ = 1, 30 do
+		igual(
+			"run: andar 1 só Sombra/Corredor",
+			({ sombra = true, corredor = true })[R.sortearArquetipo(1, aleatorio)],
+			true
+		)
+		local afixos = R.sortearAfixos(3, aleatorio)
+		igual("run: 2 afixos no andar 3", #afixos, 2)
+		igual("run: afixos diferentes", afixos[1] ~= afixos[2], true)
+	end
+	local tem = {}
+	for _ = 1, #R.BENCAOS do
+		local ofertas = R.ofertas(tem, aleatorio, 1)
+		igual("run: sempre há oferta enquanto sobra Bênção", #ofertas, 1)
+		tem[ofertas[1]] = true
+	end
+	igual("run: sem repetição de Bênção", #R.ofertas(tem, aleatorio), 0)
+	local tres = R.ofertas({}, aleatorio)
+	igual("run: 3 ofertas", #tres, 3)
+	igual(
+		"run: ofertas distintas",
+		tres[1] ~= tres[2] and tres[2] ~= tres[3] and tres[1] ~= tres[3],
+		true
+	)
+	local m = R.modificadores({ furia = true, ganancia = true, vigor = true })
+	igual("run: dano somado", m.dano, 0.2)
+	igual("run: vida soma vigor e ganância", math.floor(m.vidaMax * 100 + 0.5), 15)
+	igual("run: nota S", R.nota("purificacao", 60, 0), "S")
+	igual("run: nota A com uma queda", R.nota("purificacao", 60, 1), "A")
+	igual("run: nota B lenta", R.nota("purificacao", 400, 0), "B")
+	igual("run: Horda só conta quedas", R.nota("horda", 999, 0), "S")
+	igual(
+		"run: nota S paga mais",
+		R.MULT_NOTA.S > R.MULT_NOTA.A and R.MULT_NOTA.A > R.MULT_NOTA.B,
+		true
+	)
+	-- Fase B: preparo (Marcas e Pesadelo) vindo do cliente é sempre validado
+	local vazio = R.preparo(nil)
+	igual("preparo: padrão sem Pesadelo", vazio.pesadelo, false)
+	igual("preparo: padrão normal", R.descreverPreparo(vazio), "Normal")
+	igual("preparo: padrão x1", R.multPreparo(vazio), 1)
+	local lixo =
+		R.preparo({ pesadelo = "sim", marcas = { inventada = true, densas = 1, vidro = true } })
+	igual("preparo: pesadelo só com true", lixo.pesadelo, false)
+	igual("preparo: ignora marca inventada", lixo.marcas.inventada, nil)
+	igual("preparo: ignora valor não booleano", lixo.marcas.densas, nil)
+	igual("preparo: aceita marca válida", lixo.marcas.vidro, true)
+	local tudo = R.preparo({ pesadelo = true, marcas = { densas = true, semVidas = true } })
+	igual(
+		"preparo: pesadelo dobra e marcas somam",
+		math.floor(R.multPreparo(tudo) * 100 + 0.5),
+		350
+	)
+	igual(
+		"preparo: descrição",
+		R.descreverPreparo(tudo),
+		"PESADELO · Hordas Densas · Sem Reviver"
+	)
+	igual("guardião: fases em ordem", R.FASES_GUARDIAO[1] > R.FASES_GUARDIAO[2], true)
+end
+
+-- Incursões fase C: Fenda do Dia, desafios semanais, reviver
+do
+	local D = req("IncursoesDesafios")
+	local R = req("IncursoesRun")
+	local t = 1763337600 -- 17/11/2025 00:00 UTC (segunda-feira)
+	igual("diaria: mesmo dia, mesmo número", D.dia(t), D.dia(t + 86399))
+	igual("diaria: dia seguinte muda", D.dia(t + 86400), D.dia(t) + 1)
+	igual("semana: segunda a domingo iguais", D.semana(t), D.semana(t + 6 * 86400 + 86399))
+	igual("semana: próxima segunda muda", D.semana(t + 7 * 86400), D.semana(t) + 1)
+	local a, b = D.fendaDoDia(D.dia(t)), D.fendaDoDia(D.dia(t))
+	igual("diaria: determinística (universo)", a.universo, b.universo)
+	igual("diaria: determinística (semente)", a.semente, b.semente)
+	local n = 0
+	for id in a.marcas do
+		n += 1
+		igual("diaria: marca válida " .. id, R.marcaPorId[id] ~= nil, true)
+		igual("diaria: nunca Sem Reviver", id ~= "semVidas", true)
+	end
+	igual("diaria: 2 marcas", n, 2)
+	local x, y = D.gerador(5), D.gerador(5)
+	igual("diaria: gerador repetível", x(), y())
+	local s1 = R.sortearAndares(5, D.gerador(a.semente))
+	local s2 = R.sortearAndares(5, D.gerador(a.semente))
+	igual("diaria: mesmos andares para todos", table.concat(s1, ","), table.concat(s2, ","))
+	igual(
+		"diaria: vitória vale mais",
+		D.pontuacao(5, true, 2, 50, 600) > D.pontuacao(5, false, 2, 50, 600),
+		true
+	)
+	igual("diaria: pontuação nunca negativa", D.pontuacao(0, false, 0, 0, 99999) >= 0, true)
+	igual("diaria: recompensa por nível", D.recompensaDia(2), 240)
+	local semana = D.semana(t)
+	local tres = D.desafiosDaSemana(semana)
+	igual("semana: 3 desafios", #tres, 3)
+	igual(
+		"semana: distintos",
+		tres[1] ~= tres[2] and tres[2] ~= tres[3] and tres[1] ~= tres[3],
+		true
+	)
+	local st = D.semanaDe({}, semana)
+	local alvo = D.desafioPorId[tres[1]]
+	igual(
+		"semana: progresso parcial sem prêmio",
+		D.progredir(st, semana, alvo.id, alvo.meta - 1, alvo.id == "sequencia"),
+		0
+	)
+	igual(
+		"semana: completar dá prêmio",
+		D.progredir(st, semana, alvo.id, alvo.meta, alvo.id == "sequencia"),
+		alvo.recompensa
+	)
+	igual("semana: não paga duas vezes", D.progredir(st, semana, alvo.id, 999, false), 0)
+	local fora
+	for _, d in D.DESAFIOS do
+		if not table.find(tres, d.id) then
+			fora = d.id
+			break
+		end
+	end
+	igual(
+		"semana: desafio de outra semana não conta",
+		D.progredir(st, semana, fora, 9999, false),
+		0
+	)
+	igual("semana: semana nova zera", next(D.semanaDe({ semana = st }, semana + 1).progresso), nil)
+	igual("reviver: tempos coerentes", D.REVIVER_TEMPO < D.ABATIDO_ESPERA, true)
+end
+
 local Perfil = req("Perfil")
 local p = Perfil.padrao()
 igual("versao", p.versao, 1)
@@ -280,7 +539,8 @@ igual("1 em 1.000 = alta", Apresentacao.de(1000).id, "alta")
 igual("1 em 10.000 = muito alta", Apresentacao.de(10000).id, "muito_alta")
 igual("1 em 100.000 = extrema", Apresentacao.de(100000).id, "extrema")
 igual("1 em 1.000.000 = absoluta", Apresentacao.de(1000000).id, "absoluta")
-local faixas = { { 0.4, 0.6 }, { 0.8, 1.2 }, { 1.5, 2 }, { 2, 3 }, { 3, 4 }, { 4, 6 } }
+-- durações com a Roleta de Ecos (1,2 a 2,6 s) somada ao ritual (pedido do dono: giro mais longo)
+local faixas = { { 1.6, 1.8 }, { 2.2, 2.6 }, { 3.2, 3.7 }, { 4, 5 }, { 5.3, 6.3 }, { 6.6, 8.6 } }
 local anterior = 0
 for i, c in Apresentacao.Categorias do
 	local d = Apresentacao.tempoAteRevelacao(c)
@@ -457,5 +717,373 @@ igual(
 	Inc.recompensa("cinzas", 5, false, false)
 )
 igual("inc 3 universos", #Inc.UNIVERSOS, 3)
+
+-- Matematica do RNG, limite seguro de sorte e nova tabela de 67 originais.
+local Probabilidades = req("Probabilidades")
+local C67 = req("Catalogo67Probabilidades")
+igual("catalogo 67 entradas", #C67.lista, 67)
+igual("Musgo alterado para 1 em 6", C67.porId.musgo_luminoso.chance, 6)
+igual(
+	"Centelha mais comum",
+	C67.porId.centelha_do_nexo.pBase > C67.porId.musgo_luminoso.pBase,
+	true
+)
+igual("Centelha 20.9966%", math.abs(C67.PROBABILIDADE_RESERVA - 0.2099662279261313) < 1e-12, true)
+igual("sorte NaN segura", Probabilidades.sorteValida(0 / 0), 1)
+igual("sorte infinito segura", Probabilidades.sorteValida(math.huge), 1)
+igual("sorte negativa segura", Probabilidades.sorteValida(-1), 1)
+igual("limite superior de sorte 3", Probabilidades.sorteValida(10), 3)
+igual("transcendencia 0", Probabilidades.sorteTranscendencia(0), 1)
+igual("transcendencia X", Probabilidades.sorteTranscendencia(10), 1.5)
+igual("transcendencia maior que X", Probabilidades.sorteTranscendencia(20), 1.5)
+igual("perfil sem nivel segue sorte 1", Auras.sorteTranscendencia(nil), 1)
+local anteriorCoroa = 0
+local anteriorDivino = 0
+for nivel = 0, 10 do
+	local sorte = Probabilidades.sorteTranscendencia(nivel)
+	local pesos, z = Probabilidades.distribuicao(C67.lista, sorte)
+	local somaEfetiva = 0
+	for _, peso in pesos do
+		somaEfetiva += peso / z
+	end
+	igual("67 total no nivel " .. nivel, math.abs(somaEfetiva - 1) < 1e-10, true)
+	local coroa = Probabilidades.chanceEfetiva(C67.lista, "coroa_de_coral", sorte)
+	local divino = Probabilidades.chanceEfetiva(C67.lista, "soberania_do_vazio", sorte)
+	igual("67 Coroa cresce nivel " .. nivel, coroa >= anteriorCoroa, true)
+	igual("67 Soberania cresce nivel " .. nivel, divino >= anteriorDivino, true)
+	anteriorCoroa = coroa
+	anteriorDivino = divino
+end
+igual(
+	"67 Centelha no nivel X",
+	math.abs(Probabilidades.chanceEfetiva(C67.lista, "centelha_do_nexo", 1.5) - 0.19779318528564926)
+		< 1e-11,
+	true
+)
+igual(
+	"67 Musgo no nivel X",
+	math.abs(Probabilidades.chanceEfetiva(C67.lista, "musgo_luminoso", 1.5) - 0.15700396776446937)
+		< 1e-11,
+	true
+)
+igual(
+	"67 Soberania no nivel X",
+	math.abs(
+		Probabilidades.chanceEfetiva(C67.lista, "soberania_do_vazio", 1.5) - 1.954457110930131e-8
+	) < 1e-16,
+	true
+)
+local pesos3, z3 = Probabilidades.distribuicao(C67.lista, 3)
+local soma3 = 0
+for _, peso in pesos3 do
+	soma3 += peso / z3
+end
+igual("67 sorte 3 segue 100%", math.abs(soma3 - 1) < 1e-10, true)
+igual(
+	"67 RNG zero = divino",
+	Probabilidades.sortear(C67.lista, 1.5, function()
+		return 0
+	end).id,
+	"soberania_do_vazio"
+)
+igual(
+	"67 RNG alto = Centelha",
+	Probabilidades.sortear(C67.lista, 1.5, function()
+		return 0.999999
+	end).id,
+	"centelha_do_nexo"
+)
+igual("67 aura inexistente", Probabilidades.chanceEfetiva(C67.lista, "desconhecida", 1.5), 0)
+local somaAtual3 = 0
+for _, aura in Auras.lista do
+	somaAtual3 += Auras.probabilidadeReal(aura.id, 3)
+end
+igual("catalogo atual em 3x soma 100%", math.abs(somaAtual3 - 1) < 1e-10, true)
+igual(
+	"catalogo atual aumenta chance divina",
+	Auras.probabilidadeReal("despertar_absoluto", 1.5)
+		> Auras.probabilidadeReal("despertar_absoluto"),
+	true
+)
+
+local Itens = req("Itens")
+local estoque = Itens.sanitizar({
+	estilhaco_bruto = 1000005,
+	cinza_persistente = 0 / 0,
+	sal_mare_morta = math.huge,
+	po_umbral = -8,
+	lasca_estavel = 2.5,
+	brasa_arauto = 4,
+	faisca = 4,
+})
+igual("estoque respeita limite", estoque.estilhaco_bruto, 999999)
+igual("estoque preserva saldo válido", estoque.brasa_arauto, 4)
+for _, id in { "cinza_persistente", "sal_mare_morta", "po_umbral", "lasca_estavel", "faisca" } do
+	igual("estoque rejeita " .. id, estoque[id], nil)
+end
+igual(
+	"save antigo sem inventário recebe estado vazio",
+	next(Itens.normalizarInventario(nil).itens),
+	nil
+)
+igual("preencher inventário antigo preserva fragmentos", salvarReal.incursoes.fragmentos, 0)
+igual(
+	"normaliza slot sem posse",
+	Itens.normalizarInventario({ equipados = { artefato = "emblema_guardiao" } }).equipados.artefato,
+	nil
+)
+igual(
+	"inventários novos independentes",
+	Perfil.padrao().inventario.itens ~= Perfil.padrao().inventario.itens,
+	true
+)
+igual("pilha cheia não credita", Itens.conceder(estoque, "estilhaco_bruto", 10), 0)
+igual("crédito aceita item", Itens.conceder(estoque, "po_umbral", 1), 1)
+igual("crédito rejeita id da aura", Itens.conceder(estoque, "faisca", 1), 0)
+igual("crédito rejeita quantidade inválida", Itens.conceder(estoque, "po_umbral", -1), 0)
+igual("consumo insuficiente", Itens.consumir(estoque, "po_umbral", 2), false)
+igual(
+	"consumo remove pilha vazia",
+	Itens.consumir(estoque, "po_umbral", 1) and estoque.po_umbral,
+	nil
+)
+local totalItens = 0
+for id, item in Itens.porId do
+	totalItens += 1
+	igual("id do item " .. id, item.id, id)
+	igual("raridade do item " .. id, Itens.Tiers[item.raridade] ~= nil, true)
+end
+igual("catálogo inicial de itens", totalItens, 16)
+
+local Loot = req("LootIncursoes")
+local membroA, membroB = Loot.novo(), Loot.novo()
+local function semBonus()
+	return 1
+end
+local materiaisA, materiaisB = {}, {}
+for andar = 1, 5 do
+	igual(
+		"credita andar " .. andar,
+		Loot.creditar(membroA, materiaisA, "cinzas", andar, semBonus) ~= nil,
+		true
+	)
+	igual(
+		"não repete andar " .. andar,
+		Loot.creditar(membroA, materiaisA, "cinzas", andar, semBonus),
+		nil
+	)
+end
+igual(
+	"progresso de cada membro é isolado",
+	Loot.creditar(membroB, materiaisB, "cinzas", 1, semBonus).estilhaco_bruto,
+	3
+)
+igual("primeira incursão rende estilhaços suficientes", materiaisA.estilhaco_bruto, 15)
+igual("lascas garantidas", materiaisA.lasca_estavel, 2)
+igual("selo garantido por marco", materiaisA.selo_purificacao, 1)
+igual("marca de Guardião garantida", materiaisA.brasa_arauto, 1)
+igual(
+	"bônus épico separado",
+	Loot.creditar(Loot.novo(), {}, "cinzas", 5, function()
+		return 0
+	end).coracao_fenda,
+	1
+)
+igual(
+	"outro bioma entrega material de Maré",
+	Loot.creditar(Loot.novo(), {}, "mare", 1, semBonus).sal_mare_morta,
+	1
+)
+igual(
+	"outro Guardião entrega marca de Umbral",
+	Loot.creditar(Loot.novo(), {}, "umbral", 5, semBonus).veu_ocaso,
+	1
+)
+igual(
+	"andar inválido não é premiado",
+	Loot.creditar(Loot.novo(), {}, "cinzas", 6, semBonus),
+	nil
+)
+igual(
+	"universo inválido não é premiado",
+	Loot.creditar(Loot.novo(), {}, "arena", 1, semBonus),
+	nil
+)
+igual("membros não compartilham estoque", materiaisB.estilhaco_bruto, 3)
+
+local Receitas = req("Receitas")
+local Transcendencia = req("Transcendencia")
+local pT1 = Perfil.padrao()
+pT1.giros = 5
+pT1.incursoes.fragmentos = 23
+pT1.auras.faisca = 5
+local rT1 = Loot.novo()
+for andar = 1, 5 do
+	Loot.creditar(rT1, pT1.inventario.itens, "cinzas", andar, semBonus)
+end
+local estoqueT1 = pT1.inventario.itens
+igual("bloqueia receita desconhecida", Receitas.fabricar(estoqueT1, "invalida"), false)
+igual(
+	"conclusão de Cinzas permite fabricar Coração da Fenda",
+	Receitas.fabricar(estoqueT1, "coracao_fenda"),
+	true
+)
+igual(
+	"T1 permite Coração da Ressonância",
+	Receitas.fabricar(estoqueT1, "coracao_ressonancia"),
+	true
+)
+igual(
+	"uma única entrada não gera duas saídas",
+	Receitas.fabricar(estoqueT1, "coracao_ressonancia"),
+	false
+)
+igual("receita recusada mantém matéria-prima", estoqueT1.estilhaco_bruto, 1)
+igual("Transcende I", Transcendencia.oferecer(estoqueT1, pT1.transcendencia), true)
+igual("Transcendência consome exatamente um coração", estoqueT1.coracao_ressonancia, nil)
+igual(
+	"Transcendência não repete oferta",
+	Transcendencia.oferecer(estoqueT1, pT1.transcendencia),
+	false
+)
+igual("Transcendência persiste nível 1", pT1.transcendencia.nivel, 1)
+igual("Transcendência preserva auras", pT1.auras.faisca, 5)
+igual("Transcendência preserva giros", pT1.giros, 5)
+igual("Transcendência preserva fragmentos", pT1.incursoes.fragmentos, 23)
+igual("nível antigo é neutro", Transcendencia.normalizar(nil).nivel, 0)
+igual("nível inválido é neutro", Transcendencia.sorte(0 / 0), 1)
+for nivel = 0, 10 do
+	local sorte = Transcendencia.sorte(nivel)
+	local anterior = 0
+	for i = #Auras.lista, 1, -1 do
+		local aura = Auras.lista[i]
+		local chance = Auras.probabilidadeReal(aura.id, sorte)
+		igual("probabilidade positiva " .. aura.id .. "/" .. nivel, chance > 0, true)
+		igual(
+			"sorteio cai na faixa publicada " .. aura.id .. "/" .. nivel,
+			Auras.sortear(function()
+				return anterior + chance / 2
+			end, sorte).id,
+			aura.id
+		)
+		anterior += chance
+	end
+	igual("sorte soma 1 no nível " .. nivel, math.abs(anterior - 1) < 1e-12, true)
+end
+local rara = "trovao_jovem"
+igual(
+	"T1 aumenta a probabilidade rara no RNG normalizado",
+	Auras.probabilidadeReal(rara, 1.05) > Auras.probabilidadeReal(rara),
+	true
+)
+igual(
+	"estoque cheio não consome ingredientes",
+	Receitas.fabricar(
+		{ coracao_fenda = 999999, estilhaco_bruto = 8, lasca_estavel = 2, selo_purificacao = 1 },
+		"coracao_fenda"
+	),
+	false
+)
+
+local Artefatos = req("Artefatos")
+local pArtefato = Perfil.padrao()
+local invArtefato = pArtefato.inventario
+igual("equipar exige posse", Artefatos.equipar(invArtefato, "emblema_guardiao"), false)
+igual("equipar rejeita ID de material", Artefatos.equipar(invArtefato, "estilhaco_bruto"), false)
+invArtefato.itens = {
+	coracao_fenda = 3,
+	brasa_arauto = 3,
+	selo_purificacao = 2,
+	perola_abissal = 1,
+	veu_ocaso = 1,
+	fragmento_instavel = 6,
+}
+igual("forja Emblema", Receitas.fabricar(invArtefato.itens, "emblema_guardiao"), true)
+igual("forja Lâmina dos três mundos", Receitas.fabricar(invArtefato.itens, "lamina_nexo"), true)
+igual("equipa Emblema", Artefatos.equipar(invArtefato, "emblema_guardiao"), true)
+igual("Emblema aumenta vida", Artefatos.bonusVida(invArtefato.equipados.artefato), 0.10)
+igual("troca slot pela Lâmina", Artefatos.equipar(invArtefato, "lamina_nexo"), true)
+igual("Lâmina fica no slot único", invArtefato.equipados.artefato, "lamina_nexo")
+igual("Lâmina não aumenta vida", Artefatos.bonusVida(invArtefato.equipados.artefato), 0)
+igual("Lâmina tem visual", Artefatos.visual(invArtefato.equipados.artefato), "lamina_nexo")
+igual(
+	"slot válido sobrevive à migração",
+	Itens.normalizarInventario(invArtefato).equipados.artefato,
+	"lamina_nexo"
+)
+igual("desequipar limpa slot", Artefatos.equipar(invArtefato, ""), true)
+igual("slot vazio", invArtefato.equipados.artefato, nil)
+igual("equipamento não afeta sorte", Transcendencia.sorte(pArtefato.transcendencia.nivel), 1)
+
+local pOferta = Perfil.padrao()
+for nivel = 1, 10 do
+	local custo = Transcendencia.custo(nivel - 1)
+	local estoqueOferta = table.clone(custo)
+	local id, qtd = next(custo)
+	estoqueOferta[id] = qtd - 1
+	igual(
+		"oferta incompleta é recusada no nível " .. nivel,
+		Transcendencia.oferecer(estoqueOferta, pOferta.transcendencia),
+		false
+	)
+	igual("oferta incompleta mantém o nível " .. nivel, pOferta.transcendencia.nivel, nivel - 1)
+	for item, preco in custo do
+		igual(
+			"oferta recusada preserva " .. item .. "/" .. nivel,
+			estoqueOferta[item],
+			if item == id then preco - 1 else preco
+		)
+	end
+	estoqueOferta[id] = qtd
+	igual(
+		"oferta completa funciona no nível " .. nivel,
+		Transcendencia.oferecer(estoqueOferta, pOferta.transcendencia),
+		true
+	)
+	igual("consumo exato no nível " .. nivel, next(estoqueOferta), nil)
+	igual("nível concedido " .. nivel, pOferta.transcendencia.nivel, nivel)
+end
+igual("limite de 10 níveis", Transcendencia.custo(10), nil)
+igual("bônus máximo 1,50x", Transcendencia.sorte(10), 1.50)
+
+local Arena = req("Arena")
+local entrada = Arena.novo()
+igual("arena não permite despertar sem energia", Arena.resolver(entrada, "despertar"), nil)
+igual("arena rejeita ação inventada", Arena.resolver(entrada, "inexistente"), nil)
+local corte = Arena.resolver(entrada, "corte")
+igual("arena dano da técnica", corte.golpes[1].dano, 175)
+igual("arena jogador age antes do soberano", corte.golpes[1].ator, "jogador")
+igual("arena contra-ataque", corte.estado.vida, 900)
+igual("arena preserva os dados de entrada", entrada.soberano, 1000)
+igual("arena mantém a primeira técnica em recarga", Arena.restante(corte.estado, "corte"), 2)
+igual("arena rejeita técnica em recarga", Arena.resolver(corte.estado, "corte"), nil)
+igual("arena avança a rodada", corte.estado.rodada, 2)
+local guarda = Arena.resolver(corte.estado, "guarda")
+igual("arena guarda reduz o golpe pesado", guarda.golpes[2].dano, 91)
+igual("arena guarda gera energia", guarda.estado.energia, 35)
+local ataque = Arena.resolver(guarda.estado, "ataque")
+igual("arena recarga devolve a técnica na rodada 4", Arena.restante(ataque.estado, "corte"), 0)
+local selo = Arena.resolver(ataque.estado, "selo")
+igual("arena baluarte reduz dano recebido pelo soberano", selo.golpes[1].dano, 33)
+igual("arena selo fica ativo até um golpe de dano", selo.estado.selado, true)
+local pesado = Arena.resolver(selo.estado, "ataque")
+igual("arena selo reduz o dano seguinte", pesado.golpes[2].dano, 130)
+igual("arena consome o selo num golpe", pesado.estado.selado, false)
+igual("arena limita energia a 100", pesado.estado.energia, 100)
+local ult = Arena.resolver(pesado.estado, "despertar")
+igual("arena despertar consome a carga", ult.estado.energia, 0)
+igual("arena despertar causa dano", ult.golpes[1].dano, 290)
+local decisivo = Arena.novo()
+decisivo.soberano = 10
+local vitoria = Arena.resolver(decisivo, "ataque")
+igual("arena golpe final limitado à vida restante", vitoria.golpes[1].dano, 10)
+igual("arena vitória cancela a resposta do soberano", #vitoria.golpes, 1)
+igual("arena vitória confirmada", vitoria.resultado, "vitoria")
+igual("arena não aceita agir após vitória", Arena.resolver(vitoria.estado, "ataque"), nil)
+decisivo.soberano = 1000
+decisivo.vida = 1
+local derrota = Arena.resolver(decisivo, "ataque")
+igual("arena derrota confirmada", derrota.resultado, "derrota")
+igual("arena vida nunca fica negativa", derrota.estado.vida, 0)
 
 print(string.format("%d testes, %d falhas", total, falhas))

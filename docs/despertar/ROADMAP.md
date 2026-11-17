@@ -10,7 +10,7 @@
 
 ## Arena e Incursões
 
-- **Arena do Trono** — o Primeiro Soberano já ocupa o trono com repouso, reação e conversa. Duelo por turnos e sucessão do rei são etapas futuras.
+- **Arena do Trono** — o primeiro duelo 1×1 contra o Soberano está descrito em [Arena do Trono](ARENA.md). A sucessão e os duelos entre jogadores ficam para a próxima etapa.
 - **Bastião das Incursões** — a Mesa dos Cartógrafos abre a fila para os três universos. Os andares, Guardiões e relíquias estão descritos em `docs/despertar/INCURSOES.md`.
 
 ## V2

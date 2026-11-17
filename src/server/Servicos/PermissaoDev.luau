@@ -12,6 +12,11 @@ function PermissaoDev.copiaLocal(universo: number, lugar: number, studioTeste: b
 	return studioTeste and universo == 0 and lugar == 0
 end
 
+-- O nome vem do Player autenticado pelo Roblox.
+function PermissaoDev.contaDeTeste(nome: string, userId: number): number?
+	return if userId > 0 and string.lower(nome) == "umrnoobzz" then userId else nil
+end
+
 function PermissaoDev.autoriza(
 	universo: number,
 	lugar: number,

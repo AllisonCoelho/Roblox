@@ -1,6 +1,7 @@
 -- Monta a interface do Despertar e controla o giro (manual e automático).
 -- O cliente só pede: o resultado do sorteio sempre vem do servidor, já decidido e registrado.
 -- A apresentação (Mundo/Despertar) é escolhida a partir desse resultado.
+local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -10,20 +11,25 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Apresentacao = require(Shared.Dados.Apresentacao)
 local Auras = require(Shared.Dados.Auras)
 local Config = require(Shared.Config)
+local Monetizacao = require(Shared.Dados.Monetizacao)
 local Remotos = require(Shared.Remotos)
 local Escala = require(script.Parent.Escala)
 local Estado = require(script.Parent.Estado)
 local Navegacao = require(script.Parent.Navegacao)
 local Telas = script.Parent:WaitForChild("Telas")
 local Ajustes = require(Telas.Ajustes)
+local ArenaUI = require(Telas.Arena)
+local Altar = require(Telas.Altar)
 local Avisos = require(Telas.Avisos)
 local HUD = require(Telas.HUD)
 local Indice = require(Telas.Indice)
+local Inventario = require(Telas.Inventario)
 local PainelDev = require(Telas.PainelDev)
 local IncursoesUI = require(Telas.Incursoes)
 local Revelacao = require(Telas.Revelacao)
 local Mundo = script.Parent.Parent:WaitForChild("Mundo")
 local Despertar = require(Mundo:WaitForChild("Despertar"))
+local Artefatos = require(Mundo:WaitForChild("Artefatos"))
 local AurasControlador = require(Mundo:WaitForChild("Auras"):WaitForChild("Controlador"))
 local AurasCaudas = require(Mundo:WaitForChild("Auras"):WaitForChild("Caudas"))
 local EfeitosAlheios = require(Mundo:WaitForChild("EfeitosAlheios"))
@@ -36,6 +42,7 @@ local INTERVALO = Config.CooldownGiro + FOLGA
 
 local girando = false
 local emIncursao = false
+local emArena = false
 local proximoGiro = 0
 local ocupadoAte = 0 -- fim do ritual em andamento (auras sem cartão)
 local hud: HUD.Api
@@ -45,14 +52,55 @@ local function preferencias(): Despertar.Preferencias
 	return Despertar.preferencias(if estado then estado.configuracoes else nil)
 end
 
+-- Passes (o servidor liga o atributo "Passe_<id>" no jogador; aqui só lemos)
+local function temPasse(id: string): boolean
+	return Players.LocalPlayer:GetAttribute(Monetizacao.atributo(id)) == true
+end
+
+local ultimaOferta = 0
+-- Mostra a compra do passe (ou "em breve" se o dono ainda não criou o passe no Creator Hub)
+local function oferecer(id: string)
+	if os.clock() - ultimaOferta < 4 then
+		return
+	end
+	ultimaOferta = os.clock()
+	local produto = Monetizacao.porId[id]
+	if not produto then
+		return
+	end
+	if produto.gamePassId then
+		pcall(
+			MarketplaceService.PromptGamePassPurchase,
+			MarketplaceService,
+			Players.LocalPlayer,
+			produto.gamePassId
+		)
+	else
+		Avisos.toast(
+			string.format("%s · %d Robux — em breve na loja", produto.nome, produto.preco)
+		)
+	end
+end
+
+-- Pular o ritual é um passe; sem ele, o toque oferece a compra
+local function pular()
+	if temPasse("pularAnimacao") then
+		Despertar.pular()
+	else
+		oferecer("pularAnimacao")
+	end
+end
+
 local function podeGirar(): boolean
 	local agora = os.clock()
 	return Estado.atual ~= nil
 		and Navegacao.aberto() == nil
 		and not emIncursao
+		and not emArena
 		and not PainelDev.pendente()
 		and not girando
 		and not Revelacao.ativa()
+		and not Altar.ativa()
 		and agora >= proximoGiro
 		and agora >= ocupadoAte
 		-- o toque que fechou o cartão não deve virar um giro
@@ -65,6 +113,7 @@ local function apresentar(aura: Auras.Aura, dados: { [string]: any })
 	local teste = dados.teste == true
 	local simulado = dados.simulado == true
 	local nova = quantidade <= 1 and not teste
+	local chance = if type(dados.chance) == "number" then dados.chance else aura.chance
 	local prefs = preferencias()
 	local cat = Despertar.categoria(aura, not nova and not teste, prefs)
 	local comCartao = cat.cartao > 0
@@ -74,20 +123,26 @@ local function apresentar(aura: Auras.Aura, dados: { [string]: any })
 		-- (o cooldown do servidor, em proximoGiro, continua valendo)
 		ocupadoAte = 0
 		if not teste then
-			hud.registrarResultado(aura, nova, simulado)
+			hud.registrarResultado(aura, nova, simulado, chance)
 			-- O anúncio de quem girou só aparece agora, para não entregar o resultado antes
 			local jogador = Players.LocalPlayer
 			local nome = if simulado then "[Teste] " .. jogador.DisplayName else jogador.DisplayName
-			Avisos.anunciar(nome, jogador.UserId, aura)
+			Avisos.anunciar(nome, jogador.UserId, aura, chance)
 		end
-		if comCartao then
+		if comCartao and not emArena then
 			local estado = Estado.atual
 			Revelacao.mostrar(aura, cat, {
 				quantidade = quantidade,
+				chance = chance,
 				equipada = dados.equipou == true or (estado ~= nil and estado.equipada == aura.id),
 				teste = teste,
 			})
 		end
+	end
+
+	if emArena then
+		revelar()
+		return
 	end
 
 	-- Animações desligadas: nada de ritual nem câmera; o resultado (e o cartão) vem na hora
@@ -137,7 +192,7 @@ local function aoApertar()
 	-- Por isso a condição não olha Revelacao.ativa(): nas cenas raras a tela já está reservada
 	-- desde o início, e era isso que impedia o pulo pela tecla.
 	if not girando and os.clock() < ocupadoAte then
-		Despertar.pular()
+		pular()
 		return
 	end
 	-- Com o cartão aberto, girar() não faz nada (a tecla não fecha o cartão nem gira de novo)
@@ -192,7 +247,12 @@ local function aoDespertou(dados: any)
 		Despertar.alheio(jogador, aura, preferencias())
 	end
 	if type(dados.jogador) == "string" then
-		Avisos.anunciar(dados.jogador, dados.userId, aura)
+		Avisos.anunciar(
+			dados.jogador,
+			dados.userId,
+			aura,
+			if type(dados.chance) == "number" then dados.chance else nil
+		)
 	end
 end
 
@@ -211,9 +271,16 @@ function App.iniciar()
 			task.spawn(aoApertar)
 		end,
 		aoAlternarAuto = function()
+			local estado = Estado.atual
+			local ligando = estado ~= nil and not estado.configuracoes.giroAutomatico
+			if ligando and not temPasse("autoGiro") then
+				oferecer("autoGiro")
+				return
+			end
 			alternarConfiguracao("giroAutomatico")
 		end,
 		aoAbrirIndice = Indice.abrir,
+		aoAbrirInventario = Inventario.abrir,
 		aoAbrirAjustes = Ajustes.abrir,
 	})
 	Revelacao.montar(raiz, {
@@ -225,18 +292,21 @@ function App.iniciar()
 				end
 			end)
 		end,
-		aoPular = Despertar.pular,
+		aoPular = pular,
 		aoMudar = function(ativa)
-			hud.definirVisivel(not ativa and not emIncursao)
+			hud.definirVisivel(not ativa and not emIncursao and not emArena)
 		end,
 	})
 	Avisos.montar(raiz)
 	Indice.montar(Avisos.toast)
+	Inventario.montar(Avisos.toast)
+	Altar.montar(raiz, Avisos.toast)
 	Ajustes.montar(Avisos.toast)
 	PainelDev.iniciar(hud.quadro, {
 		podeAbrir = function()
 			return not girando
 				and not emIncursao
+				and not emArena
 				and not Revelacao.ativa()
 				and os.clock() >= ocupadoAte
 		end,
@@ -254,16 +324,33 @@ function App.iniciar()
 			Despertar.pular()
 			Revelacao.fechar()
 		end
-		hud.definirVisivel(not emPartida and not Revelacao.ativa())
+		hud.definirVisivel(not emPartida and not emArena and not Revelacao.ativa())
+	end)
+	ArenaUI.montar(raiz, Avisos.toast, function(emDuelo)
+		emArena = emDuelo
+		if emDuelo then
+			Navegacao.fechar()
+			Despertar.pular()
+			Revelacao.fechar()
+			ocupadoAte = 0
+		end
+		hud.definirVisivel(not emDuelo and not emIncursao and not Revelacao.ativa())
 	end)
 	Navegacao.ajustar()
 
 	EfeitosAlheios.iniciar()
 	AurasControlador.iniciar()
+	Artefatos.iniciar()
 	Estado.aoMudar(function(estado)
 		hud.atualizar(estado)
 		local c = estado.configuracoes
+		Artefatos.definir(
+			estado.inventario.equipados.artefato,
+			c.qualidadeBaixa == true,
+			c.ocultarEfeitosAlheios == true
+		)
 		EfeitosAlheios.definir(c.ocultarEfeitosAlheios == true)
+		IncursoesUI.definirQualidade(c.qualidadeBaixa == true, c.movimentoReduzido == true)
 		AurasControlador.definir({
 			qualidadeBaixa = c.qualidadeBaixa == true,
 			movimentoReduzido = c.movimentoReduzido == true,
@@ -301,10 +388,10 @@ function App.iniciar()
 	end)
 
 	UserInputService.InputBegan:Connect(function(input, processado)
-		if processado then
+		if processado or emArena then
 			return
 		end
-		if input.KeyCode == Enum.KeyCode.E then
+		if input.KeyCode == Enum.KeyCode.E and not emIncursao then
 			task.spawn(aoApertar)
 		elseif
 			RunService:IsStudio()
@@ -365,7 +452,12 @@ function App.iniciar()
 		while true do
 			task.wait(0.1)
 			local estado = Estado.atual
-			if estado and estado.configuracoes.giroAutomatico and podeGirar() then
+			if
+				estado
+				and estado.configuracoes.giroAutomatico
+				and temPasse("autoGiro")
+				and podeGirar()
+			then
 				task.spawn(girar)
 			end
 		end
