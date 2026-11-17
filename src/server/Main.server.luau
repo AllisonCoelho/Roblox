@@ -10,6 +10,7 @@ Remotos.criarTodos()
 local Servicos = script.Parent:WaitForChild("Servicos")
 local Acoes = require(Servicos:WaitForChild("Acoes"))
 local Dados = require(Servicos:WaitForChild("Dados"))
+local Passes = require(Servicos:WaitForChild("Passes"))
 local Sorteio = require(Servicos:WaitForChild("Sorteio"))
 local Artefatos = require(Servicos:WaitForChild("Artefatos"))
 local Forja = require(Servicos:WaitForChild("Forja"))
@@ -21,6 +22,7 @@ local Arena = require(script.Parent:WaitForChild("Arena"):WaitForChild("Servico"
 
 Acoes.iniciar()
 -- Os serviços registram seus ganchos antes de Dados começar a carregar jogadores
+Passes.iniciar()
 Sorteio.iniciar()
 Forja.iniciar()
 Artefatos.iniciar()
