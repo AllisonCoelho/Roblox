@@ -1,0 +1,57 @@
+{
+  "auraId": "relicario_do_inverno",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/relicario_do_inverno",
+  "templateFile": "assets/roblox/auras_originais/relicario_do_inverno.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "altar",
+      "triangles": 212,
+      "sizeStuds": [
+        0.7431,
+        1.76,
+        0.45
+      ],
+      "centerFromPivot": [
+        0.0021,
+        0.42,
+        -0.0
+      ],
+      "meshId": null
+    },
+    {
+      "name": "sino_gelo",
+      "triangles": 48,
+      "sizeStuds": [
+        0.4,
+        0.5,
+        0.4
+      ],
+      "centerFromPivot": [
+        0.0,
+        0.05,
+        -0.0
+      ],
+      "meshId": null
+    },
+    {
+      "name": "prisma",
+      "triangles": 34,
+      "sizeStuds": [
+        0.5243,
+        1.5525,
+        0.3702
+      ],
+      "centerFromPivot": [
+        0.0638,
+        0.1238,
+        0.0065
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 7
+}

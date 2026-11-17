@@ -1,0 +1,42 @@
+{
+  "auraId": "majestade_de_cobre",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/majestade_de_cobre",
+  "templateFile": "assets/roblox/auras_originais/majestade_de_cobre.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "leao",
+      "triangles": 316,
+      "sizeStuds": [
+        2.2173,
+        2.2173,
+        0.9583
+      ],
+      "centerFromPivot": [
+        0.0,
+        -0.0,
+        -0.0959
+      ],
+      "meshId": null
+    },
+    {
+      "name": "relogio",
+      "triangles": 300,
+      "sizeStuds": [
+        0.716,
+        0.2552,
+        0.7177
+      ],
+      "centerFromPivot": [
+        0.0014,
+        0.0889,
+        -0.0003
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 2
+}

@@ -1,0 +1,27 @@
+{
+  "auraId": "atlas_fragmentado",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/atlas_fragmentado",
+  "templateFile": "assets/roblox/auras_originais/atlas_fragmentado.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "ilha",
+      "triangles": 116,
+      "sizeStuds": [
+        1.3701,
+        1.1287,
+        0.678
+      ],
+      "centerFromPivot": [
+        0.0833,
+        0.0144,
+        -0.0133
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 4
+}

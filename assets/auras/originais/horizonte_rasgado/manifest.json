@@ -1,0 +1,42 @@
+{
+  "auraId": "horizonte_rasgado",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/horizonte_rasgado",
+  "templateFile": "assets/roblox/auras_originais/horizonte_rasgado.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "fenda",
+      "triangles": 40,
+      "sizeStuds": [
+        1.95,
+        2.8,
+        0.05
+      ],
+      "centerFromPivot": [
+        0.025,
+        0.0,
+        -0.0
+      ],
+      "meshId": null
+    },
+    {
+      "name": "borda",
+      "triangles": 160,
+      "sizeStuds": [
+        2.1034,
+        2.7398,
+        0.113
+      ],
+      "centerFromPivot": [
+        -0.0055,
+        -0.0496,
+        0.0372
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 2
+}
