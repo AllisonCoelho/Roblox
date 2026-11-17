@@ -1,10 +1,19 @@
--- HUD da Órbita do Nexo. O centro fica livre para o avatar e para o cenário.
+-- HUD da Órbita do Nexo (v2). Mantém a identidade original (fundo escuro, placas chanfradas,
+-- lilás) e organiza como os jogos de aventura do Roblox: cartão do jogador com barras no topo
+-- esquerdo, menu lateral de ícones, moedas e últimos despertares à direita e uma barra de
+-- atalhos numerada em volta do botão DESPERTAR. O centro fica livre para o avatar e o cenário.
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 local Shared = ReplicatedStorage.Shared
 local Auras = require(Shared.Dados.Auras)
 local Formato = require(Shared.Formato)
+local Icones = require(Shared.Dados.Icones)
+local Itens = require(Shared.Dados.Itens)
 local Perfil = require(Shared.Dados.Perfil)
+local Temporada = require(Shared.Dados.Temporada)
 local Transcendencia = require(Shared.Dados.Transcendencia)
 local Cores = require(Shared.Tema).Orbita
 local Escala = require(script.Parent.Parent.Escala)
@@ -12,6 +21,17 @@ local Kit = require(script.Parent.Parent.Kit)
 
 local HUD = {}
 local RECENTES = 3
+
+-- Um destaque por atalho (borda e ícone), sobre o mesmo fundo escuro da Órbita
+local DESTAQUE = {
+	Loja = Color3.fromHex("FFC83D"),
+	Bolsa = Color3.fromHex("FF9A6A"),
+	Indice = Color3.fromHex("7FD8FF"),
+	Passe = Color3.fromHex("FF8BD8"),
+	Ajustes = Cores.Lilas,
+	Giros = Color3.fromHex("FFD36B"),
+	Fragmentos = Color3.fromHex("C9A2FF"),
+}
 
 export type EstadoGiro = "perfil" | "pedido" | "recarregando" | "pular" | "pronto"
 
@@ -30,11 +50,72 @@ type Opcoes = {
 	aoAbrirIndice: () -> (),
 	aoAbrirInventario: () -> (),
 	aoAbrirLoja: () -> (),
+	aoAbrirTemporada: (() -> ())?,
 	aoAbrirAjustes: () -> (),
 }
 
 local function corTier(aura: Auras.Aura): Color3
 	return Color3.fromHex(Auras.Tiers[aura.tier].cor)
+end
+
+-- Leve aumento ao passar o mouse e "afundar" ao tocar (resposta imediata ao toque)
+local function animarToque(alvo: GuiObject, botao: GuiButton)
+	local escala = Kit.novo("UIScale", { Parent = alvo })
+	local function para(v: number)
+		TweenService:Create(escala, TweenInfo.new(0.12, Enum.EasingStyle.Quad), { Scale = v })
+			:Play()
+	end
+	botao.MouseEnter:Connect(function()
+		para(1.04)
+	end)
+	botao.MouseLeave:Connect(function()
+		para(1)
+	end)
+	botao.MouseButton1Down:Connect(function()
+		para(0.94)
+	end)
+	botao.MouseButton1Up:Connect(function()
+		para(1.04)
+	end)
+end
+
+local function texto(pai: Instance, props: { [string]: any }): TextLabel
+	props.Parent = pai
+	return Kit.texto(props)
+end
+
+local function barra(pai: Instance, cor: Color3, posicao: UDim2, tamanho: UDim2): Frame
+	local fundo = Kit.novo("Frame", {
+		BackgroundColor3 = Cores.Elevado,
+		BorderSizePixel = 0,
+		Position = posicao,
+		Size = tamanho,
+		Parent = pai,
+	})
+	local cheio = Kit.novo("Frame", {
+		BackgroundColor3 = cor,
+		BorderSizePixel = 0,
+		Size = UDim2.fromScale(0, 1),
+		Parent = fundo,
+	})
+	return cheio
+end
+
+-- Selo com o número do atalho (teclas 1–4)
+local function selo(pai: Instance, numero: string)
+	local p = Kit.placa({
+		tamanho = UDim2.fromOffset(22, 22),
+		posicao = UDim2.fromOffset(-6, -6),
+		fundo = Cores.Fundo,
+		borda = Cores.Lilas,
+		corte = 5,
+		z = 5,
+		pai = pai,
+	})
+	texto(
+		p.conteudo,
+		{ fonte = "mono", Text = numero, TextSize = 13, Size = UDim2.fromScale(1, 1) }
+	)
 end
 
 function HUD.montar(raiz: Frame, op: Opcoes): Api
@@ -45,47 +126,222 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 		Parent = raiz,
 	})
 
-	local placaGiros = Kit.placa({
-		nome = "Giros",
-		tamanho = UDim2.fromOffset(216, 52),
+	-- ================================================================ cartão do jogador
+	local cartao = Kit.placa({
+		nome = "Jogador",
+		tamanho = UDim2.fromOffset(336, 92),
 		posicao = UDim2.fromOffset(22, 16),
+		corte = 12,
 		pai = hud,
 	})
-	Kit.texto({
-		Text = "GIROS",
-		TextSize = 14,
-		TextColor3 = Cores.TextoSuave,
-		TextXAlignment = Enum.TextXAlignment.Left,
-		Position = UDim2.fromOffset(12, 0),
-		Size = UDim2.new(0, 56, 1, 0),
-		Parent = placaGiros.conteudo,
+	local moldura = Kit.circulo({
+		BackgroundColor3 = Cores.Elevado,
+		Position = UDim2.fromOffset(10, 10),
+		Size = UDim2.fromOffset(72, 72),
+		Parent = cartao.conteudo,
 	})
-	local giros = Kit.texto({
+	Kit.novo("UIStroke", { Color = Cores.Lilas, Thickness = 2, Parent = moldura })
+	local avatar = Kit.novo("ImageLabel", {
+		BackgroundTransparency = 1,
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromScale(0.94, 0.94),
+		Parent = moldura,
+	})
+	Kit.novo("UICorner", { CornerRadius = UDim.new(1, 0), Parent = avatar })
+	task.spawn(function()
+		local ok, imagem = pcall(
+			Players.GetUserThumbnailAsync,
+			Players,
+			Players.LocalPlayer.UserId,
+			Enum.ThumbnailType.HeadShot,
+			Enum.ThumbnailSize.Size150x150
+		)
+		if ok then
+			avatar.Image = imagem
+		end
+	end)
+	local selTrans = Kit.placa({
+		tamanho = UDim2.fromOffset(40, 22),
+		posicao = UDim2.fromOffset(52, 64),
+		fundo = Cores.Lilas,
+		borda = Cores.Lilas,
+		corte = 5,
+		z = 4,
+		pai = cartao.conteudo,
+	})
+	local textoTrans = texto(selTrans.conteudo, {
 		fonte = "mono",
-		Text = "0",
-		TextSize = 22,
-		TextXAlignment = Enum.TextXAlignment.Right,
-		TextTruncate = Enum.TextTruncate.AtEnd,
-		Position = UDim2.fromOffset(65, 0),
-		Size = UDim2.new(1, -77, 1, 0),
-		Parent = placaGiros.conteudo,
+		Text = "T0",
+		TextSize = 13,
+		TextColor3 = Cores.Fundo,
+		Size = UDim2.fromScale(1, 1),
 	})
+	texto(cartao.conteudo, {
+		fonte = "titulo",
+		Text = Players.LocalPlayer.DisplayName,
+		TextSize = 22,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextTruncate = Enum.TextTruncate.AtEnd,
+		Position = UDim2.fromOffset(96, 8),
+		Size = UDim2.new(1, -106, 0, 28),
+	})
+	local textoTemporada = texto(cartao.conteudo, {
+		Text = "PASSE · NV 0",
+		TextSize = 14,
+		TextColor3 = DESTAQUE.Passe,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Position = UDim2.fromOffset(96, 40),
+		Size = UDim2.new(1, -106, 0, 18),
+	})
+	local barraTemporada =
+		barra(cartao.conteudo, DESTAQUE.Passe, UDim2.fromOffset(96, 62), UDim2.new(1, -110, 0, 8))
+	local alvoCartao = Kit.alvo(cartao.quadro, "Passe de Temporada", function()
+		(op.aoAbrirTemporada or op.aoAbrirLoja)()
+	end)
+	animarToque(cartao.quadro, alvoCartao)
 
+	-- Moedas logo abaixo do cartão (como dinheiro e fragmentos nos jogos de aventura)
+	local moedas = Kit.novo("Frame", {
+		Name = "Moedas",
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(22, 116),
+		Size = UDim2.fromOffset(336, 40),
+		Parent = hud,
+	})
+	Kit.novo("UIListLayout", {
+		FillDirection = Enum.FillDirection.Horizontal,
+		Padding = UDim.new(0, 8),
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		Parent = moedas,
+	})
+	local placasMoeda: { Kit.Placa } = {}
+	local function moeda(ordem: number, simbolo: string, nome: string, cor: Color3): TextLabel
+		local p = Kit.placa({
+			tamanho = UDim2.fromOffset(164, 40),
+			ordem = ordem,
+			corte = 8,
+			pai = moedas,
+		})
+		table.insert(placasMoeda, p)
+		texto(p.conteudo, {
+			Text = simbolo,
+			TextSize = 20,
+			Position = UDim2.fromOffset(6, 0),
+			Size = UDim2.fromOffset(28, 40),
+		})
+		texto(p.conteudo, {
+			Text = nome,
+			TextSize = 12,
+			TextColor3 = Cores.TextoSuave,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Position = UDim2.fromOffset(36, 0),
+			Size = UDim2.new(0, 70, 1, 0),
+		})
+		return texto(p.conteudo, {
+			fonte = "mono",
+			Text = "0",
+			TextSize = 18,
+			TextColor3 = cor,
+			TextXAlignment = Enum.TextXAlignment.Right,
+			TextTruncate = Enum.TextTruncate.AtEnd,
+			Position = UDim2.fromOffset(60, 0),
+			Size = UDim2.new(1, -70, 1, 0),
+		})
+	end
+	local giros = moeda(1, Icones.MENU.Giros, "GIROS", DESTAQUE.Giros)
+	local fragmentos = moeda(2, Icones.MENU.Fragmentos, "FRAGM.", DESTAQUE.Fragmentos)
+
+	-- ================================================================ menu lateral
+	local menu = Kit.novo("Frame", {
+		Name = "Menu",
+		BackgroundTransparency = 1,
+		AnchorPoint = Vector2.new(0, 0.5),
+		Position = UDim2.new(0, 22, 0.5, 40),
+		Size = UDim2.fromOffset(80, 450),
+		Parent = hud,
+	})
+	local listaMenu = Kit.novo("UIListLayout", {
+		Padding = UDim.new(0, 8),
+		VerticalAlignment = Enum.VerticalAlignment.Center,
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		Parent = menu,
+	})
+	local placasMenu: { Kit.Placa } = {}
+	local botoesMenu: { TextButton } = {}
+	local function atalho(
+		ordem: number,
+		nome: string,
+		simbolo: string,
+		cor: Color3,
+		acao: () -> ()
+	): TextButton
+		local p = Kit.placa({
+			nome = nome,
+			tamanho = UDim2.fromOffset(78, 78),
+			borda = cor,
+			corte = 12,
+			ordem = ordem,
+			pai = menu,
+		})
+		-- faixa de cor no pé do botão: identifica o atalho de longe
+		Kit.novo("Frame", {
+			BackgroundColor3 = cor,
+			BackgroundTransparency = 0.75,
+			BorderSizePixel = 0,
+			AnchorPoint = Vector2.new(0, 1),
+			Position = UDim2.new(0, 2, 1, -2),
+			Size = UDim2.new(1, -4, 0, 24),
+			Parent = p.conteudo,
+		})
+		texto(p.conteudo, {
+			Text = simbolo,
+			TextSize = 30,
+			Position = UDim2.fromOffset(0, 6),
+			Size = UDim2.new(1, 0, 0, 40),
+		})
+		texto(p.conteudo, {
+			fonte = "titulo",
+			Text = string.upper(nome),
+			TextSize = 14,
+			TextColor3 = Kit.corLegivel(cor),
+			AnchorPoint = Vector2.new(0.5, 1),
+			Position = UDim2.new(0.5, 0, 1, -4),
+			Size = UDim2.new(1, -4, 0, 20),
+		})
+		local b = Kit.alvo(p.quadro, nome, acao)
+		animarToque(p.quadro, b)
+		table.insert(placasMenu, p)
+		table.insert(botoesMenu, b)
+		return b
+	end
+	atalho(1, "Loja", Icones.MENU.Loja, DESTAQUE.Loja, op.aoAbrirLoja)
+	atalho(2, "Bolsa", Icones.MENU.Bolsa, DESTAQUE.Bolsa, op.aoAbrirInventario)
+	atalho(3, "Índice", Icones.MENU.Indice, DESTAQUE.Indice, op.aoAbrirIndice)
+	atalho(4, "Passe", Icones.MENU.Temporada, DESTAQUE.Passe, op.aoAbrirTemporada or op.aoAbrirLoja)
+	local ajustesBotao =
+		atalho(5, "Ajustes", Icones.MENU.Ajustes, DESTAQUE.Ajustes, op.aoAbrirAjustes)
+	for i, b in botoesMenu do
+		b.NextSelectionUp = botoesMenu[i - 1]
+		b.NextSelectionDown = botoesMenu[i + 1]
+	end
+
+	-- ================================================================ últimos despertares
 	local feed = Kit.placa({
 		nome = "Recentes",
 		tamanho = UDim2.fromOffset(258, 140),
-		posicao = UDim2.fromOffset(22, 76),
+		ancora = Vector2.new(1, 0),
+		posicao = UDim2.new(1, -22, 0, 16),
 		pai = hud,
 	})
 	feed.quadro.Visible = false
-	Kit.texto({
+	texto(feed.conteudo, {
 		Text = "ÚLTIMOS DESPERTARES",
 		TextSize = 14,
 		TextColor3 = Cores.TextoSuave,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		Position = UDim2.fromOffset(12, 0),
 		Size = UDim2.new(1, -24, 0, 28),
-		Parent = feed.conteudo,
 	})
 	type Linha = { quadro: Frame, nome: TextLabel, chance: TextLabel, marca: TextLabel }
 	local linhas: { Linha } = {}
@@ -102,182 +358,103 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 			Visible = false,
 			Parent = feed.conteudo,
 		})
-		local marca = Kit.texto({
-			Text = "◆",
-			TextSize = 12,
-			Size = UDim2.new(0, 22, 1, 0),
-			Parent = quadro,
-		})
-		local nome = Kit.texto({
+		local marca = texto(quadro, { Text = "◆", TextSize = 12, Size = UDim2.new(0, 22, 1, 0) })
+		local nome = texto(quadro, {
 			fonte = "titulo",
 			TextSize = 18,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			TextTruncate = Enum.TextTruncate.AtEnd,
 			Position = UDim2.fromOffset(24, 0),
 			Size = UDim2.new(1, -100, 1, 0),
-			Parent = quadro,
 		})
-		local chance = Kit.texto({
+		local chance = texto(quadro, {
 			fonte = "mono",
 			TextSize = 14,
 			TextXAlignment = Enum.TextXAlignment.Right,
 			Position = UDim2.new(1, -74, 0, 0),
 			Size = UDim2.new(0, 66, 1, 0),
-			Parent = quadro,
 		})
 		linhas[i] = { quadro = quadro, nome = nome, chance = chance, marca = marca }
 	end
 
-	local ajustes = Kit.botaoPlaca({
-		texto = "⚙",
-		tamanho = UDim2.fromOffset(64, 64),
-		tamanhoTexto = 28,
-		pai = hud,
-		aoClicar = op.aoAbrirAjustes,
-	})
-	ajustes.rotulo.FontFace = Font.fromEnum(Enum.Font.SourceSans)
-	ajustes.placa.quadro.AnchorPoint = Vector2.new(1, 0)
-	ajustes.placa.quadro.Position = UDim2.new(1, -22, 0, 16)
-	ajustes.botao.Text = "Ajustes"
-
-	local inventario = Kit.botaoPlaca({
-		texto = "Inventário",
-		tamanho = UDim2.fromOffset(146, 50),
-		tamanhoTexto = 18,
-		pai = hud,
-		aoClicar = op.aoAbrirInventario,
-	})
-	inventario.placa.quadro.AnchorPoint = Vector2.new(1, 0)
-
-	local loja = Kit.botaoPlaca({
-		texto = "✦ Loja",
-		tamanho = UDim2.fromOffset(146, 50),
-		tamanhoTexto = 18,
-		tom = "lilas",
-		pai = hud,
-		aoClicar = op.aoAbrirLoja,
-	})
-	loja.placa.quadro.AnchorPoint = Vector2.new(1, 0)
-	loja.botao.Text = "Loja"
-
-	local placaAura = Kit.placa({
-		nome = "AuraEquipada",
-		tamanho = UDim2.fromOffset(292, 96),
-		posicao = UDim2.new(1, -22, 0, 88),
-		ancora = Vector2.new(1, 0),
-		pai = hud,
-	})
-	local iconeAura, centroAura = Kit.cristal(placaAura.conteudo, 48, Cores.Borda)
-	iconeAura.AnchorPoint = Vector2.new(0, 0.5)
-	iconeAura.Position = UDim2.new(0, 12, 0.5, 0)
-	local tituloAura = Kit.texto({
-		Text = "AURA EQUIPADA",
-		TextSize = 14,
-		TextColor3 = Cores.TextoSuave,
-		TextXAlignment = Enum.TextXAlignment.Left,
-		Position = UDim2.fromOffset(70, 8),
-		Size = UDim2.new(1, -78, 0, 20),
-		Parent = placaAura.conteudo,
-	})
-	local nomeEquipada = Kit.texto({
-		fonte = "titulo",
-		Text = "Nenhuma",
-		TextSize = 24,
-		TextXAlignment = Enum.TextXAlignment.Left,
-		TextWrapped = true,
-		Position = UDim2.fromOffset(70, 26),
-		Size = UDim2.new(1, -80, 1, -51),
-		Parent = placaAura.conteudo,
-	})
-	local raridade = Kit.texto({
-		fonte = "mono",
-		Text = "Desperte uma aura",
-		TextSize = 14,
-		TextColor3 = Cores.TextoSuave,
-		TextXAlignment = Enum.TextXAlignment.Left,
-		TextWrapped = true,
-		Position = UDim2.new(0, 70, 1, -25),
-		Size = UDim2.new(1, -80, 0, 20),
-		Parent = placaAura.conteudo,
-	})
-
-	local barra = Kit.novo("Frame", {
+	-- ================================================================ barra de atalhos
+	local barraAcoes = Kit.novo("Frame", {
 		Name = "Acoes",
 		BackgroundTransparency = 1,
 		AnchorPoint = Vector2.new(0.5, 1),
 		Position = UDim2.new(0.5, 0, 1, -22),
-		Size = UDim2.fromOffset(464, 156),
+		Size = UDim2.fromOffset(600, 160),
 		Parent = hud,
 	})
-	local auto = Kit.placa({
-		nome = "Auto",
-		tamanho = UDim2.fromOffset(154, 68),
-		ancora = Vector2.new(0, 1),
-		posicao = UDim2.fromScale(0, 1),
-		pai = barra,
-	})
-	local indice = Kit.placa({
-		nome = "Indice",
-		tamanho = UDim2.fromOffset(154, 68),
-		ancora = Vector2.new(1, 1),
-		posicao = UDim2.fromScale(1, 1),
-		pai = barra,
-	})
+	local escalaBarra = Kit.novo("UIScale", { Parent = barraAcoes })
 
-	local function rotulos(placa: Kit.Placa, titulo: string, valor: string): TextLabel
-		Kit.texto({
+	type Espaco = {
+		placa: Kit.Placa,
+		simbolo: TextLabel,
+		titulo: TextLabel,
+		valor: TextLabel,
+		botao: TextButton,
+	}
+	local function espaco(
+		numero: string,
+		x: number,
+		titulo: string,
+		simbolo: string,
+		acao: () -> ()
+	): Espaco
+		local p = Kit.placa({
+			nome = "Espaco" .. numero,
+			tamanho = UDim2.fromOffset(100, 108),
+			ancora = Vector2.new(0.5, 1),
+			posicao = UDim2.new(0.5, x, 1, 0),
+			corte = 12,
+			pai = barraAcoes,
+		})
+		local simb = texto(p.conteudo, {
+			Text = simbolo,
+			TextSize = 32,
+			Position = UDim2.fromOffset(0, 8),
+			Size = UDim2.new(1, 0, 0, 40),
+		})
+		local tit = texto(p.conteudo, {
 			Text = titulo,
-			TextSize = 14,
+			TextSize = 12,
 			TextColor3 = Cores.TextoSuave,
-			TextXAlignment = Enum.TextXAlignment.Left,
-			Position = UDim2.fromOffset(12, 7),
-			Size = UDim2.new(1, -24, 0, 20),
-			Parent = placa.conteudo,
+			Position = UDim2.fromOffset(4, 52),
+			Size = UDim2.new(1, -8, 0, 16),
 		})
-		return Kit.texto({
-			fonte = "mono",
-			Text = valor,
-			TextSize = 18,
-			TextXAlignment = Enum.TextXAlignment.Left,
-			Position = UDim2.fromOffset(12, 27),
-			Size = UDim2.new(1, -24, 0, 29),
-			Parent = placa.conteudo,
+		local val = texto(p.conteudo, {
+			fonte = "titulo",
+			TextSize = 15,
+			TextTruncate = Enum.TextTruncate.AtEnd,
+			Position = UDim2.fromOffset(4, 70),
+			Size = UDim2.new(1, -8, 0, 22),
 		})
+		selo(p.quadro, numero)
+		local b = Kit.alvo(p.quadro, titulo, acao)
+		animarToque(p.quadro, b)
+		return { placa = p, simbolo = simb, titulo = tit, valor = val, botao = b }
 	end
+	local espAura = espaco("1", -246, "AURA", Icones.MENU.Aura, op.aoAbrirIndice)
+	local espAuto = espaco("2", -136, "AUTO", Icones.MENU.Auto, op.aoAlternarAuto)
+	local espIndice = espaco("3", 136, "ÍNDICE", Icones.MENU.Indice, op.aoAbrirIndice)
+	local espArtefato = espaco("4", 246, "ARTEFATO", Icones.MENU.Artefato, op.aoAbrirInventario)
+	espIndice.placa.definirCor(Cores.Painel, DESTAQUE.Indice)
+	local progresso = barra(
+		espIndice.placa.conteudo,
+		Cores.Lilas,
+		UDim2.new(0, 10, 1, -9),
+		UDim2.new(1, -20, 0, 3)
+	)
 
-	local valorAuto = rotulos(auto, "AUTO", "Desligado")
-	local valorIndice = rotulos(indice, "ÍNDICE", "0 / " .. #Auras.lista)
-	local estadoAuto = Kit.texto({
-		Text = "○",
-		TextColor3 = Cores.TextoSuave,
-		TextSize = 16,
-		Position = UDim2.new(1, -26, 0, 4),
-		Size = UDim2.fromOffset(18, 18),
-		Parent = auto.conteudo,
-	})
-	local trilho = Kit.novo("Frame", {
-		BackgroundColor3 = Cores.Elevado,
-		BorderSizePixel = 0,
-		Position = UDim2.new(0, 12, 1, -9),
-		Size = UDim2.new(1, -24, 0, 3),
-		Parent = indice.conteudo,
-	})
-	local progresso = Kit.novo("Frame", {
-		BackgroundColor3 = Cores.Lilas,
-		BorderSizePixel = 0,
-		Size = UDim2.fromScale(0, 1),
-		Parent = trilho,
-	})
-	local autoBotao = Kit.alvo(auto.quadro, "Giro automático", op.aoAlternarAuto)
-	local indiceBotao = Kit.alvo(indice.quadro, "Índice de auras", op.aoAbrirIndice)
-
+	-- Botão DESPERTAR (a órbita original: anel de recarga em volta do cristal)
 	local giro = Kit.novo("Frame", {
 		Name = "Despertar",
 		BackgroundTransparency = 1,
 		AnchorPoint = Vector2.new(0.5, 1),
 		Position = UDim2.fromScale(0.5, 1),
-		Size = UDim2.fromOffset(134, 156),
-		Parent = barra,
+		Size = UDim2.fromOffset(134, 160),
+		Parent = barraAcoes,
 	})
 	local orbita = Kit.novo("Frame", {
 		Name = "Orbita",
@@ -287,13 +464,12 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 		Size = UDim2.fromOffset(126, 126),
 		Parent = giro,
 	})
-	local orbitaEscala = Kit.novo("UIScale", { Parent = orbita })
 	local anel = Kit.anel(orbita, 126, Cores.Lilas, Cores.Borda, 1)
 	local disco = Kit.circulo({
 		BackgroundColor3 = Cores.Fundo,
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.fromOffset(118, 118),
+		Size = UDim2.fromOffset(116, 116),
 		ZIndex = 2,
 		Parent = orbita,
 	})
@@ -312,17 +488,15 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 			Parent = orbita,
 		})
 	end
-
-	local cristal, centro = Kit.cristal(disco, 66, Cores.Lilas)
+	local cristal, centro = Kit.cristal(disco, 64, Cores.Lilas)
 	cristal.AnchorPoint = Vector2.new(0.5, 0.5)
-	cristal.Position = UDim2.fromScale(0.5, 0.48)
-	local carga = Kit.texto({
+	cristal.Position = UDim2.fromScale(0.5, 0.46)
+	local carga = texto(disco, {
 		fonte = "mono",
 		TextSize = 18,
 		TextColor3 = Cores.Menta,
 		Position = UDim2.new(0, 0, 1, -36),
 		Size = UDim2.new(1, 0, 0, 24),
-		Parent = disco,
 	})
 	local etiqueta = Kit.placa({
 		tamanho = UDim2.new(1, 0, 0, 40),
@@ -333,53 +507,69 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 		z = 3,
 		pai = giro,
 	})
-	local rotuloGiro = Kit.texto({
+	local rotuloGiro = texto(etiqueta.conteudo, {
 		fonte = "titulo",
 		Text = "DESPERTAR",
 		TextSize = 26,
 		TextWrapped = true,
 		Position = UDim2.fromOffset(5, 0),
 		Size = UDim2.new(1, -10, 1, 0),
-		Parent = etiqueta.conteudo,
 	})
 	local tecla = Kit.placa({
 		nome = "Atalho",
 		tamanho = UDim2.fromOffset(28, 28),
-		posicao = UDim2.new(1, 4, 0, 55),
+		posicao = UDim2.new(1, -8, 0, 0),
 		corte = 5,
 		z = 4,
 		pai = giro,
 	})
-	Kit.texto({
-		fonte = "mono",
-		Text = "E",
-		TextSize = 16,
-		Size = UDim2.fromScale(1, 1),
-		Parent = tecla.conteudo,
-	})
+	texto(
+		tecla.conteudo,
+		{ fonte = "mono", Text = "E", TextSize = 16, Size = UDim2.fromScale(1, 1) }
+	)
 	local giroBotao = Kit.alvo(giro, "Despertar", op.aoDespertar)
-	giroBotao.NextSelectionLeft = autoBotao
-	giroBotao.NextSelectionRight = indiceBotao
-	autoBotao.NextSelectionRight = giroBotao
-	indiceBotao.NextSelectionLeft = giroBotao
-	indiceBotao.NextSelectionUp = ajustes.botao
-	ajustes.botao.NextSelectionDown = indiceBotao
+	animarToque(orbita, giroBotao)
+	giroBotao.NextSelectionLeft = espAuto.botao
+	giroBotao.NextSelectionRight = espIndice.botao
+	espAura.botao.NextSelectionRight = espAuto.botao
+	espAura.botao.NextSelectionLeft = ajustesBotao
+	espAuto.botao.NextSelectionLeft = espAura.botao
+	espAuto.botao.NextSelectionRight = giroBotao
+	espIndice.botao.NextSelectionLeft = giroBotao
+	espIndice.botao.NextSelectionRight = espArtefato.botao
+	espArtefato.botao.NextSelectionLeft = espIndice.botao
 
+	-- Teclas 1–4 (Alt continua reservado aos testes do Studio)
+	UserInputService.InputBegan:Connect(function(input, processado)
+		if processado or not hud.Visible or UserInputService:IsKeyDown(Enum.KeyCode.LeftAlt) then
+			return
+		end
+		local acao = ({
+			[Enum.KeyCode.One] = op.aoAbrirIndice,
+			[Enum.KeyCode.Two] = op.aoAlternarAuto,
+			[Enum.KeyCode.Three] = op.aoAbrirIndice,
+			[Enum.KeyCode.Four] = op.aoAbrirInventario,
+		} :: { [Enum.KeyCode]: () -> () })[input.KeyCode]
+		if acao then
+			acao()
+		end
+	end)
+
+	-- ================================================================ resultado do giro
 	local resultado = Kit.placa({
 		nome = "Resultado",
 		tamanho = UDim2.fromOffset(446, 52),
 		ancora = Vector2.new(0.5, 1),
-		posicao = UDim2.new(0.5, 0, 0, -18),
-		pai = barra,
+		posicao = UDim2.new(0.5, 0, 0, -16),
+		pai = barraAcoes,
 	})
 	resultado.quadro.Visible = false
-	local textoResultado = Kit.texto({
+	local textoResultado = texto(resultado.conteudo, {
 		fonte = "titulo",
 		TextSize = 21,
 		TextWrapped = true,
 		Position = UDim2.fromOffset(10, 0),
 		Size = UDim2.new(1, -20, 1, 0),
-		Parent = resultado.conteudo,
 	})
 	local resultadoToken = 0
 	local resultadoSimulado = false
@@ -391,62 +581,46 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 		feed.quadro.Visible = not Escala.compacto and #lista > 0
 		feed.quadro.Size = UDim2.fromOffset(258, 32 + 36 * #lista)
 		for i, linha in linhas do
-			local giro = lista[i]
-			linha.quadro.Visible = giro ~= nil
-			if giro then
-				linha.nome.Text = giro.aura.nome
-				linha.chance.Text = "1/" .. Formato.chanceCurta(giro.chance)
-				linha.marca.TextColor3 = corTier(giro.aura)
+			local g = lista[i]
+			linha.quadro.Visible = g ~= nil
+			if g then
+				linha.nome.Text = g.aura.nome
+				linha.chance.Text = "1/" .. Formato.chanceCurta(g.chance)
+				linha.marca.TextColor3 = corTier(g.aura)
 			end
 		end
 	end
 
 	local function ajustarRotuloGiro()
-		local tamanho = if Escala.compacto then 22 else 26
-		local aguardando = estadoGiro == "perfil" or estadoGiro == "pedido"
-		rotuloGiro.TextSize = if aguardando then tamanho - 5 else tamanho
-		etiqueta.quadro.Size = UDim2.new(1, 0, 0, if aguardando then 48 else 40)
+		local longo = estadoGiro == "perfil" or estadoGiro == "pedido"
+		rotuloGiro.TextSize = if longo then 16 elseif Escala.compacto then 22 else 26
 	end
 
 	Escala.aoMudar(function()
 		local compacto = Escala.compacto
-		local estreito = Escala.tamanho.X < 600
-		local largura = math.min(if compacto then 390 else 464, Escala.tamanho.X - 28)
-		local larguraGiro = if compacto then 106 else 134
-		local lateral = math.floor((largura - larguraGiro) / 2 - 9)
-		local altura = if compacto then 118 else 156
-		local ladoDireito = math.clamp((Escala.tamanho.X - largura) * 0.5 - 160, 0, 112)
-		local deslocamento = if Escala.toque then ladoDireito else 0
-		local margem = if Escala.toque and ladoDireito == 0 then 126 else 22
-		barra.Size = UDim2.fromOffset(largura, altura)
-		barra.Position = UDim2.new(0.5, deslocamento, 1, -margem)
-		giro.Size = UDim2.fromOffset(larguraGiro, altura)
-		orbitaEscala.Scale = if compacto then 86 / 126 else 1
-		auto.quadro.Size = UDim2.fromOffset(lateral, 68)
-		indice.quadro.Size = UDim2.fromOffset(lateral, 68)
-		ajustes.placa.quadro.Position = UDim2.new(1, -14, 0, 10)
-		local larguraAura = if estreito then 202 elseif compacto then 230 else 292
-		placaAura.quadro.Size = UDim2.fromOffset(larguraAura, if compacto then 112 else 96)
-		placaAura.quadro.Position = UDim2.new(1, -14, 0, 84)
-		inventario.placa.quadro.Position = UDim2.new(1, -14, 0, if compacto then 202 else 186)
-		loja.placa.quadro.Position = UDim2.new(1, -14, 0, if compacto then 258 else 242)
-		local textoX = if estreito then 46 else 70
-		iconeAura.Size = UDim2.fromOffset(if estreito then 30 else 48, if estreito then 30 else 48)
-		iconeAura.Position = UDim2.new(0, 10, 0.5, 0)
-		tituloAura.Position = UDim2.fromOffset(textoX, 8)
-		tituloAura.Size = UDim2.new(1, -textoX - 8, 0, 20)
-		nomeEquipada.Position = UDim2.fromOffset(textoX, 26)
-		nomeEquipada.Size = UDim2.new(1, -textoX - 8, 1, if compacto then -70 else -51)
-		nomeEquipada.TextSize = if compacto then 20 else 24
-		raridade.Position = UDim2.new(0, textoX, 1, if compacto then -41 else -24)
-		raridade.Size = UDim2.new(1, -textoX - 8, 0, if compacto then 37 else 20)
-		placaGiros.quadro.Size = UDim2.fromOffset(if compacto then 158 else 216, 52)
-		placaGiros.quadro.Position = UDim2.fromOffset(if compacto then 14 else 22, 16)
-		giros.TextSize = if compacto then 18 else 22
-		ajustarRotuloGiro()
-		tecla.quadro.Position = UDim2.new(1, 4, 0, if compacto then 18 else 55)
+		local estreito = Escala.tamanho.X < 760
+		escalaBarra.Scale = if estreito then 0.7 elseif compacto then 0.85 else 1
+		local margem = if Escala.toque then 26 else 22
+		barraAcoes.Position =
+			UDim2.new(0.5, if Escala.toque and not estreito then -60 else 0, 1, -margem)
+		local lado = if compacto then 60 else 78
+		for _, p in placasMenu do
+			p.quadro.Size = UDim2.fromOffset(lado, lado)
+		end
+		menu.Size = UDim2.fromOffset(lado + 2, (lado + 8) * #placasMenu)
+		listaMenu.Padding = UDim.new(0, if compacto then 5 else 8)
+		menu.Position = UDim2.new(0, if compacto then 12 else 22, 0.5, if compacto then 30 else 40)
+		local largura = if estreito then 250 else 336
+		cartao.quadro.Size = UDim2.fromOffset(largura, 92)
+		cartao.quadro.Position =
+			UDim2.fromOffset(if compacto then 12 else 22, if compacto then 10 else 16)
+		moedas.Position =
+			UDim2.fromOffset(if compacto then 12 else 22, if compacto then 108 else 116)
+		for _, p in placasMoeda do
+			p.quadro.Size = UDim2.fromOffset((largura - 8) / 2, 40)
+		end
 		tecla.quadro.Visible = Escala.teclado and (estadoGiro == "pronto" or estadoGiro == "pular")
-		resultado.quadro.Size = UDim2.fromOffset(math.min(largura, 446), 52)
+		ajustarRotuloGiro()
 		atualizarFeed()
 	end)
 
@@ -481,7 +655,11 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 			giroBotao.Interactable = disponivel
 			tecla.quadro.Visible = Escala.teclado and disponivel
 			centro.BackgroundColor3 = if disponivel or carregando then Cores.Lilas else Cores.Borda
-			etiqueta.definirCor(Cores.Elevado, if disponivel then Cores.Lilas else Cores.Borda)
+			etiqueta.definirCor(
+				if disponivel then Cores.Lilas else Cores.Elevado,
+				if disponivel then Cores.Lilas else Cores.Borda
+			)
+			rotuloGiro.TextColor3 = if disponivel then Cores.Fundo else Cores.Texto
 		end,
 		definirVisivel = function(visivel: boolean)
 			hud.Visible = visivel
@@ -501,34 +679,73 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 			giros.Text = if estado.giros < 1000000
 				then Formato.inteiro(estado.giros)
 				else Formato.curto(estado.giros)
+			local frag = if type(estado.incursoes) == "table"
+				then estado.incursoes.fragmentos or 0
+				else 0
+			fragmentos.Text = if frag < 1000000 then Formato.inteiro(frag) else Formato.curto(frag)
+			textoTrans.Text = "T" .. estado.transcendencia.nivel
+
+			local bruto = (estado :: any).temporada
+			local t = Temporada.de(if type(bruto) == "table" then table.clone(bruto) else nil)
+			local nivel = Temporada.nivel(t.xp)
+			textoTemporada.Text = string.format("PASSE DE TEMPORADA · NV %d", nivel)
+			barraTemporada.Size = UDim2.fromScale(
+				if nivel >= Temporada.NIVEIS
+					then 1
+					else (t.xp - nivel * Temporada.XP_POR_NIVEL) / Temporada.XP_POR_NIVEL,
+				1
+			)
+
+			-- 1 · aura equipada (borda e nome na cor da raridade)
 			local aura = if estado.equipada then Auras.porId[estado.equipada] else nil
-			nomeEquipada.Text = if aura then aura.nome else "Nenhuma"
-			local cor = if aura then corTier(aura) else Cores.Borda
-			centroAura.BackgroundColor3 = cor
-			raridade.Text = if aura
-				then string.format(
-					"%s · 1 em %s",
-					Auras.Tiers[aura.tier].nome,
-					Formato.chance(
+			if aura then
+				local cor = corTier(aura)
+				espAura.placa.definirCor(Cores.Painel, cor)
+				espAura.simbolo.Text = Icones.aura(aura.estilo)
+				espAura.valor.Text = aura.nome
+				espAura.valor.TextColor3 = Kit.corLegivel(cor)
+				espAura.titulo.Text = "1 em "
+					.. Formato.chanceCurta(
 						Auras.chanceEfetiva(aura, Transcendencia.sorte(estado.transcendencia.nivel))
 					)
-				)
-				else "Desperte uma aura"
-			raridade.TextColor3 = if aura then Kit.corLegivel(cor) else Cores.TextoSuave
+			else
+				espAura.placa.definirCor(Cores.Painel, Cores.Borda)
+				espAura.simbolo.Text = Icones.MENU.Aura
+				espAura.valor.Text = "Nenhuma"
+				espAura.valor.TextColor3 = Cores.TextoSuave
+				espAura.titulo.Text = "AURA"
+			end
 
+			-- 2 · giro automático (menta quando ligado, como no HUD original)
 			local ligado = estado.configuracoes.giroAutomatico == true
-			valorAuto.Text = if ligado then "Ligado" else "Desligado"
-			valorAuto.TextColor3 = if ligado then Cores.Menta else Cores.Texto
-			estadoAuto.Text = if ligado then "●" else "○"
-			estadoAuto.TextColor3 = if ligado then Cores.Menta else Cores.TextoSuave
-			auto.definirCor(
+			espAuto.placa.definirCor(
 				if ligado then Cores.Ativo else Cores.Painel,
 				if ligado then Cores.Menta else Cores.Borda
 			)
-			autoBotao.Text = "Giro automático · " .. valorAuto.Text
+			espAuto.valor.Text = if ligado then "Ligado" else "Desligado"
+			espAuto.valor.TextColor3 = if ligado then Cores.Menta else Cores.Texto
+			espAuto.botao.Text = "Giro automático · " .. espAuto.valor.Text
+
+			-- 3 · índice
 			local descobertas = Auras.contarDescobertas(estado.auras)
-			valorIndice.Text = string.format("%d / %d", descobertas, #Auras.lista)
+			espIndice.valor.Text = string.format("%d / %d", descobertas, #Auras.lista)
 			progresso.Size = UDim2.fromScale(descobertas / #Auras.lista, 1)
+
+			-- 4 · artefato equipado
+			local artefato = estado.inventario.equipados.artefato
+			local item = if artefato then Itens.porId[artefato] else nil
+			if item then
+				local cor = Color3.fromHex(Itens.Tiers[item.raridade].cor)
+				espArtefato.placa.definirCor(Cores.Painel, cor)
+				espArtefato.simbolo.Text = Icones.item(artefato :: string, item.categoria)
+				espArtefato.valor.Text = item.nome
+				espArtefato.valor.TextColor3 = Kit.corLegivel(cor)
+			else
+				espArtefato.placa.definirCor(Cores.Painel, Cores.Borda)
+				espArtefato.simbolo.Text = Icones.MENU.Artefato
+				espArtefato.valor.Text = "Vazio"
+				espArtefato.valor.TextColor3 = Cores.TextoSuave
+			end
 		end,
 		registrarResultado = function(
 			aura: Auras.Aura,

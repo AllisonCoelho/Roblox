@@ -283,7 +283,12 @@ function App.iniciar()
 		end,
 		aoAbrirIndice = Indice.abrir,
 		aoAbrirInventario = Inventario.abrir,
-		aoAbrirLoja = Loja.abrir,
+		aoAbrirLoja = function()
+			Loja.abrirAba("Pacotes")
+		end,
+		aoAbrirTemporada = function()
+			Loja.abrirAba("Temporada")
+		end,
 		aoAbrirAjustes = Ajustes.abrir,
 	})
 	Revelacao.montar(raiz, {
