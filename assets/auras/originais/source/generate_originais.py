@@ -547,6 +547,197 @@ def _(bm, rng):
     placa(bm, contorno, 0.18, rot(8, 12, 0))
     placa(bm, [(0, -0.2), (0.07, 0.0), (0, 0.22), (-0.07, 0.0)], 0.02, Matrix.Translation(Vector((0.05, 0, 0.0))) @ rot(0, 0, 25))  # folha presa dentro
 
+
+# ================================================================ Raras
+
+
+def anel(bm, raio, espessura, n=32, y=0.0, a0=0.0, a1=2 * math.pi, achatar=1.0, lados=6):
+    tubo(bm, arco_pts(raio, a0, a1, n, y=y), espessura, lados=lados, fechar=abs(a1 - a0) < 6.2, achatar=achatar)
+
+
+@peca("coroa_de_coral", "galho")
+def _(bm, rng):
+    def ramo(p0, direcao, comp, r, nivel):
+        p1 = Vector(p0) + Vector(direcao).normalized() * comp
+        tubo(bm, [tuple(p0), tuple((Vector(p0) + p1) / 2 + Vector((rng.uniform(-0.05, 0.05), 0, 0))), tuple(p1)], [r, r * 0.8, r * 0.55], lados=6)
+        bolha(bm, tuple(p1), r * 0.7, sub=1, rng=rng)
+        if nivel < 3:
+            for s in (-1, 1):
+                d = Vector(direcao).normalized() + Vector((s * rng.uniform(0.5, 0.9), rng.uniform(0.1, 0.4), rng.uniform(-0.3, 0.3)))
+                ramo(p1, d, comp * 0.7, r * 0.7, nivel + 1)
+
+    ramo(Vector((0, 0, 0)), Vector((0, 1, 0.1)), 0.7, 0.09, 0)
+
+
+@peca("relampago_de_giz", "raio")
+def _(bm, rng):
+    pts = [(0, 1.4), (0.35, 0.55), (0.12, 0.5), (0.45, -0.3), (0.2, -0.32), (0.4, -1.4), (-0.25, -0.15), (-0.02, -0.12), (-0.3, 0.6), (-0.08, 0.62)]
+    placa(bm, pts, 0.12)
+
+
+@peca("relampago_de_giz", "placa_tri")
+def _(bm, rng):
+    placa(bm, [(-0.25, -0.2), (0.28, -0.15), (0.0, 0.3)], 0.05)
+
+
+@peca("jiboia_de_fumaca", "corpo")
+def _(bm, rng):
+    n = 30
+    pts, raios = [], []
+    for i in range(n):
+        t = i / (n - 1)
+        a = math.pi * 1.5 * t
+        pts.append((math.cos(a) * 2.4, -1.0 + 2.6 * t + 0.35 * math.sin(t * 9), math.sin(a) * 2.2))
+        raios.append(0.12 + 0.42 * math.sin(math.pi * min(1, t * 1.1)) ** 0.8)
+    tubo(bm, pts, raios, lados=10)
+
+
+@peca("fenda_de_porcelana", "caco")
+def _(bm, rng):
+    placa(bm, [(-0.35, -0.3), (0.1, -0.38), (0.4, -0.05), (0.25, 0.35), (-0.15, 0.4), (-0.4, 0.05)], 0.06, rot(0, 0, 0))
+    for k in range(3):  # rachaduras azuis em relevo
+        a = k * 2.1
+        tubo(bm, [(0, 0, 0.035), (math.cos(a) * 0.18, math.sin(a) * 0.18, 0.035), (math.cos(a + 0.4) * 0.32, math.sin(a + 0.4) * 0.32, 0.035)], 0.012, lados=4)
+
+
+@peca("fenda_de_porcelana", "mascara")
+def _(bm, rng):
+    contorno = [(math.cos(a) * 0.5 * (1 if math.sin(a) > 0 else 0.85), math.sin(a) * 0.65) for a in [2 * math.pi * i / 20 for i in range(20)]]
+    placa(bm, contorno, 0.08)
+    for s in (-1, 1):
+        caixa(bm, (s * 0.2, 0.12, 0.05), (0.16, 0.06, 0.04))
+    tubo(bm, [(0.05, 0.6, 0.05), (-0.1, 0.2, 0.05), (0.08, -0.15, 0.05), (-0.05, -0.6, 0.05)], 0.02, lados=4)
+
+
+@peca("petalas_de_ferrugem", "petala")
+def _(bm, rng):
+    placa(bm, [(0, -0.45), (0.22, -0.2), (0.28, 0.15), (0.12, 0.42), (0, 0.55), (-0.12, 0.42), (-0.28, 0.15), (-0.22, -0.2)], 0.045, rot(15, 0, 0))
+    caixa(bm, (0, -0.25, 0.03), (0.12, 0.14, 0.04))  # miolo escuro
+
+
+@peca("sinos_do_crepusculo", "sino")
+def _(bm, rng):
+    pts = [(0, 0.55, 0), (0, 0.42, 0), (0, 0.15, 0), (0, -0.15, 0), (0, -0.32, 0)]
+    tubo(bm, pts, [0.03, 0.14, 0.18, 0.24, 0.32], lados=12, fechar=False)
+    bolha(bm, (0, -0.28, 0), 0.07, sub=1, rng=rng)
+    tubo(bm, [(0, 0.55, 0), (0, 0.95, 0)], 0.012, lados=4)
+
+
+@peca("sinos_do_crepusculo", "onda")
+def _(bm, rng):
+    anel(bm, 0.6, 0.025, n=36, achatar=0.4)
+
+
+@peca("esporos_de_safira", "cogumelo")
+def _(bm, rng):
+    tubo(bm, [(0, -0.6, 0), (0.05, -0.2, 0), (0, 0.2, 0.02)], [0.07, 0.06, 0.05], lados=7)
+    pts = [(0, 0.45, 0), (0, 0.38, 0), (0, 0.25, 0), (0, 0.18, 0)]
+    tubo(bm, pts, [0.02, 0.3, 0.42, 0.38], lados=12)
+
+
+@peca("esporos_de_safira", "esporo_cubo")
+def _(bm, rng):
+    caixa(bm, (0, 0, 0), (0.14, 0.14, 0.14), rot(30, 45, 0))
+
+
+@peca("solsticio_de_areia", "duna")
+def _(bm, rng):
+    n = 14
+    pts = [(-1.0 + 2.0 * i / (n - 1), 0.2 * math.sin(math.pi * i / (n - 1)) ** 2, 0) for i in range(n)]
+    tubo(bm, pts, [0.03 + 0.14 * math.sin(math.pi * i / (n - 1)) for i in range(n)], lados=5, achatar=0.35)
+
+
+@peca("solsticio_de_areia", "relogio")
+def _(bm, rng):
+    anel(bm, 0.55, 0.04, n=30, a0=0.0, a1=math.pi * 1.6)
+    for k in range(8):
+        a = k * math.pi * 1.6 / 8
+        caixa(bm, (math.cos(a) * 0.45, 0, math.sin(a) * 0.45), (0.04, 0.03, 0.12), rot(0, -math.degrees(a), 0))
+    placa(bm, [(0, 0), (0.05, 0.5), (-0.05, 0.5)], 0.03, rot(90, 0, 0) @ rot(0, 0, -40))
+
+
+@peca("marfim_flutuante", "presa")
+def _(bm, rng):
+    n = 12
+    pts = [(0.35 * (i / (n - 1)) ** 2, -0.8 + 1.6 * i / (n - 1), 0) for i in range(n)]
+    tubo(bm, pts, [0.14 * (1 - (i / (n - 1)) ** 1.3) + 0.01 for i in range(n)], lados=8)
+    anel(bm, 0.16, 0.025, n=14, y=-0.55)  # encaixe metálico
+    tubo(bm, [(0, -0.6, 0.15), (0.02, -0.9, 0.18)], 0.01, lados=4)
+    bipiramide(bm, (0.02, -0.98, 0.18), (0, 1, 0), 0.05, 0.08, 0.04, lados=4)
+
+
+@peca("lotus_de_gravidade", "lotus")
+def _(bm, rng):
+    for camada, (n, r, inc) in enumerate(((8, 0.85, 50), (6, 0.6, 35))):
+        for k in range(n):
+            a = 360 * k / n + camada * 22
+            placa(bm, [(0, 0), (0.18, 0.3), (0.0, 0.8 * r + 0.2), (-0.18, 0.3)], 0.06, rot(0, a, 0) @ rot(180 - inc, 0, 0))
+    bolha(bm, (0, -0.05, 0), 0.22, sub=2, rng=rng)
+
+
+@peca("lotus_de_gravidade", "petala_solta")
+def _(bm, rng):
+    placa(bm, [(0, 0), (0.14, 0.22), (0.0, 0.55), (-0.14, 0.22)], 0.05)
+
+
+@peca("espelho_de_chuva", "espelho")
+def _(bm, rng):
+    caixa(bm, (0, 0, 0), (0.9, 1.2, 0.05))
+    for x in (-0.47, 0.47):
+        caixa(bm, (x, 0, 0), (0.05, 1.28, 0.09))
+    for y in (-0.62, 0.62):
+        caixa(bm, (0, y, 0), (0.98, 0.05, 0.09))
+
+
+@peca("espelho_de_chuva", "gota_espelho")
+def _(bm, rng):
+    gota(bm, (0, 0, 0), (0, 1, 0), 0.3, 0.06, lados=6)
+
+
+@peca("capsula_de_tempestade", "capsula")
+def _(bm, rng):
+    for k in range(6):  # grade vazada: meridianos
+        a = math.pi * k / 6
+        pts = [(math.cos(a) * math.sin(t) * 0.7, math.cos(t) * 0.7, math.sin(a) * math.sin(t) * 0.7) for t in [math.pi * i / 16 for i in range(17)]]
+        tubo(bm, pts, 0.025, lados=5, fechar=False)
+    for y in (-0.35, 0.0, 0.35):
+        anel(bm, math.sqrt(0.49 - y * y), 0.025, n=24, y=y, lados=5)
+
+
+@peca("capsula_de_tempestade", "aro")
+def _(bm, rng):
+    anel(bm, 1.05, 0.05, n=36, a0=0.3, a1=2 * math.pi - 0.3, lados=6)
+
+
+@peca("capsula_de_tempestade", "trovao")
+def _(bm, rng):
+    placa(bm, [(0, 0.45), (0.12, 0.08), (0.04, 0.06), (0.14, -0.45), (-0.1, -0.02), (-0.02, -0.0)], 0.04)
+
+
+@peca("cauda_de_cometa", "nucleo")
+def _(bm, rng):
+    bolha(bm, (0, 0, 0), 0.32, sub=1, rng=random.Random(3))
+
+
+@peca("cauda_de_cometa", "faixa")
+def _(bm, rng):
+    n = 16
+    pts = [(0.15 * math.sin(i * 0.5), -0.05 * i, 0.25 * i) for i in range(n)]
+    tubo(bm, pts, [0.24 * (1 - i / (n - 1)) ** 0.8 + 0.01 for i in range(n)], lados=6, achatar=0.25)
+
+
+@peca("prisma_do_silencio", "octaedro")
+def _(bm, rng):
+    vs = [(0.6, 0, 0), (-0.6, 0, 0), (0, 0.75, 0), (0, -0.75, 0), (0, 0, 0.6), (0, 0, -0.6)]
+    arestas = [(0, 2), (0, 3), (0, 4), (0, 5), (1, 2), (1, 3), (1, 4), (1, 5), (2, 4), (4, 3), (3, 5), (5, 2)]
+    for a, b in arestas:
+        tubo(bm, [vs[a], vs[b]], 0.04, lados=5)
+
+
+@peca("prisma_do_silencio", "placa_som")
+def _(bm, rng):
+    placa(bm, [(-0.35, -0.12), (0.35, -0.12), (0.3, 0.12), (-0.3, 0.12)], 0.04)
+
 # ---------------------------------------------------------------- comportamento (vai para o Luau)
 # modo: "ancora" (pos local), "orbita" (rx, rz, altura, ang, vel), "pendulo" (arco atrás: centro, abertura)
 # rot = graus (X, Y, Z); giro = graus/s; osc = {eixo, amplitude graus, freq}; correr = pos local correndo;
@@ -758,6 +949,154 @@ AURAS.update({
             for k in range(4)
         ],
         "especial": dict(template="placa", n=6, origem=(0, 0.8, 0), raio=1.2, escala=1.4, cor=0, material="Glass"),
+    },
+})
+
+
+# Raras
+AURAS.update({
+    "coroa_de_coral": {
+        "cores": ("FF8DAA", "42D4C6"),
+        "pecas": [
+            dict(template="galho", modo="ancora", pos=(x, 1.3 + 0.25 * abs(x), 0.9), rot=(-15, 0, -x * 28), cor=k % 2, material="SmoothPlastic", rigidez=40, atraso=0.5, osc=(2, 5, 0.3), escala=1.6 - 0.25 * abs(x), correr=(x * 0.6, 1.2, 1.1), correrRot=(-50, 0, -x * 15), detalhe=k >= 4)
+            for k, x in enumerate((0.0, -0.9, 0.9, -1.7, 1.7))
+        ],
+        "especial": dict(template="galho", n=8, origem=(0, 0.8, 0.6), raio=2.4, escala=1.3, cor=0, material="Neon"),
+    },
+    "relampago_de_giz": {
+        "cores": ("F4F7FF", "4C93FF"),
+        "pecas": [
+            dict(template="raio", modo="ancora", pos=(-1.8, 0.8, 0.5), rot=(0, 30, 10), cor=0, material="Neon", rigidez=50, atraso=0.4, osc=(1, 8, 2.3), escala=1.3, correr=(-0.8, 0.6, 2.0), correrRot=(70, 0, 0)),
+            dict(template="raio", modo="ancora", pos=(1.9, 0.5, 0.6), rot=(0, -30, -15), cor=1, material="Neon", rigidez=50, atraso=0.4, osc=(1, -8, 1.9), escala=1.15, correr=(0.8, 0.4, 2.4), correrRot=(70, 0, 0)),
+            dict(template="raio", modo="ancora", pos=(0, 2.6, 1.0), rot=(0, 0, 90), cor=0, material="Neon", rigidez=40, atraso=0.5, osc=(2, 10, 2.7), escala=0.9, detalhe=True),
+        ]
+        + [
+            dict(template="placa_tri", modo="orbita", rx=2.2, rz=2.0, altura=0.2 + 0.8 * k, ang=k * 2.1, vel=0.6, inclinacao=0.3, cor=1, material="SmoothPlastic", rigidez=34, atraso=0.6, giro=(40, 60, 0), escala=1.5, detalhe=k >= 2)
+            for k in range(3)
+        ],
+        "especial": dict(template="raio", n=6, origem=(0, 0.6, 0), raio=2.8, escala=1.0, cor=1, material="Neon"),
+    },
+    "jiboia_de_fumaca": {
+        "cores": ("7DD7B2", "2D696F"),
+        "pecas": [
+            dict(template="corpo", modo="ancora", pos=(0, 0.2, 0), giro=(0, 18, 0), cor=0, material="ForceField", rigidez=24, atraso=0.9, bob=0.2, osc=(2, 6, 0.25), correr=(0, 0.5, 1.4), correrRot=(0, 0, 0)),
+            dict(template="corpo", modo="ancora", pos=(0, -0.4, 0), rot=(0, 140, 0), giro=(0, 18, 0), cor=1, material="ForceField", rigidez=20, atraso=1.0, bob=-0.2, escala=0.8, detalhe=True),
+        ],
+        "especial": dict(template="corpo", n=1, origem=(0, 1.8, 0), raio=0, escala=1.3, cor=0, material="ForceField", girar=90),
+    },
+    "fenda_de_porcelana": {
+        "cores": ("F7F5EC", "2D3D69"),
+        "pecas": [
+            dict(template="caco", modo="ancora", pos=p, rot=r, cor=0, material="SmoothPlastic", rigidez=45, atraso=0.4, bob=0.08, osc=(1, 10, 0.4), escala=1.5, correr=(p[0] * 0.4, p[1] * 0.6 + 0.4, 1.3 + 0.4 * k), correrRot=(0, 0, 40), detalhe=k >= 4)
+            for k, (p, r) in enumerate((((-1.45, 1.1, 0.0), (0, 60, 10)), ((1.5, 1.0, 0.1), (0, -60, -10)), ((-1.6, -0.1, -0.3), (0, 40, 30)), ((1.55, -1.3, -0.2), (0, -45, -20)), ((-0.9, -1.6, -0.6), (20, 20, 0))))
+        ],
+        "especial": dict(template="mascara", n=1, origem=(0, 1.4, -1.6), raio=0, escala=2.2, cor=0, material="SmoothPlastic"),
+    },
+    "petalas_de_ferrugem": {
+        "cores": ("E78952", "543D50"),
+        "pecas": [
+            dict(template="petala", modo="orbita", rx=2.0 + 0.3 * (k % 3), rz=1.8 + 0.25 * (k % 3), altura=-0.6 + 0.45 * k, ang=k * 1.1, vel=0.55 if k % 2 else -0.45, inclinacao=0.35, cor=k % 2, material="Metal", rigidez=32, atraso=0.7, giro=(0, 0, 50), escala=1.6, correr=(0.3 * (k - 2.5), 0.4 + 0.15 * k, 1.6 + 0.3 * k), correrRot=(80, 0, 20), detalhe=k >= 4)
+            for k in range(6)
+        ],
+        "especial": dict(template="petala", n=10, origem=(0, 0.8, 0), raio=2.8, escala=1.5, cor=0, material="Metal"),
+    },
+    "sinos_do_crepusculo": {
+        "cores": ("BCA2FF", "D5A66D"),
+        "pecas": [
+            dict(template="sino", modo="ancora", pos=p, cor=1, material="Metal", rigidez=36, atraso=0.6, osc=(2, 14, 0.5 + 0.12 * k), escala=1.4 - 0.15 * k, correr=(p[0] * 0.5, p[1], 1.6))
+            for k, p in enumerate(((-1.6, 1.6, 0.5), (1.7, 0.9, 0.4), (-1.2, -0.2, 0.9)))
+        ]
+        + [
+            dict(template="onda", modo="ancora", pos=p, rot=(90, 0, 0), cor=0, material="Neon", transp=0.3, rigidez=36, atraso=0.6, pulso=0.3, escala=1.2, detalhe=k >= 2)
+            for k, p in enumerate(((-1.6, 1.2, 0.5), (1.7, 0.5, 0.4), (-1.2, -0.6, 0.9)))
+        ],
+        "especial": dict(template="onda", n=3, origem=(0, 1.0, 0), raio=0.4, escala=5.0, cor=0, material="Neon"),
+    },
+    "esporos_de_safira": {
+        "cores": ("53B3FF", "1D2758"),
+        "pecas": [
+            dict(template="cogumelo", modo="ancora", pos=p, rot=(0, 0, r), cor=0, material="Glass", transp=0.15, rigidez=50, atraso=0.4, pulso=0.06, escala=e, correrRot=(-30, 0, r), apontar=True, detalhe=k >= 3)
+            for k, (p, r, e) in enumerate((((-1.3, -2.3, 0.5), 10, 1.6), ((1.2, -2.4, 0.7), -12, 1.3), ((-1.5, 1.5, 0.4), 25, 0.9), ((0.4, -2.5, -1.2), 5, 1.0)))
+        ]
+        + [
+            dict(template="esporo_cubo", modo="orbita", rx=1.6, rz=1.5, altura=-1.0 + 1.2 * k, ang=k * 2.1, vel=0.5, inclinacao=0.4, cor=0, material="Neon", rigidez=30, atraso=0.7, giro=(80, 80, 0))
+            for k in range(3)
+        ],
+        "especial": dict(template="cogumelo", n=8, origem=(0, -2.9, 0), raio=2.4, escala=1.4, cor=0, material="Glass"),
+    },
+    "solsticio_de_areia": {
+        "cores": ("FFD27A", "7A5583"),
+        "pecas": [
+            dict(template="duna", modo="ancora", pos=(0, 2.3, 0.9), rot=(10, 0, 8), cor=0, material="SmoothPlastic", rigidez=40, atraso=0.5, bob=0.12, escala=1.5, correr=(0, 1.0, 1.8), correrRot=(0, 90, 0)),
+            dict(template="duna", modo="ancora", pos=(0, -0.6, 1.1), rot=(-10, 0, -6), cor=0, material="SmoothPlastic", rigidez=40, atraso=0.5, bob=-0.12, escala=1.7, correr=(0, 0.0, 2.4), correrRot=(0, 90, 0)),
+            dict(template="relogio", modo="ancora", pos=(1.3, 1.6, 0), rot=(0, 0, 90), giro=(0, 20, 0), cor=1, material="Neon", rigidez=46, atraso=0.4, escala=1.4),
+        ],
+        "especial": dict(template="relogio", n=1, origem=(0, 1.2, 1.6), raio=0, escala=3.4, cor=0, material="Neon", girar=180),
+    },
+    "marfim_flutuante": {
+        "cores": ("F5E7CB", "876E93"),
+        "pecas": [
+            dict(template="presa", modo="ancora", pos=p, rot=r, cor=0, material="SmoothPlastic", rigidez=34, atraso=0.6, bob=0.3 * (1 if k % 2 else -1), escala=1.6, correr=(p[0] * 0.35, 0.8, 1.6), correrRot=(r[0], r[1] + 90, r[2]), detalhe=k >= 3)
+            for k, (p, r) in enumerate((((-1.9, 1.0, 0.6), (0, 20, 15)), ((1.9, 0.9, 0.6), (0, 160, 15)), ((-1.6, -0.9, 0.9), (0, 30, -20)), ((1.6, -1.0, 0.9), (0, 150, -20))))
+        ],
+        "especial": dict(template="presa", n=2, origem=(0, 1.0, 1.6), raio=0.6, escala=2.6, cor=1, material="Neon"),
+    },
+    "lotus_de_gravidade": {
+        "cores": ("9B83D9", "202036"),
+        "pecas": [
+            dict(template="lotus", modo="ancora", pos=(0, 2.9, 0.1), giro=(0, 12, 0), cor=1, material="SmoothPlastic", rigidez=50, atraso=0.4, bob=0.1, escala=1.5, correrRot=(-20, 0, 0)),
+        ]
+        + [
+            dict(template="petala_solta", modo="orbita", rx=1.4 + 0.2 * k, rz=1.3 + 0.2 * k, altura=0.9 + 0.35 * k, ang=k * 1.25, vel=0.4, inclinacao=0.6, cor=k % 2, material="Neon" if k % 2 == 0 else "SmoothPlastic", rigidez=28, atraso=0.7, giro=(0, 0, 70), escala=1.4, correr=(math.cos(k) * 0.9, 0.6 + 0.2 * k, math.sin(k) * 0.9), detalhe=k >= 3)
+            for k in range(5)
+        ],
+        "especial": dict(template="petala_solta", n=12, origem=(0, 2.9, 0.1), raio=2.2, escala=1.4, cor=0, material="Neon"),
+    },
+    "espelho_de_chuva": {
+        "cores": ("C8E7FF", "3A6787"),
+        "pecas": [
+            dict(template="espelho", modo="orbita", rx=2.3, rz=2.1, altura=0.6 + 0.25 * (k % 2), ang=k * 1.57 + 0.4, vel=0.18, inclinacao=0.1, cor=0, material="Glass", transp=0.1, rigidez=36, atraso=0.6, rot=(0, 90, 0), escala=1.3, correr=(math.cos(k * 1.57) * 2.6, 0.7, 0.8 + abs(math.sin(k * 1.57))), detalhe=k >= 3)
+            for k in range(4)
+        ]
+        + [
+            dict(template="gota_espelho", modo="orbita", rx=2.0, rz=1.8, altura=-1.0 + 0.9 * k, ang=k * 2.0, vel=0.3, inclinacao=0.0, cor=1, material="Neon", rigidez=30, atraso=0.6, bob=0.6, detalhe=True)
+            for k in range(3)
+        ],
+        "especial": dict(template="espelho", n=1, origem=(0, 1.2, 2.0), raio=0, escala=3.2, cor=0, material="Glass"),
+    },
+    "capsula_de_tempestade": {
+        "cores": ("8AE8F5", "344B79"),
+        "pecas": [
+            dict(template="capsula", modo="ancora", pos=(0, 1.4, 1.5), giro=(0, 30, 0), cor=1, material="Metal", rigidez=40, atraso=0.5, bob=0.12, escala=1.6, correr=(0, 1.2, 2.0), abrirEscala=0.4),
+            dict(template="trovao", modo="ancora", pos=(0, 1.4, 1.5), giro=(150, 230, 90), cor=0, material="Neon", rigidez=40, atraso=0.5, escala=1.6, correr=(0, 1.2, 2.0)),
+        ]
+        + [
+            dict(template="aro", modo="ancora", pos=(0, 1.4, 1.5), rot=r, giro=g, cor=0, material="Neon", rigidez=40, atraso=0.5, escala=1.6, correr=(0, 1.2, 2.0), detalhe=k >= 2)
+            for k, (r, g) in enumerate((((90, 0, 0), (0, 0, 40)), ((0, 0, 60), (0, 50, 0)), ((30, 0, -50), (0, -35, 0))))
+        ],
+        "especial": dict(template="trovao", n=6, origem=(0, 1.4, 1.5), raio=2.6, escala=2.0, cor=0, material="Neon"),
+    },
+    "cauda_de_cometa": {
+        "cores": ("FF9A6A", "6C74EE"),
+        "pecas": [
+            dict(template="nucleo", modo="ancora", pos=(1.3, 1.9, 0.6), giro=(40, 60, 0), cor=0, material="Neon", rigidez=46, atraso=0.4, bob=0.1, escala=1.4, pulso=0.08),
+        ]
+        + [
+            dict(template="faixa", modo="ancora", pos=(1.3, 1.9, 0.6), rot=(rx, -20 + 18 * k, 0), cor=k % 2, material="Neon", transp=0.15 + 0.15 * k, rigidez=30 - 4 * k, atraso=0.8, osc=(1, 10, 0.5 + 0.15 * k), escala=1.4, correr=(0.6, 1.6, 1.0), correrRot=(10, 0, 0), detalhe=k >= 2)
+            for k, rx in enumerate((-5, 10, 25))
+        ],
+        "especial": dict(template="nucleo", n=1, origem=(0, 1.8, 0), raio=3.0, escala=1.2, cor=0, material="Neon"),
+    },
+    "prisma_do_silencio": {
+        "cores": ("B7F7DD", "435870"),
+        "pecas": [
+            dict(template="octaedro", modo="ancora", pos=(0, 0.6, -1.6), giro=(0, 25, 10), cor=0, material="Glass", transp=0.2, rigidez=50, atraso=0.4, bob=0.12, escala=1.3, correr=(0, 0.8, 1.6)),
+        ]
+        + [
+            dict(template="placa_som", modo="orbita", rx=1.9, rz=1.7, altura=0.6 + 0.5 * math.sin(k * 2), ang=k * 1.57, vel=0.2, inclinacao=0.0, cor=1, material="SmoothPlastic", rigidez=36, atraso=0.6, rot=(0, 90, 0), escala=1.8, correr=(math.cos(k * 1.57) * 1.0, 0.8, 1.6 + math.sin(k * 1.57) * 0.5), correrRot=(0, 0, 90), detalhe=k >= 3)
+            for k in range(4)
+        ],
+        "especial": dict(template="placa_som", n=8, origem=(0, 0.8, 0), raio=3.4, escala=2.0, cor=0, material="Glass"),
     },
 })
 
@@ -993,7 +1332,10 @@ def renderizar(objs):
     oc = bpy.data.objects.new("c", cam)
     fixa.objects.link(oc)
     cena.camera = oc
+    so = [x for x in os.environ.get("SO", "").split(",") if x]
     for aura, cfg in AURAS.items():
+        if so and aura not in so:
+            continue
         col = bpy.data.collections.new(aura)
         cena.collection.children.link(col)
         cores = [hexcor(c) for c in cfg["cores"]]
@@ -1015,7 +1357,8 @@ def renderizar(objs):
         for o in list(col.objects):
             bpy.data.objects.remove(o)
         bpy.data.collections.remove(col)
-    folha()
+    if not so:
+        folha()
 
 
 def folha():
