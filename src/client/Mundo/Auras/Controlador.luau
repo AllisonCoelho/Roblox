@@ -62,7 +62,11 @@ local function sincronizar(jogador: Player, personagem: Model)
 	else
 		task.spawn(function()
 			personagem:WaitForChild("HumanoidRootPart", 10)
-			if personagem.Parent and personagem:GetAttribute("AuraVfx") == "gear5" and permitido(jogador) then
+			if
+				personagem.Parent
+				and personagem:GetAttribute("AuraVfx") == "gear5"
+				and permitido(jogador)
+			then
 				PresencaAnime.definir(personagem, "gear5")
 			end
 		end)

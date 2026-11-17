@@ -95,11 +95,8 @@ local function marcarChao(a: Ativa, intensidade: number, camera: Vector3)
 		table.insert(excluir, pasta)
 	end
 	params.FilterDescendantsInstances = excluir
-	local hit = Workspace:Raycast(
-		a.raiz.Position + Vector3.new(0, 1, 0),
-		Vector3.new(0, -9, 0),
-		params
-	)
+	local hit =
+		Workspace:Raycast(a.raiz.Position + Vector3.new(0, 1, 0), Vector3.new(0, -9, 0), params)
 	if not hit or hit.Normal.Y < 0.6 then
 		return
 	end
@@ -202,9 +199,16 @@ function Presenca.simular(_dt: number)
 		local quadrilD = motor(personagem, "RightHip", "Right Hip")
 		local quadrilE = motor(personagem, "LeftHip", "Left Hip")
 
-		sobrepor(raiz, CFrame.new(0, subir, 0) * CFrame.Angles(math.rad(inclinar * 0.3), 0, math.rad(girar * 0.3)))
+		sobrepor(
+			raiz,
+			CFrame.new(0, subir, 0)
+				* CFrame.Angles(math.rad(inclinar * 0.3), 0, math.rad(girar * 0.3))
+		)
 		sobrepor(cintura, CFrame.Angles(math.rad(inclinar), math.rad(girar), math.rad(7 * alegria)))
-		sobrepor(pescoco, CFrame.Angles(math.rad(-16 * alegria + 5 * voo), 0, math.rad(-4 * alegria)))
+		sobrepor(
+			pescoco,
+			CFrame.Angles(math.rad(-16 * alegria + 5 * voo), 0, math.rad(-4 * alegria))
+		)
 		-- Uma mao sobre a testa, outra para fora: silhueta reconhecivel no idle.
 		sobrepor(
 			ombroD,
