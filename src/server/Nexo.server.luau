@@ -8,11 +8,13 @@ local Auras = require(Shared.Dados.Auras)
 local Formato = require(Shared.Formato)
 local Dados = require(script.Parent.Servicos.Dados)
 local Nexo = require(script.Parent.Mundo.Nexo)
+local PrimeiroSoberano = require(script.Parent.NPCs.PrimeiroSoberano)
 
 local INTERVALO = 4
 local LINHAS = 5
 
 local pasta = Nexo.construir()
+PrimeiroSoberano.iniciar(pasta) -- o NPC nasce sentado no trono da Arena
 local painel = pasta:WaitForChild("PainelRanking")
 local texto = painel:WaitForChild("Ranking"):WaitForChild("Texto") :: TextLabel
 
