@@ -15,10 +15,12 @@ local RECENTES = 3
 export type EstadoGiro = "perfil" | "pedido" | "recarregando" | "pular" | "pronto"
 
 export type Api = {
+	quadro: Frame,
 	definirGiro: (fracao: number, falta: number, estado: EstadoGiro) -> (),
 	definirVisivel: (visivel: boolean) -> (),
+	definirPerfilTeste: (ativo: boolean) -> (),
 	atualizar: (estado: Perfil.Estado) -> (),
-	registrarResultado: (aura: Auras.Aura, nova: boolean) -> (),
+	registrarResultado: (aura: Auras.Aura, nova: boolean, simulado: boolean) -> (),
 }
 
 type Opcoes = {
@@ -85,6 +87,8 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 	type Linha = { quadro: Frame, nome: TextLabel, chance: TextLabel, marca: TextLabel }
 	local linhas: { Linha } = {}
 	local recentes: { Auras.Aura } = {}
+	local recentesTeste: { Auras.Aura } = {}
+	local emTeste = false
 	for i = 1, RECENTES do
 		local quadro = Kit.novo("Frame", {
 			Name = "Giro" .. i,
@@ -355,12 +359,23 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 		Parent = resultado.conteudo,
 	})
 	local resultadoToken = 0
+	local resultadoSimulado = false
 	local estadoGiro: EstadoGiro? = nil
 	local tempoMostrado = ""
 
 	local function atualizarFeed()
-		feed.quadro.Visible = not Escala.compacto and #recentes > 0
-		feed.quadro.Size = UDim2.fromOffset(258, 32 + 36 * #recentes)
+		local lista = if emTeste then recentesTeste else recentes
+		feed.quadro.Visible = not Escala.compacto and #lista > 0
+		feed.quadro.Size = UDim2.fromOffset(258, 32 + 36 * #lista)
+		for i, linha in linhas do
+			local aura = lista[i]
+			linha.quadro.Visible = aura ~= nil
+			if aura then
+				linha.nome.Text = aura.nome
+				linha.chance.Text = "1/" .. Formato.chanceCurta(aura.chance)
+				linha.marca.TextColor3 = corTier(aura)
+			end
+		end
 	end
 
 	local function ajustarRotuloGiro()
@@ -411,6 +426,7 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 	end)
 
 	return {
+		quadro = hud,
 		definirGiro = function(fracao: number, falta: number, estado: EstadoGiro)
 			local carregando = estado == "recarregando"
 			local disponivel = estado == "pronto" or estado == "pular"
@@ -445,6 +461,17 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 		definirVisivel = function(visivel: boolean)
 			hud.Visible = visivel
 		end,
+		definirPerfilTeste = function(ativo: boolean)
+			emTeste = ativo
+			if not ativo then
+				table.clear(recentesTeste)
+				if resultadoSimulado then
+					resultadoToken += 1
+					resultado.quadro.Visible = false
+				end
+			end
+			atualizarFeed()
+		end,
 		atualizar = function(estado: Perfil.Estado)
 			giros.Text = if estado.giros < 1000000
 				then Formato.inteiro(estado.giros)
@@ -476,25 +503,19 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 			valorIndice.Text = string.format("%d / %d", descobertas, #Auras.lista)
 			progresso.Size = UDim2.fromScale(descobertas / #Auras.lista, 1)
 		end,
-		registrarResultado = function(aura: Auras.Aura, nova: boolean)
-			table.insert(recentes, 1, aura)
-			if #recentes > RECENTES then
-				table.remove(recentes)
-			end
-			for i, linha in linhas do
-				local a = recentes[i]
-				linha.quadro.Visible = a ~= nil
-				if a then
-					linha.nome.Text = a.nome
-					linha.chance.Text = "1/" .. Formato.chanceCurta(a.chance)
-					linha.marca.TextColor3 = corTier(a)
-				end
+		registrarResultado = function(aura: Auras.Aura, nova: boolean, simulado: boolean)
+			local lista = if simulado then recentesTeste else recentes
+			table.insert(lista, 1, aura)
+			if #lista > RECENTES then
+				table.remove(lista)
 			end
 			atualizarFeed()
+			resultadoSimulado = simulado
 			resultadoToken += 1
 			local meu = resultadoToken
 			textoResultado.Text = string.format(
-				"%s%s · 1 em %s",
+				"%s%s%s · 1 em %s",
+				if simulado then "Teste · " else "",
 				if nova then "Nova · " else "",
 				aura.nome,
 				Formato.chance(aura.chance)

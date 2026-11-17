@@ -91,9 +91,11 @@ local corAgitada = corBase
 -- Kit 3D da praça (modelado no Blender). Se o motor recusar criar as malhas, o cenário
 -- provisório do servidor continua visível: é o fallback temporário desta fase.
 local kit: Montagem.Resultado? = nil
+nexo:SetAttribute("EstadoKit3D", "Montando")
 task.spawn(function()
 	local ok, resultado = pcall(Montagem.construir, nexo)
 	if not ok then
+		nexo:SetAttribute("EstadoKit3D", "Cenário provisório")
 		warn(
 			"[Nexo] kit 3D indisponível; mantendo o cenário provisório: " .. tostring(resultado)
 		)
@@ -108,6 +110,7 @@ task.spawn(function()
 	end
 	coracao.Transparency = 1 -- segue como referência de posição e dono da luz
 	casca.Transparency = 1
+	nexo:SetAttribute("EstadoKit3D", "Carregado")
 end)
 
 local BRANCO = Color3.new(1, 1, 1)

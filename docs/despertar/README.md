@@ -35,6 +35,14 @@ CI e build verde. Sem erros no Output do Studio. Testes com dois jogadores (aura
 - **Cena de quem girou** (`Telas/Revelacao.luau`), Épico+: câmera, barras de cinema, clarão, faixa com o nome e selo da raridade. Toque pula.
 - Para trocar a pose por uma animação feita no Animation Editor: publique a animação e substitua `POSES` por um `Animator:LoadAnimation` com o ID.
 
+## Painel Dev
+
+- Abra pelo botão **DEV** ao lado da engrenagem ou pelo atalho **F8**. O servidor libera o painel à conta proprietária da experiência privada de testes. Na cópia local do Studio, o primeiro cliente simulado pode usar as ferramentas.
+- Em **Sessão**, **Liberar tudo** preenche a coleção temporária. Também é possível copiar a conta real ou começar vazia para repetir a primeira entrada. **Voltar ao perfil real** encerra a simulação.
+- **Auras** equipa qualquer aura do catálogo, altera quantidades e força o próximo resultado. **VFX** aplica as prévias disponíveis no personagem. **Rituais** faz um giro aleatório de teste ou encena uma categoria sem conceder a aura.
+- **Mapa** leva às entradas dos lugares do Nexo e permite renascer. A aba também mostra a versão do place, FPS e o estado de montagem do kit 3D local.
+- As alterações da sessão ficam na memória da conta que está testando. O salvamento e os rankings leem o perfil real. Os anúncios de giros simulados aparecem só para quem fez o giro.
+
 
 ## Ritual + Ruptura (direção aprovada)
 
@@ -65,7 +73,7 @@ Módulos do cliente:
 Regras:
 - **Obter não é equipar.** Só a primeira aura é equipada sozinha; depois, pelo cartão, pelo Índice ou ligando "equipar a mais rara automaticamente".
 - Os outros jogadores veem só a versão abreviada (≈1 s, sem câmera) das auras 1 em 1.000 ou mais raras, e podem desligar.
-- **Teste visual (só no Studio):** `Alt+1` a `Alt+6` encena cada categoria sem sortear, salvar nem anunciar. A ação `TesteVisual` não é registrada em servidor publicado.
+- **Teste visual:** `Alt+1` a `Alt+6` encena as categorias no Studio. No ambiente privado, a conta do dono também acessa essas prévias na aba Rituais do Painel Dev.
 
 ### Avaliação visual pendente (seção 16 do prompt mestre)
 

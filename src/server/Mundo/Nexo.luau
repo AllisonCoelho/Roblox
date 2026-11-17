@@ -804,6 +804,36 @@ local function construirBastiao(pasta: Instance)
 	)
 end
 
+-- Pontos de chegada do painel, calculados a partir da entrada de cada lugar.
+function Nexo.destinoDev(nome: string): CFrame?
+	local pasta = workspace:FindFirstChild("Nexo")
+	if not pasta then
+		return nil
+	end
+	if nome == "praca" then
+		local spawn = pasta:FindFirstChild("Spawn")
+		return if spawn and spawn:IsA("SpawnLocation")
+			then spawn.CFrame + Vector3.new(0, 3, 0)
+			else nil
+	end
+
+	local olhar: CFrame
+	local borda: number
+	if nome == "bastiao" then
+		olhar = CFrame.lookAt(direcao(BASTIAO.graus) * BASTIAO.dist, Vector3.zero)
+		borda = 20.5
+	else
+		local localNexo = LOCAIS[nome]
+		if not localNexo then
+			return nil
+		end
+		olhar = referencia(nome)
+		borda = localNexo.borda
+	end
+	local chegada = (olhar * CFrame.new(0, 4, -borda - 3)).Position
+	return CFrame.lookAt(chegada, olhar.Position + Vector3.new(0, 4, 0))
+end
+
 local function configurarCeu()
 	-- Noite estilizada, mas clara: ambiente mais alto e exposição levantada para que o mapa
 	-- seja legível sem depender de muitas PointLights (custo baixo no celular)

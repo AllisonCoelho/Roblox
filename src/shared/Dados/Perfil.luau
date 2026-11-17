@@ -45,6 +45,21 @@ function Perfil.padrao(): Estado
 	}
 end
 
+-- Os perfis salvos são tabelas serializáveis. Inclui campos aninhados de versões futuras.
+local function copiarTabela(origem: { [any]: any }): { [any]: any }
+	local copia = table.clone(origem)
+	for chave, valor in origem do
+		if type(valor) == "table" then
+			copia[chave] = copiarTabela(valor)
+		end
+	end
+	return copia
+end
+
+function Perfil.copiar(estado: Estado): Estado
+	return copiarTabela(estado) :: Estado
+end
+
 -- Conta um giro e guarda a aura sorteada na coleção
 function Perfil.registrarGiro(estado: Estado, auraId: string)
 	estado.giros += 1

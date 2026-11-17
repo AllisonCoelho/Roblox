@@ -25,7 +25,7 @@ end
 local function atualizar()
 	local linhas = {}
 	for _, jogador in Players:GetPlayers() do
-		local estado = Dados.de(jogador)
+		local estado = Dados.real(jogador)
 		if estado then
 			local melhor = Auras.melhorDe(estado.auras)
 			table.insert(linhas, {

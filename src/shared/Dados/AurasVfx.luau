@@ -1,7 +1,7 @@
 -- Auras que têm VFX próprio montado no cliente (malhas 3D + movimento procedural).
 -- O servidor só replica QUAL aura está ativa (atributo "AuraVfx" no personagem); cada cliente
 -- monta o efeito localmente. Para essas, o efeito antigo de partículas do servidor não é criado.
--- Essas auras ainda não estão no catálogo de sorteio: por enquanto só existem como prévia no Studio.
+-- Essas auras estão disponíveis como prévia no Studio e no painel de desenvolvimento.
 return {
 	gear5 = true,
 	-- família Naruto (Mundo/Auras/Caudas.luau)

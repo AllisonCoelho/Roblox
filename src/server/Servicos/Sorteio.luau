@@ -24,22 +24,11 @@ local function aleatorio(): number
 	return rng:NextNumber()
 end
 
-local function despertar(player: Player): (boolean, string?, { [string]: any }?)
-	local agora = os.clock()
-	local ultimo = ultimoGiro[player]
-	if ultimo and agora - ultimo < Config.CooldownGiro - TOLERANCIA then
-		return false, "Aguarde um instante..."
-	end
-	if not Dados.de(player) then
-		return false, "Carregando seus dados..."
-	end
-	ultimoGiro[player] = agora
-
-	-- O resultado é decidido e registrado aqui, antes de qualquer apresentação no cliente
-	local aura = Auras.sortear(aleatorio)
+local function entregar(player: Player, aura: Auras.Aura): (boolean, string?, { [string]: any }?)
 	local quantidade = 0
 	local equipou = false
-	Dados.alterar(player, function(estado)
+	local simulado = Dados.emTeste(player)
+	local ok, mensagem = Dados.alterar(player, function(estado)
 		local eraVazia = Perfil.colecaoVazia(estado)
 		Perfil.registrarGiro(estado, aura.id)
 		quantidade = estado.auras[aura.id]
@@ -53,21 +42,49 @@ local function despertar(player: Player): (boolean, string?, { [string]: any }?)
 		end
 		return true
 	end)
+	if not ok then
+		return false, mensagem
+	end
 
-	-- Auras raras: os outros clientes mostram a versão abreviada e o anúncio do servidor
+	-- Em teste, só o dono recebe o evento para ver a reação do Núcleo e a revelação local.
 	if aura.chance >= Auras.ANUNCIO_MINIMO then
-		Remotos.evento("Despertou"):FireAllClients({
+		local evento = Remotos.evento("Despertou")
+		local dados = {
 			jogador = player.DisplayName,
 			userId = player.UserId,
 			aura = aura.id,
-		})
+		}
+		if simulado then
+			evento:FireClient(player, dados)
+		else
+			evento:FireAllClients(dados)
+		end
 	end
-	return true, aura.id, { quantidade = quantidade, equipou = equipou }
+	return true, aura.id, { quantidade = quantidade, equipou = equipou, simulado = simulado }
 end
 
--- Só no Studio: pede a encenação de uma categoria sem sortear nem dar posse de nada.
--- Em servidores publicados esta ação nem é registrada.
-local function testeVisual(_player: Player, indice: any): (boolean, string?, { [string]: any }?)
+local function despertar(player: Player): (boolean, string?, { [string]: any }?)
+	local agora = os.clock()
+	local ultimo = ultimoGiro[player]
+	if ultimo and agora - ultimo < Config.CooldownGiro - TOLERANCIA then
+		return false, "Aguarde um instante..."
+	end
+	if not Dados.de(player) then
+		return false, "Carregando seus dados..."
+	end
+	ultimoGiro[player] = agora
+	return entregar(player, Auras.sortear(aleatorio))
+end
+
+function Sorteio.simular(player: Player, aura: Auras.Aura?): (boolean, string?, { [string]: any }?)
+	if not Dados.emTeste(player) then
+		return false, "Abra uma sessão de teste"
+	end
+	return entregar(player, aura or Auras.sortear(aleatorio))
+end
+
+-- Encena uma categoria sem alterar o perfil, pelo atalho do Studio ou pelo painel autorizado.
+function Sorteio.testeVisual(indice: any): (boolean, string?, { [string]: any }?)
 	if type(indice) ~= "number" or indice ~= math.floor(indice) then
 		return false, "Pedido inválido"
 	end
@@ -119,7 +136,9 @@ function Sorteio.iniciar()
 	Acoes.registrar("Equipar", equipar)
 	Acoes.registrar("Configurar", configurar)
 	if RunService:IsStudio() then
-		Acoes.registrar("TesteVisual", testeVisual)
+		Acoes.registrar("TesteVisual", function(_, indice)
+			return Sorteio.testeVisual(indice)
+		end)
 	end
 	Players.PlayerRemoving:Connect(function(player)
 		ultimoGiro[player] = nil
