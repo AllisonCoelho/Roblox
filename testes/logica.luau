@@ -30,7 +30,7 @@ do
 		end
 		local tier = AurasAtuais.Tiers[AurasAtuais.tierDe(math.floor(a.chance))].nome
 		igual("v2: raridade bate com a chance " .. a.id, a.tier, tier)
-		if i > 1 then
+		if i > 2 then -- a reserva (nº 1) fica de fora: a chance dela é o que sobra
 			igual("v2: ordem crescente " .. a.id, a.chance > V2.lista[i - 1].chance, true)
 		end
 	end
