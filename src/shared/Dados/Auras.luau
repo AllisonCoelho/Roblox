@@ -106,15 +106,32 @@ for i, d in DEFINICOES do
 	Auras.porId[aura.id] = aura
 end
 
--- Sorteia uma aura. aleatorio() devolve um número em [0, 1). sorte multiplica as chances das
--- auras que não são a reserva (1 = normal); com sorte > 1 as mais raras têm prioridade.
+-- Raro ou superior recebe o bônus. O restante cede massa proporcionalmente à chance base.
+-- A reserva continua participando da mesma distribuição das auras comuns.
+local somaRara = 0
+for _, aura in Auras.lista do
+	if aura.tier >= 3 then
+		somaRara += 1 / aura.chance
+	end
+end
+
+local function multiplicadores(sorte: number?): (number, number)
+	local s = sorte or 1
+	if s ~= s then
+		s = 1
+	end
+	local raro = math.clamp(s, 1, math.min(1.5, 1 / somaRara))
+	local comum = math.max(0, (1 - raro * somaRara) / (1 - somaRara))
+	return raro, comum
+end
+
 function Auras.sortear(aleatorio: () -> number, sorte: number?): Aura
-	local s = math.max(1, sorte or 1)
+	local raro, comum = multiplicadores(sorte)
 	local u = aleatorio()
 	local acumulado = 0
 	for i = #Auras.lista, 2, -1 do
 		local aura = Auras.lista[i]
-		acumulado += s / aura.chance
+		acumulado += (if aura.tier >= 3 then raro else comum) / aura.chance
 		if u < acumulado then
 			return aura
 		end
@@ -122,16 +139,18 @@ function Auras.sortear(aleatorio: () -> number, sorte: number?): Aura
 	return Auras.lista[1]
 end
 
--- Probabilidade real de sair cada aura num giro (sorte normal)
-function Auras.probabilidadeReal(id: string): number
+-- Usa exatamente as mesmas faixas do sorteio.
+function Auras.probabilidadeReal(id: string, sorte: number?): number
 	local aura = Auras.porId[id]
 	if not aura then
 		return 0
 	end
-	if aura.ordem == 1 then
-		return Auras.PROBABILIDADE_RESERVA
-	end
-	return 1 / aura.chance
+	local raro, comum = multiplicadores(sorte)
+	return (if aura.tier >= 3 then raro else comum) / aura.chance
+end
+
+function Auras.chanceEfetiva(aura: Aura, sorte: number?): number
+	return 1 / Auras.probabilidadeReal(aura.id, sorte)
 end
 
 -- A aura mais rara de uma coleção { [id] = quantidade }

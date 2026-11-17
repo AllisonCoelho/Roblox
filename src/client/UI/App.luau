@@ -16,6 +16,7 @@ local Estado = require(script.Parent.Estado)
 local Navegacao = require(script.Parent.Navegacao)
 local Telas = script.Parent:WaitForChild("Telas")
 local Ajustes = require(Telas.Ajustes)
+local Altar = require(Telas.Altar)
 local Avisos = require(Telas.Avisos)
 local HUD = require(Telas.HUD)
 local Indice = require(Telas.Indice)
@@ -54,6 +55,7 @@ local function podeGirar(): boolean
 		and not PainelDev.pendente()
 		and not girando
 		and not Revelacao.ativa()
+		and not Altar.ativa()
 		and agora >= proximoGiro
 		and agora >= ocupadoAte
 		-- o toque que fechou o cartão não deve virar um giro
@@ -66,6 +68,7 @@ local function apresentar(aura: Auras.Aura, dados: { [string]: any })
 	local teste = dados.teste == true
 	local simulado = dados.simulado == true
 	local nova = quantidade <= 1 and not teste
+	local chance = if type(dados.chance) == "number" then dados.chance else aura.chance
 	local prefs = preferencias()
 	local cat = Despertar.categoria(aura, not nova and not teste, prefs)
 	local comCartao = cat.cartao > 0
@@ -75,16 +78,17 @@ local function apresentar(aura: Auras.Aura, dados: { [string]: any })
 		-- (o cooldown do servidor, em proximoGiro, continua valendo)
 		ocupadoAte = 0
 		if not teste then
-			hud.registrarResultado(aura, nova, simulado)
+			hud.registrarResultado(aura, nova, simulado, chance)
 			-- O anúncio de quem girou só aparece agora, para não entregar o resultado antes
 			local jogador = Players.LocalPlayer
 			local nome = if simulado then "[Teste] " .. jogador.DisplayName else jogador.DisplayName
-			Avisos.anunciar(nome, jogador.UserId, aura)
+			Avisos.anunciar(nome, jogador.UserId, aura, chance)
 		end
 		if comCartao then
 			local estado = Estado.atual
 			Revelacao.mostrar(aura, cat, {
 				quantidade = quantidade,
+				chance = chance,
 				equipada = dados.equipou == true or (estado ~= nil and estado.equipada == aura.id),
 				teste = teste,
 			})
@@ -193,7 +197,12 @@ local function aoDespertou(dados: any)
 		Despertar.alheio(jogador, aura, preferencias())
 	end
 	if type(dados.jogador) == "string" then
-		Avisos.anunciar(dados.jogador, dados.userId, aura)
+		Avisos.anunciar(
+			dados.jogador,
+			dados.userId,
+			aura,
+			if type(dados.chance) == "number" then dados.chance else nil
+		)
 	end
 end
 
@@ -235,6 +244,7 @@ function App.iniciar()
 	Avisos.montar(raiz)
 	Indice.montar(Avisos.toast)
 	Inventario.montar()
+	Altar.montar(raiz, Avisos.toast)
 	Ajustes.montar(Avisos.toast)
 	PainelDev.iniciar(hud.quadro, {
 		podeAbrir = function()

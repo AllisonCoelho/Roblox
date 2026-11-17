@@ -36,7 +36,12 @@ function Avisos.toast(texto: string)
 	end)
 end
 
-function Avisos.anunciar(nomeJogador: string, _userId: number, aura: Auras.Aura)
+function Avisos.anunciar(
+	nomeJogador: string,
+	_userId: number,
+	aura: Auras.Aura,
+	chanceEfetiva: number?
+)
 	if aura.chance < Auras.ANUNCIO_MINIMO then
 		return
 	end
@@ -49,7 +54,7 @@ function Avisos.anunciar(nomeJogador: string, _userId: number, aura: Auras.Aura)
 	local corLegivel = Kit.corLegivel(cor):ToHex()
 	local nome = escapar(nomeJogador)
 	local auraNome = escapar(aura.nome)
-	local chance = Formato.chance(aura.chance)
+	local chance = Formato.chance(chanceEfetiva or aura.chance)
 	bannerTexto.Text = string.format(
 		'<b>%s</b> despertou <font color="#%s"><b>%s</b></font> · 1 em %s',
 		nome,

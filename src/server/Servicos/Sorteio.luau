@@ -10,6 +10,7 @@ local Auras = require(Shared.Dados.Auras)
 local Config = require(Shared.Config)
 local Perfil = require(Shared.Dados.Perfil)
 local Remotos = require(Shared.Remotos)
+local Transcendencia = require(Shared.Dados.Transcendencia)
 local Acoes = require(script.Parent.Acoes)
 local Dados = require(script.Parent.Dados)
 
@@ -24,7 +25,11 @@ local function aleatorio(): number
 	return rng:NextNumber()
 end
 
-local function entregar(player: Player, aura: Auras.Aura): (boolean, string?, { [string]: any }?)
+local function entregar(
+	player: Player,
+	aura: Auras.Aura,
+	sorte: number?
+): (boolean, string?, { [string]: any }?)
 	local quantidade = 0
 	local equipou = false
 	local simulado = Dados.emTeste(player)
@@ -46,6 +51,7 @@ local function entregar(player: Player, aura: Auras.Aura): (boolean, string?, { 
 		return false, mensagem
 	end
 
+	local chance = Auras.chanceEfetiva(aura, sorte)
 	-- Em teste, só o dono recebe o evento para ver a reação do Núcleo e a revelação local.
 	if aura.chance >= Auras.ANUNCIO_MINIMO then
 		local evento = Remotos.evento("Despertou")
@@ -53,6 +59,7 @@ local function entregar(player: Player, aura: Auras.Aura): (boolean, string?, { 
 			jogador = player.DisplayName,
 			userId = player.UserId,
 			aura = aura.id,
+			chance = chance,
 		}
 		if simulado then
 			evento:FireClient(player, dados)
@@ -60,7 +67,9 @@ local function entregar(player: Player, aura: Auras.Aura): (boolean, string?, { 
 			evento:FireAllClients(dados)
 		end
 	end
-	return true, aura.id, { quantidade = quantidade, equipou = equipou, simulado = simulado }
+	return true,
+		aura.id,
+		{ quantidade = quantidade, equipou = equipou, simulado = simulado, chance = chance }
 end
 
 local function despertar(player: Player): (boolean, string?, { [string]: any }?)
@@ -69,18 +78,22 @@ local function despertar(player: Player): (boolean, string?, { [string]: any }?)
 	if ultimo and agora - ultimo < Config.CooldownGiro - TOLERANCIA then
 		return false, "Aguarde um instante..."
 	end
-	if not Dados.de(player) then
-		return false, "Carregando seus dados..."
+	local estado = Dados.de(player)
+	if not estado or not Dados.podeProgredir(player) then
+		return false, "Seu perfil ainda não está disponível."
 	end
+	local sorte = Transcendencia.sorte(estado.transcendencia.nivel)
 	ultimoGiro[player] = agora
-	return entregar(player, Auras.sortear(aleatorio))
+	return entregar(player, Auras.sortear(aleatorio, sorte), sorte)
 end
 
 function Sorteio.simular(player: Player, aura: Auras.Aura?): (boolean, string?, { [string]: any }?)
 	if not Dados.emTeste(player) then
 		return false, "Abra uma sessão de teste"
 	end
-	return entregar(player, aura or Auras.sortear(aleatorio))
+	local estado = Dados.de(player)
+	local sorte = Transcendencia.sorte(if estado then estado.transcendencia.nivel else 0)
+	return entregar(player, aura or Auras.sortear(aleatorio, sorte), sorte)
 end
 
 -- Encena uma categoria sem alterar o perfil, pelo atalho do Studio ou pelo painel autorizado.

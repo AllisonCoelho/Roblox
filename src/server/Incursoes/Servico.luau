@@ -798,8 +798,8 @@ local function acaoFila(player: Player, universo: any): (boolean, string?)
 	if daRun[player] or embarques[player] then
 		return false, "Termine sua incursão ou aguarde o retorno ao Bastião."
 	end
-	if not Dados.de(player) then
-		return false, "Aguarde seu perfil carregar."
+	if Dados.emTransacao(player) or not Dados.podeProgredir(player) then
+		return false, "Aguarde a confirmação dos seus dados para entrar na fila."
 	end
 	if not perto(player, bastiao(), DISTANCIA_BASTIAO) then
 		return false, "Vá até o Bastião das Incursões para entrar na fila."

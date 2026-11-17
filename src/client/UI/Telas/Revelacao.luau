@@ -14,7 +14,12 @@ local Kit = require(script.Parent.Parent.Kit)
 
 local Revelacao = {}
 
-export type Info = { quantidade: number, equipada: boolean, teste: boolean }
+export type Info = {
+	chance: number?,
+	quantidade: number,
+	equipada: boolean,
+	teste: boolean,
+}
 export type Opcoes = {
 	aoEquipar: (auraId: string) -> (),
 	aoPular: () -> (),
@@ -109,7 +114,7 @@ function Revelacao.mostrar(aura: Auras.Aura, cat: Apresentacao.Categoria, info: 
 	nome.Text = aura.nome
 	tierTexto.Text = tier.nome
 	tierTexto.TextColor3 = Kit.corLegivel(cor)
-	chance.Text = "1 em " .. Formato.chance(aura.chance)
+	chance.Text = "1 em " .. Formato.chance(info.chance or aura.chance)
 
 	if info.teste then
 		situacao.Text = "Teste visual"
