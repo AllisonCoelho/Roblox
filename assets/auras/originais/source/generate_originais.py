@@ -1191,6 +1191,69 @@ def _(bm, rng):
     n = 40
     tubo(bm, [(math.cos(a) * 1.7 * (1 + 0.12 * math.sin(3 * a)), math.sin(a) * 1.5, 0) for a in [2 * math.pi * i / (n - 1) for i in range(n)]], 0.08, lados=6, fechar=False)
 
+
+# ================================================================ Divinas
+
+
+@peca("alvorecer_dos_titas", "mao")
+def _(bm, rng):
+    caixa(bm, (0, 0, 0), (1.0, 1.1, 0.35))
+    for k, (x, comp) in enumerate(((-0.36, 1.0), (-0.12, 1.2), (0.12, 1.15), (0.36, 0.95))):
+        pts = [(x, 0.55 + comp * t, -0.25 * t * t) for t in (0, 0.33, 0.66, 1.0)]
+        tubo(bm, pts, [0.12, 0.11, 0.1, 0.07], lados=8)
+    tubo(bm, [(0.5, 0.0, 0), (0.8, 0.4, -0.15), (0.95, 0.75, -0.3)], [0.13, 0.11, 0.08], lados=8)
+    tubo(bm, [(-0.45, -0.55, 0), (0.45, -0.55, 0)], 0.2, lados=8)
+
+
+@peca("alvorecer_dos_titas", "halo_solar")
+def _(bm, rng):
+    for a0 in (0.1, 1.7, 3.3, 4.9):
+        anel(bm, 1.5, 0.08, n=14, a0=a0, a1=a0 + 1.25, lados=6)
+    for k in range(16):
+        a = 2 * math.pi * k / 16
+        bipiramide(bm, (math.cos(a) * 1.85, math.sin(a) * 1.85, 0), (math.cos(a), math.sin(a), 0), 0.35 + 0.2 * (k % 2), 0.05, 0.07, lados=4, rng=rng)
+
+
+@peca("divindade_do_prisma", "catedral")
+def _(bm, rng):
+    for k in range(7):
+        x = (k - 3) * 0.42
+        alto = 2.4 - 0.45 * abs(k - 3)
+        prisma_ponta(bm, (x, alto / 2 - 0.6, 0.1 * abs(k - 3)), (0, 1, 0), alto, 0.14 + 0.03 * (3 - abs(k - 3)), 0.5, rng=rng)
+
+
+@peca("divindade_do_prisma", "nucleo")
+def _(bm, rng):
+    prisma_ponta(bm, (0, 0, 0), (0, 1, 0), 0.5, 0.45, 0.3, lados=6, rng=random.Random(2))
+
+
+@peca("divindade_do_prisma", "petala_luz")
+def _(bm, rng):
+    placa(bm, [(0, 0), (0.45, 0.9), (0.2, 2.2), (0, 2.6), (-0.2, 2.2), (-0.45, 0.9)], 0.05)
+
+
+@peca("ultimo_jardim", "arvore")
+def _(bm, rng):
+    tubo(bm, [(0, -1.4, 0), (0.1, -0.4, 0.05), (-0.05, 0.6, 0), (0, 1.2, 0)], [0.28, 0.22, 0.16, 0.1], lados=9)
+    for k in range(7):
+        a = k * 51 + 20
+        m = rot(0, a, 0)
+        h = 0.2 + 0.18 * k
+        p1 = tuple(m @ Vector((0.7, h + 0.5, 0)))
+        p2 = tuple(m @ Vector((1.3, h + 0.9, 0.2)))
+        tubo(bm, [(0, h, 0), p1, p2], [0.09, 0.05, 0.015], lados=6)
+    for k in range(4):
+        a = k * 1.57 + 0.4
+        tubo(bm, [(0, -1.3, 0), (math.cos(a) * 0.7, -1.55, math.sin(a) * 0.7), (math.cos(a + 0.4) * 1.3, -1.75, math.sin(a + 0.4) * 1.3)], [0.14, 0.08, 0.02], lados=6)
+
+
+@peca("ultimo_jardim", "flor_galaxia")
+def _(bm, rng):
+    for k in range(7):
+        a = 360 * k / 7
+        placa(bm, [(0, 0), (0.14, 0.18), (0.0, 0.45), (-0.14, 0.18)], 0.03, rot(0, 0, a) @ rot(15, 0, 0))
+    bolha(bm, (0, 0, 0.05), 0.1, sub=1, rng=rng)
+
 # ---------------------------------------------------------------- comportamento (vai para o Luau)
 # modo: "ancora" (pos local), "orbita" (rx, rz, altura, ang, vel), "pendulo" (arco atrás: centro, abertura)
 # rot = graus (X, Y, Z); giro = graus/s; osc = {eixo, amplitude graus, freq}; correr = pos local correndo;
@@ -1874,6 +1937,45 @@ AURAS.update({
             for k in range(6)
         ],
         "especial": dict(template="olho", n=12, origem=(0, 1.6, 0), raio=3.4, escala=2.0, cor=0, material="Neon"),
+    },
+})
+
+
+# Divinas
+AURAS.update({
+    "alvorecer_dos_titas": {
+        "cores": ("FFE1A8", "8B8DE8"),
+        "pecas": [
+            dict(template="mao", modo="ancora", pos=(s * 2.0, 1.2, 1.4), rot=(0, s * -20, s * -25), cor=0, material="Marble", rigidez=26, atraso=0.8, osc=(0, 5, 0.25), bob=0.2, escala=1.5, espelhar=s < 0, correr=(s * 1.4, 1.6, 1.0), correrRot=(-40, 0, s * -10), abrir=(s * 0.8, 1.8, 0.4))
+            for s in (-1, 1)
+        ]
+        + [
+            dict(template="halo_solar", modo="ancora", pos=(0, 3.6, 1.0), rot=(10, 0, 0), giro=(0, 0, 10), cor=0, material="Neon", rigidez=46, atraso=0.4, pulso=0.04, escala=1.3),
+        ],
+        "especial": dict(template="mao", n=2, origem=(0, 1.0, 2.2), raio=2.6, escala=2.6, cor=1, material="Neon"),
+    },
+    "divindade_do_prisma": {
+        "cores": ("E8F6FF", "D89FFF"),
+        "pecas": [
+            dict(template="catedral", modo="ancora", pos=(0, 1.4, 1.8), cor=0, material="Glass", transp=0.1, rigidez=40, atraso=0.5, escala=1.3, correr=(0, 1.0, 2.6), correrRot=(-70, 0, 0)),
+            dict(template="nucleo", modo="ancora", pos=(0, 1.3, 1.2), giro=(0, 45, 0), cor=1, material="Neon", rigidez=50, atraso=0.4, pulso=0.1, escala=1.4),
+        ]
+        + [
+            dict(template="petala_luz", modo="ancora", pos=(0, 1.0, 2.0), rot=(0, 0, -60 + 30 * k), cor=k % 2, material="Neon", transp=0.4, rigidez=40, atraso=0.5, osc=(2, 4, 0.25), escala=0.9, abrirEscala=0.8, detalhe=k >= 3)
+            for k in range(5)
+        ],
+        "especial": dict(template="petala_luz", n=5, origem=(0, 1.0, 1.8), raio=0.6, escala=2.2, cor=0, material="Neon", arco_iris=True),
+    },
+    "ultimo_jardim": {
+        "cores": ("D0FFDA", "F8B1F1"),
+        "pecas": [
+            dict(template="arvore", modo="ancora", pos=(0, 1.3, 1.9), cor=0, material="Neon", transp=0.2, rigidez=34, atraso=0.6, osc=(2, 3, 0.2), escala=1.5, correrRot=(-35, 0, 0)),
+        ]
+        + [
+            dict(template="flor_galaxia", modo="orbita", rx=2.3 + 0.3 * (k % 2), rz=2.0, altura=0.6 + 0.4 * k, ang=k * 1.25, vel=0.25, inclinacao=0.5, cor=1, material="Neon", rigidez=30, atraso=0.6, giro=(0, 0, 40), pulso=0.15, escala=1.8, correr=(0.4 * (k - 2), 1.8 + 0.2 * k, 1.6 + 0.3 * k), detalhe=k >= 3)
+            for k in range(5)
+        ],
+        "especial": dict(template="flor_galaxia", n=14, origem=(0, 2.4, 1.6), raio=3.6, escala=2.2, cor=1, material="Neon"),
     },
 })
 
