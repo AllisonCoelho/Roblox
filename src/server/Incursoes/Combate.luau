@@ -35,10 +35,14 @@ type Estado = {
 	velocidadeNormal: number?,
 	invulneravelAte: number,
 	proximoDash: number,
+	mods: { [string]: number }, -- Bênçãos da Fenda (Shared/Dados/IncursoesRun)
 	ctx: Contexto?,
 }
 
 local estados: { [Player]: Estado } = {}
+
+-- Chamado a cada inimigo derrubado por um jogador (sequência, cura, Elites). Ligado pelo Serviço.
+Combate.aoAbater = nil :: ((Player, any) -> ())?
 local rng = Random.new()
 
 local function porHumanoide(h: Humanoid): (Player?, Estado?)
@@ -69,7 +73,7 @@ end
 
 local function ganhar(e: Estado, valor: number)
 	local antes = math.floor(e.medidor)
-	e.medidor = math.min(Dados.MEDIDOR_MAX, e.medidor + valor)
+	e.medidor = math.min(Dados.MEDIDOR_MAX, e.medidor + valor * (1 + (e.mods.medidor or 0)))
 	if math.floor(e.medidor) ~= antes then
 		enviarEstado(e)
 	end
@@ -91,6 +95,7 @@ function Combate.entrar(player: Player, auraVfx: any, cor: Color3)
 		velocidadeNormal = nil,
 		invulneravelAte = 0,
 		proximoDash = 0,
+		mods = {},
 		ctx = nil,
 	}
 end
@@ -126,6 +131,14 @@ function Combate.atualizarKit(player: Player, auraVfx: any)
 			e.combo = 0
 			enviarEstado(e)
 		end
+	end
+end
+
+-- Bênçãos da Fenda: modificadores somados do jogador nesta run
+function Combate.definirModificadores(player: Player, mods: { [string]: number })
+	local e = estados[player]
+	if e then
+		e.mods = mods
 	end
 end
 
@@ -198,14 +211,21 @@ local function acertar(
 	local total = 0
 	for _, i in table.clone(ctx.inimigos) do
 		if i.vida > 0 and Dados.acerta(geo, origem, dir, i.pos, i.raio) then
-			local critico = rng:NextNumber() < Dados.CRITICO_CHANCE
-			local dano = Dados.dano(tecnica.dano, ctx.ressonancia, mult * bonus, critico)
+			local critico = rng:NextNumber() < Dados.CRITICO_CHANCE + (e.mods.critico or 0)
+			local dano = Dados.dano(
+				tecnica.dano,
+				ctx.ressonancia,
+				mult * bonus * (1 + (e.mods.dano or 0)),
+				critico
+			)
 			local rel = Vector3.new(i.pos.X - origem.X, 0, i.pos.Z - origem.Z)
 			local fora = if rel.Magnitude > 0.1 then rel.Unit else dir
 			if tecnica.empurrar or tecnica.atordoar then
 				Inimigos.empurrar(i, fora * (tecnica.empurrar or 0), tecnica.atordoar)
 			end
-			Inimigos.ferir(i, dano)
+			if Inimigos.ferir(i, dano, origem) and Combate.aoAbater then
+				Combate.aoAbater(player, i)
+			end
 			total += dano
 			table.insert(alvos, i.pos)
 			if critico then
@@ -243,7 +263,10 @@ function Combate.tecnica(player: Player, id: any, dir: any, ctx: Contexto): (boo
 		e.medidor = 0
 		e.despertarAte = agora + e.kit.despertar.duracao
 	end
-	e.recargas[id] = agora + tecnica.recarga
+	local reducao = if id == "tecnica1" or id == "tecnica2"
+		then math.clamp(e.mods.recargaTecnicas or 0, 0, 0.6)
+		else 0
+	e.recargas[id] = agora + tecnica.recarga * (1 - reducao)
 	soltarGuarda(e)
 
 	local mult = 1
@@ -293,6 +316,13 @@ function Combate.tecnica(player: Player, id: any, dir: any, ctx: Contexto): (boo
 		-- técnicas com atraso partem de onde o jogador está quando soltam
 		local o = if (tecnica.atraso or 0) > 0 then ctx.raiz.Position else origem
 		local alvos = acertar(player, e, tecnica, o, direcao, mult)
+		if id == "golpe" and combo == #e.kit.combo and (e.mods.ecoCombo or 0) > 0 then
+			-- Bênção Eco do Golpe: o último golpe do combo solta uma onda em volta
+			local eco: any =
+				{ id = "eco", forma = "area", alcance = 8, dano = 16, empurrar = 6, atordoar = 0.4 }
+			acertar(player, e, eco, o, direcao, 1)
+			ctx.paraRun({ tipo = "combate", acao = "eco", origem = o, cor = e.cor })
+		end
 		if #alvos > 0 then
 			ctx.paraRun({
 				tipo = "combate",
@@ -331,8 +361,32 @@ function Combate.esquiva(player: Player, dir: any, ctx: Contexto): (boolean, str
 	if agora < e.proximoDash then
 		return false, nil
 	end
-	e.proximoDash = agora + Dados.DASH_RECARGA
+	e.proximoDash = agora
+		+ Dados.DASH_RECARGA * (1 - math.clamp(e.mods.recargaEsquiva or 0, 0, 0.6))
 	e.invulneravelAte = agora + e.kit.dash.invulneravel
+	if (e.mods.rastro or 0) > 0 then
+		-- Bênção Rastro de Brasas: queima quem estiver no caminho da esquiva
+		local origem = ctx.raiz.Position
+		local brasa: any = {
+			id = "rastro",
+			forma = "linha",
+			alcance = e.kit.dash.distancia,
+			largura = 2.5,
+			dano = 18,
+		}
+		task.delay(0.2, function()
+			if estados[player] == e then
+				acertar(player, e, brasa, origem, direcao, 1)
+			end
+		end)
+		ctx.paraRun({
+			tipo = "combate",
+			acao = "rastro",
+			origem = origem,
+			dir = direcao,
+			distancia = e.kit.dash.distancia,
+		})
+	end
 	soltarGuarda(e)
 	ctx.paraRun({
 		tipo = "combate",
@@ -386,6 +440,7 @@ function Combate.defesa(h: Humanoid, dano: number, origem: Vector3, inimigo: any
 	local invulneravel = agora < e.invulneravelAte
 	local deFrente = Dados.deFrente(raiz.Position, raiz.CFrame.LookVector, origem)
 	local final = Dados.danoRecebido(dano, e.kit, e.guardando, deFrente, invulneravel)
+		* (1 - math.clamp(e.mods.danoRecebido or 0, 0, 0.8))
 	if invulneravel then
 		ganhar(e, Dados.MEDIDOR_ESQUIVA)
 		e.ctx.paraRun({ tipo = "combate", acao = "esquivou", origem = raiz.Position })
