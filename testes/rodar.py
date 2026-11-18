@@ -28,6 +28,7 @@ MODULOS = {
     "AurasOriginaisV2": "src/shared/Dados/AurasOriginaisV2.luau",
     "Combate": "src/shared/Dados/Combate.luau",
     "Monetizacao": "src/shared/Dados/Monetizacao.luau",
+    "Icones": "src/shared/Dados/Icones.luau",
     "Cosmeticos": "src/shared/Dados/Cosmeticos.luau",
     "Temporada": "src/shared/Dados/Temporada.luau",
     "IncursoesRun": "src/shared/Dados/IncursoesRun.luau",
