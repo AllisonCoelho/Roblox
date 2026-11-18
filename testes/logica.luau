@@ -1177,4 +1177,102 @@ do
 	igual("temporada: XP limitado ao último nível", maximo.xp, T.NIVEIS * T.XP_POR_NIVEL)
 end
 
+-- Gear 5: duas silhuetas em repouso e contatos no passo que move o corpo.
+do
+	local M = req("Gear5Movimento")
+	local risada, flutuar = M.parado(0.8)
+	igual("gear 5: sustenta a risada", risada, 0)
+	igual("gear 5: flutuação discreta", math.abs(flutuar) <= 0.075, true)
+	local transicao = M.parado(1.9)
+	igual("gear 5: mistura gradual das poses", transicao > 0 and transicao < 1, true)
+	local relaxado = M.parado(3)
+	igual("gear 5: sustenta o repouso", relaxado, 1)
+	local volta = M.parado(4.2)
+	igual("gear 5: volta gradualmente à risada", volta > 0 and volta < 1, true)
+	igual("gear 5: repete o ciclo", M.parado(4.8), 0)
+
+	local fase, pe = M.passo(0.49, 0.02, 14)
+	igual("gear 5: pousa no pé esquerdo", pe, "E")
+	igual("gear 5: sem segundo contato no quadro seguinte", select(2, M.passo(fase, 0.02, 14)), nil)
+	fase, pe = M.passo(0.99, 0.02, 14)
+	igual("gear 5: volta com o pé direito", pe, "D")
+	igual("gear 5: a fase volta ao começo", fase < 0.05, true)
+	igual("gear 5: parado não avança o passo", M.passo(0.2, 1, 0), 0.2)
+	local andando = M.passo(0, 0.2, 5)
+	local correndo = M.passo(0, 0.2, 16)
+	igual("gear 5: passo acelera com movimento", correndo > andando, true)
+	local esquerda, quadro, _, altura = M.corrida(0.819)
+	igual("gear 5: espelha a passada alternada", esquerda, true)
+	igual("gear 5: pose aérea no topo do passo", quadro, 3)
+	igual("gear 5: há quique na passada", altura > 0.55, true)
+	local _, _, _, contato = M.corrida(0.5)
+	igual("gear 5: volta à altura de apoio no contato", contato, 0)
+end
+
+-- Gear 5: Haki do Rei sincronizado com a animação parada
+do
+	local M = req("Gear5Movimento")
+	local T = M.TEMPO_PARADO
+	local eventos = {}
+	local t = 0
+	while t < T * 4 do
+		local e = M.hakiParado(t, t + 1 / 60)
+		if e then
+			table.insert(eventos, { e, t + 1 / 60 })
+		end
+		t += 1 / 60
+	end
+	igual("haki: 4 eventos em 4 ciclos parados", #eventos, 4)
+	igual("haki: primeiro são faíscas no repouso", eventos[1][1], "fraco")
+	igual(
+		"haki: faíscas no quadro do repouso",
+		math.abs(eventos[1][2] - M.HAKI_RELAXADO) < 0.02,
+		true
+	)
+	igual("haki: estouro forte no auge da risada", eventos[2][1], "forte")
+	igual(
+		"haki: forte no segundo ciclo",
+		math.abs(eventos[2][2] - (T + M.HAKI_RISADA)) < 0.02,
+		true
+	)
+	igual("haki: ciclos alternados", eventos[3][1] .. eventos[4][1], "fracoforte")
+	igual("haki: nada ao começar a ficar parado", M.hakiParado(0, 0.3), nil)
+	igual("haki: um quadro longo não perde o evento", M.hakiParado(T + 0.3, T + 0.4), "forte")
+	igual("haki: queda baixa só borracha", M.hakiPouso(-20), nil)
+	igual("haki: queda forte estoura", M.hakiPouso(-45), 1)
+	igual("haki: intensidade do pouso limitada", M.hakiPouso(-500), 1.6)
+	igual("haki: queda média tem mínimo", M.hakiPouso(-31), 0.8)
+end
+
+-- Ícones da interface
+do
+	local I = req("Icones")
+	local It = req("Itens")
+	for id, item in It.porId do
+		igual("ícone: item tem símbolo próprio " .. id, I.ITENS[id] ~= nil, true)
+		igual("ícone: categoria conhecida " .. id, I.CATEGORIAS[item.categoria] ~= nil, true)
+	end
+	igual(
+		"ícone: item desconhecido usa a categoria",
+		I.item("xx", "Artefatos"),
+		I.CATEGORIAS.Artefatos
+	)
+	igual("ícone: sem categoria", I.item("xx", nil), I.DESCONHECIDO)
+	igual("ícone: aura sem estilo", I.aura(nil), I.AURAS.brilho)
+	local vistos = { [I.DESCONHECIDO] = true }
+	for _, grupo in { I.ITENS, I.CATEGORIAS, I.AURAS, I.MENU, I.STATUS, I.DISTINTIVOS } do
+		for nome, indice in grupo do
+			igual(
+				"ícone: célula válida " .. nome,
+				indice % 1 == 0 and indice >= 1 and indice <= I.TOTAL,
+				true
+			)
+			vistos[indice] = true
+		end
+	end
+	for i = 1, I.TOTAL do
+		igual("ícone: atlas usa a célula " .. i, vistos[i], true)
+	end
+end
+
 print(string.format("%d testes, %d falhas", total, falhas))

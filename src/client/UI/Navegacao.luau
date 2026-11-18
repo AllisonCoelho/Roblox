@@ -6,6 +6,7 @@ local UserInputService = game:GetService("UserInputService")
 local Cores = require(ReplicatedStorage.Shared.Tema).Orbita
 local Escala = require(script.Parent.Escala)
 local Kit = require(script.Parent.Kit)
+local IconeImagem = require(script.Parent.IconeImagem)
 
 local Navegacao = {}
 local aberto: string? = nil
@@ -25,7 +26,7 @@ type Registro = {
 	painel: Painel,
 	foco: TextButton,
 	titulo: TextLabel,
-	icone: TextLabel,
+	icone: GuiObject,
 	aoAbrir: (() -> ())?,
 	reserva: number,
 	dimensoes: Vector2,
@@ -66,7 +67,7 @@ function Navegacao.criarPainel(
 	nome: string,
 	op: {
 		titulo: string,
-		icone: string,
+		icone: string | number,
 		reserva: number?,
 		dimensoes: Vector2?,
 	},
@@ -105,14 +106,24 @@ function Navegacao.criarPainel(
 		Size = UDim2.new(1, 0, 0, 1),
 		Parent = cabecalho,
 	})
-	local icone = Kit.texto({
-		Text = op.icone,
-		TextColor3 = Cores.Lilas,
-		TextSize = 26,
-		Position = UDim2.fromOffset(16, 0),
-		Size = UDim2.new(0, 30, 1, 0),
-		Parent = cabecalho,
-	})
+	local icone: GuiObject
+	if type(op.icone) == "number" then
+		icone = IconeImagem.criar(
+			cabecalho,
+			op.icone,
+			UDim2.new(0, 16, 0.5, -15),
+			UDim2.fromOffset(30, 30)
+		)
+	else
+		icone = Kit.texto({
+			Text = op.icone,
+			TextColor3 = Cores.Lilas,
+			TextSize = 26,
+			Position = UDim2.fromOffset(16, 0),
+			Size = UDim2.new(0, 30, 1, 0),
+			Parent = cabecalho,
+		})
+	end
 	local titulo = Kit.texto({
 		fonte = "titulo",
 		Text = op.titulo,

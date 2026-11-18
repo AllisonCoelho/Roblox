@@ -2,6 +2,7 @@ local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Icones = require(ReplicatedStorage.Shared.Dados.Icones)
 local Remotos = require(ReplicatedStorage.Shared.Remotos)
 local Escala = require(script.Parent.Parent.Escala)
 local Estado = require(script.Parent.Parent.Estado)
@@ -18,7 +19,7 @@ end
 function DialogoSoberano.montar(aoAviso: (string) -> (), aoAbrir: () -> ())
 	local painel = Navegacao.criarPainel(NOME, {
 		titulo = "Primeiro Soberano",
-		icone = "♛",
+		icone = Icones.DISTINTIVOS.dis_coroa,
 		dimensoes = Vector2.new(700, 320),
 	})
 	local fala = Kit.texto({
