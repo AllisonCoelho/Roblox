@@ -1360,4 +1360,89 @@ do
 	end
 end
 
+-- Animações da Arena: tempos, clipes e pernas com os pés no chão
+do
+	local Anim = req("ArenaAnimacoes")
+	local Pecas = req("SoberanoPecas")
+	local ArenaR = req("Arena")
+	local function perto(a, b)
+		return math.abs(a - b) < 0.05
+	end
+	-- todo golpe que o servidor encena tem tempo e clipe próprios
+	for id in ArenaR.Acoes do
+		igual("animação: tempo do golpe " .. id, Anim.TEMPOS[id] ~= nil, true)
+		igual("animação: clipe do jogador " .. id, Anim.JOGADOR[id] ~= nil, true)
+	end
+	for _, id in { "investida", "pesado", "baluarte" } do
+		igual("animação: tempo do Soberano " .. id, Anim.TEMPOS[id] ~= nil, true)
+		igual("animação: clipe do Soberano " .. id, Anim.SOBERANO[id] ~= nil, true)
+	end
+	-- o clipe cobre preparo + retorno (o próximo golpe não corta a animação no meio)
+	for id, tempo in Anim.TEMPOS do
+		local clipe = Anim.JOGADOR[id] or Anim.SOBERANO[id]
+		if clipe and not clipe.segurar then
+			igual(
+				"animação: " .. id .. " cabe no tempo do golpe",
+				clipe.duracao <= tempo.preparo + tempo.retorno + 0.6,
+				true
+			)
+		end
+	end
+	-- reações referenciam clipes existentes
+	for _, r in { Anim.reacaoJogador(true, 0), Anim.reacaoJogador(false, 260), Anim.reacaoJogador(false, 100) } do
+		igual("animação: reação " .. tostring(r), Anim.JOGADOR[r] ~= nil, true)
+	end
+	igual("animação: baluarte sem guarda não mexe no jogador", Anim.reacaoJogador(false, 0), nil)
+	igual("animação: corte derruba o Soberano", Anim.reacaoSoberano("corte", 175), "atingidoForte")
+	igual("animação: golpe sem dano não abala", Anim.reacaoSoberano("ataque", 0), nil)
+	-- chaves em ordem e dentro da duração
+	local function chavesOk(clipe)
+		local anterior = -1
+		for _, c in clipe.chaves do
+			if c.t < anterior or c.t > clipe.duracao + 1e-6 then
+				return false
+			end
+			anterior = c.t
+		end
+		return true
+	end
+	for nome, clipe in Anim.JOGADOR do
+		igual("animação: chaves do jogador " .. nome, chavesOk(clipe), true)
+	end
+	for nome, clipe in Anim.SOBERANO do
+		igual("animação: chaves do Soberano " .. nome, chavesOk(clipe), true)
+	end
+	-- amostragem: começo, fim, interpolação e laço
+	local postura = Anim.JOGADOR.postura
+	igual("animação: laço volta ao começo", perto(Anim.amostrar(postura, postura.duracao).raiz2, Anim.amostrar(postura, 0).raiz2), true)
+	local ataque = Anim.JOGADOR.ataque
+	local fim = Anim.amostrar(ataque, ataque.duracao + 5)
+	igual("animação: fim do ataque volta à postura", perto(fim.ombroD1, Anim.amostrar(postura, 0).ombroD1), true)
+	-- cinemática inversa: repouso = zero; agachar dobra o joelho para a frente; o pé alcança o alvo
+	for nome, perna in { r15 = Anim.PERNA_R15, dir = Pecas.pernas.dir, esq = Pecas.pernas.esq } do
+		local c, j = Anim.perna(perna, 0, 0, 0, 0)
+		igual("perna " .. nome .. ": repouso sem giro", perto(c, 0) and perto(j, 0), true)
+		c, j = Anim.perna(perna, 0, 0, -0.8, 0)
+		igual("perna " .. nome .. ": agachar leva a coxa à frente", c > 0.2, true)
+		igual("perna " .. nome .. ": agachar dobra o joelho", j < -0.4, true)
+	end
+	-- o tornozelo cai onde o clipe pediu (agachado e com o pé à frente)
+	do
+		local perna = Anim.PERNA_R15
+		local c, j = Anim.perna(perna, 0, -0.6, -0.5, 0)
+		local l = 1.2
+		local jy, jz = -math.cos(c) * l, -math.sin(c) * l
+		local ty = jy - math.cos(c + j) * l
+		local tz = jz - math.sin(c + j) * l
+		igual("perna r15: tornozelo na altura pedida", perto(ty, -2.4 + 0.5), true)
+		igual("perna r15: tornozelo à frente", perto(tz, -0.6), true)
+	end
+	-- salto do Soberano: a entrada vai do trono (viagem 0) ao ringue (viagem 1)
+	local entrada = Anim.SOBERANO.entrada
+	igual("soberano: entrada começa no trono", Anim.amostrar(entrada, 0).viagem1, 0)
+	igual("soberano: entrada termina no ringue", Anim.amostrar(entrada, entrada.duracao).viagem1, 1)
+	igual("soberano: entrada cabe na introdução", entrada.duracao <= Anim.INTRODUCAO, true)
+	igual("soberano: peças do duelo com pernas", #Pecas.duelo, 6)
+end
+
 print(string.format("%d testes, %d falhas", total, falhas))

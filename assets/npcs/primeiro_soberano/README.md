@@ -34,8 +34,10 @@ Ao ser desafiado, levanta, desembainha o espadão e assume seu lugar no ringue. 
 - **Alerta:** ao abrir o diálogo (no máximo a cada 25 s, compartilhado), a mão direita pressiona o braço do
   trono e uma onda de luz corre pelo piso.
 - Movimento reduzido: amplitudes menores, capa parada, sem onda. Qualidade baixa: capa parada, sem onda.
-- **Duelo:** a pose em pé reutiliza o tronco, a armadura e as articulações. A base e a lâmina
-  desembainhada usam duas malhas adicionais. O início e os ataques seguem o relógio do servidor.
+- **Duelo:** a pose em pé reutiliza o tronco, a armadura e as articulações.
+  - Seis malhas adicionais: quadril, duas coxas, duas canelas com as botas e a lâmina desembainhada.
+  - As pernas são resolvidas por cinemática inversa a partir dos pés de cada clipe, então os pés ficam no chão.
+  - Clipes e tempos em `src/shared/Dados/ArenaAnimacoes.luau`. Regerar só as peças do duelo: `generate_soberano.py --duelo`.
 
 ## Arquivos
 

@@ -20,6 +20,8 @@ MODULOS = {
     "Sessao": "src/server/Servicos/Sessao.luau",
     "PermissaoDev": "src/server/Servicos/PermissaoDev.luau",
     "Arena": "src/shared/Dados/Arena.luau",
+    "ArenaAnimacoes": "src/shared/Dados/ArenaAnimacoes.luau",
+    "SoberanoPecas": "src/shared/Dados/SoberanoPecas.luau",
     "Incursoes": "src/shared/Dados/Incursoes.luau",
     "Gear5Movimento": "src/client/Mundo/Auras/Gear5Movimento.luau",
     "AurasVfx": "src/shared/Dados/AurasVfx.luau",

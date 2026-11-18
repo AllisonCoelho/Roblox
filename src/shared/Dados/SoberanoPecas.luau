@@ -85,4 +85,55 @@ return {
 			pai = "torso",
 		},
 	},
+	-- em pé, no duelo: pernas articuladas (o tronco vira filho do quadril, 1,35 acima)
+	duelo = {
+		{
+			nome = "quadril_duelo",
+			malha = "soberano_quadril_duelo",
+			material = "Metal",
+			junta = { 0.000, 3.550, 0.250 },
+		},
+		{
+			nome = "coxa_dir",
+			malha = "soberano_coxa_dir",
+			material = "Metal",
+			junta = { 0.890, 3.550, 0.100 },
+			pai = "quadril_duelo",
+		},
+		{
+			nome = "coxa_esq",
+			malha = "soberano_coxa_esq",
+			material = "Metal",
+			junta = { -0.890, 3.550, 0.100 },
+			pai = "quadril_duelo",
+		},
+		{
+			nome = "canela_dir",
+			malha = "soberano_canela_dir",
+			material = "Metal",
+			junta = { 0.979, 1.840, -0.320 },
+			pai = "coxa_dir",
+		},
+		{
+			nome = "canela_esq",
+			malha = "soberano_canela_esq",
+			material = "Metal",
+			junta = { -0.979, 1.840, 0.320 },
+			pai = "coxa_esq",
+		},
+		{ nome = "lamina_duelo", malha = "soberano_lamina_duelo", material = "Metal" },
+	},
+	-- pontos da perna em pé para a cinemática inversa (quadril, joelho, tornozelo)
+	pernas = {
+		dir = {
+			quadril = { 0.890, 3.550, 0.100 },
+			joelho = { 0.979, 1.840, -0.320 },
+			tornozelo = { 1.032, 0.480, -0.170 },
+		},
+		esq = {
+			quadril = { -0.890, 3.550, 0.100 },
+			joelho = { -0.979, 1.840, 0.320 },
+			tornozelo = { -1.032, 0.480, 0.470 },
+		},
+	},
 }

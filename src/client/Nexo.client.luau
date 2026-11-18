@@ -18,6 +18,7 @@ local Estado = require(UI:WaitForChild("Estado"))
 local PrimeiroSoberano = require(
 	script.Parent:WaitForChild("Mundo"):WaitForChild("NPCs"):WaitForChild("PrimeiroSoberano")
 )
+local ArenaCorpo = require(script.Parent:WaitForChild("Mundo"):WaitForChild("ArenaCorpo"))
 
 local K_CIRCULO = 0.5523 -- fator de Bézier para 4 arcos formarem um círculo
 
@@ -222,11 +223,14 @@ RunService.Heartbeat:Connect(function()
 end)
 
 -- Primeiro Soberano: armadura 3D e repouso (o NPC em si é do servidor)
+-- ArenaCorpo: corpo dos jogadores em duelo (todos os clientes veem os mesmos golpes)
+ArenaCorpo.iniciar()
 Estado.aoMudar(function(estado)
 	PrimeiroSoberano.definir({
 		qualidadeBaixa = estado.configuracoes.qualidadeBaixa == true,
 		movimentoReduzido = estado.configuracoes.movimentoReduzido == true,
 	})
+	ArenaCorpo.definir({ movimentoReduzido = estado.configuracoes.movimentoReduzido == true })
 end)
 
 -- Interações do mapa
