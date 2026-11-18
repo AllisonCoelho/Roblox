@@ -269,23 +269,50 @@ def fazer_espada():
     return montar(p)
 
 
-def fazer_base_duelo():
-    """Parte inferior em pé, com o quadril elevado em 1,35 studs."""
+# Em pé (duelo): a parte de baixo é articulada para andar, saltar e ajoelhar.
+QUADRIL_PE = QUADRIL + 1.35
+JOELHO_PE = 1.84
+TORNOZELO_PE = 0.48
+
+
+def perna_pe(lado):
+    """Pontos da perna em pé (espaço do NPC no Blender): quadril, joelho e tornozelo."""
+    x = lado * 0.89
+    y = lado * 0.32
+    return (
+        Vector((x, -0.1, QUADRIL_PE)),
+        Vector((x * 1.1, y, JOELHO_PE)),
+        Vector((x * 1.16, y - 0.15, TORNOZELO_PE)),
+    )
+
+
+def fazer_quadril_duelo():
+    """Bacia, cinto e faixa: a peça de onde saem as pernas e o tronco no duelo."""
     rng = random.Random(3112)
-    quadril = QUADRIL + 1.35
-    p = [
-        placa(2.5, 1.5, 0.95, rng, OBSIDIANA, T((0, -0.25, quadril))),
-        placa(2.9, 0.5, 0.5, rng, ACO, T((0, 0.45, quadril + 0.3))),
-        (kit.espinho((0, 0.72, quadril + 0.45), (0, 0.9, quadril - 0.7), 0.85, RUBRO, 1.0), None),
-    ]
-    for lado in (-1, 1):
-        x = lado * 0.89
-        y = lado * 0.32
-        p += membro((x, -0.1, quadril), (x * 1.1, y, 1.84), 1.15, 1.0, rng, OBSIDIANA)
-        p += membro((x * 1.1, y, 1.84), (x * 1.16, y - 0.15, 0.48), 1.2, 1.3, rng, OBSIDIANA)
-        p.append(placa(1.2, 0.75, 0.9, rng, ACO, T((x * 1.1, y + 0.45, 1.84)) @ R(lado * 8, "Z")))
-        p.append(placa(1.45, 2.1, 0.6, rng, OBSIDIANA, T((x * 1.16, y + 0.38, 0.3))))
-        p.append(placa(1.5, 0.5, 0.5, rng, ACO, T((x * 1.16, y + 1.23, 0.3))))
+    q = QUADRIL_PE
+    return montar([
+        placa(2.5, 1.5, 0.95, rng, OBSIDIANA, T((0, -0.25, q))),
+        placa(2.9, 0.5, 0.5, rng, ACO, T((0, 0.45, q + 0.3))),
+        (kit.espinho((0, 0.72, q + 0.45), (0, 0.9, q - 0.7), 0.85, RUBRO, 1.0), None),
+    ])
+
+
+def fazer_coxa_duelo(lado):
+    rng = random.Random(3114 + lado)
+    quadril, joelho, _ = perna_pe(lado)
+    p = membro(quadril, joelho, 1.15, 1.0, rng, OBSIDIANA)
+    p.append(placa(1.2, 0.75, 0.9, rng, ACO, T(joelho + Vector((0, 0.45, 0))) @ R(lado * 8, "Z")))
+    return montar(p)
+
+
+def fazer_canela_duelo(lado):
+    rng = random.Random(3117 + lado)
+    _, joelho, tornozelo = perna_pe(lado)
+    x = tornozelo.x
+    y = joelho.y
+    p = membro(joelho, tornozelo, 1.2, 1.3, rng, OBSIDIANA)
+    p.append(placa(1.45, 2.1, 0.6, rng, OBSIDIANA, T((x, y + 0.38, 0.3))))  # bota
+    p.append(placa(1.5, 0.5, 0.5, rng, ACO, T((x, y + 1.23, 0.3))))  # biqueira
     return montar(p)
 
 
@@ -302,14 +329,19 @@ def fazer_lamina_duelo():
     ])
 
 
+# nome, função, junta, pai (o tronco entra como filho do quadril no cliente)
 DUEL = [
-    ("base_duelo", fazer_base_duelo),
-    ("lamina_duelo", fazer_lamina_duelo),
+    ("quadril_duelo", fazer_quadril_duelo, Vector((0, -0.25, QUADRIL_PE)), None),
+    ("coxa_dir", lambda: fazer_coxa_duelo(1), perna_pe(1)[0], "quadril_duelo"),
+    ("coxa_esq", lambda: fazer_coxa_duelo(-1), perna_pe(-1)[0], "quadril_duelo"),
+    ("canela_dir", lambda: fazer_canela_duelo(1), perna_pe(1)[1], "coxa_dir"),
+    ("canela_esq", lambda: fazer_canela_duelo(-1), perna_pe(-1)[1], "coxa_esq"),
+    ("lamina_duelo", fazer_lamina_duelo, None, None),
 ]
 
 
 def escrever_duelo(metal):
-    for nome, montar_peca in DUEL:
+    for nome, montar_peca, _, _ in DUEL:
         obj = kit.registrar("soberano_" + nome, montar_peca(), metal)
         vertices, triangulos = escrever_dados(nome, obj)
         print("%-16s %6d vértices %6d triângulos" % (nome, vertices, triangulos))
@@ -392,6 +424,24 @@ def escrever_pecas():
         if pai:
             campos.append('pai = "%s"' % pai)
         linhas.append("\t\t{ " + ", ".join(campos) + " },")
+    linhas += ["\t},", "\t-- em pé, no duelo: pernas articuladas (o tronco vira filho do quadril, 1,35 acima)"]
+    linhas.append("\tduelo = {")
+    for nome, _, junta, pai in DUEL:
+        campos = ['nome = "%s"' % nome, 'malha = "soberano_%s"' % nome, 'material = "Metal"']
+        if junta:
+            campos.append("junta = { %.3f, %.3f, %.3f }" % rbx(junta))
+        if pai:
+            campos.append('pai = "%s"' % pai)
+        linhas.append("\t\t{ " + ", ".join(campos) + " },")
+    linhas.append("\t},")
+    linhas.append("\t-- pontos da perna em pé para a cinemática inversa (quadril, joelho, tornozelo)")
+    linhas.append("\tpernas = {")
+    for chave, lado in (("dir", 1), ("esq", -1)):
+        q, j, t = (rbx(v) for v in perna_pe(lado))
+        linhas.append(
+            "\t\t%s = { quadril = { %.3f, %.3f, %.3f }, joelho = { %.3f, %.3f, %.3f }, tornozelo = { %.3f, %.3f, %.3f } },"
+            % ((chave,) + q + j + t)
+        )
     linhas += ["\t},", "}", ""]
     with open(ARQ_PECAS, "w", encoding="utf-8") as f:
         f.write("\n".join(linhas))
@@ -404,6 +454,7 @@ def main():
     metal = kit.criar_material("Soberano_Metal", rugosidade=0.5, metalico=0.7)
     escrever_duelo(metal)
     if "--duelo" in sys.argv:
+        escrever_pecas()
         return
     tecido = kit.criar_material("Soberano_Tecido", rugosidade=0.95)
     luz = bpy.data.materials.new("Soberano_Luz")
