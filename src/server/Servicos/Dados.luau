@@ -192,6 +192,7 @@ function Dados.carregar(player: Player)
 			return
 		end
 	end
+	Perfil.migrarAuras(estado)
 	estado.inventario = Itens.normalizarInventario(estado.inventario)
 	estado.transcendencia = Transcendencia.normalizar(estado.transcendencia)
 	estados[player] = estado

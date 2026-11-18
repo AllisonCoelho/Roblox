@@ -13,29 +13,28 @@ igual("negativo", Formato.inteiro(-1500), "-1.500")
 igual("abreviado", Formato.curto(15000), "15 mil")
 igual("tempo", Formato.tempo(42), "0:42")
 
--- Catálogo das 67 auras originais (separado do sorteio em uso)
+-- O catálogo de dados e o catálogo do sorteio usam os mesmos IDs, nomes e chances.
 do
 	local V2 = req("AurasOriginaisV2")
 	local AurasAtuais = req("Auras")
 	igual("v2: 67 auras", #V2.lista, 67)
-	local ids, contagem, colide = 0, {}, 0
+	local ids, contagem = 0, {}
 	for i, a in V2.lista do
 		igual("v2: numeração " .. a.id, a.numero, i)
 		if V2.porId[a.id] == a then
 			ids += 1
 		end
 		contagem[a.tier] = (contagem[a.tier] or 0) + 1
-		if AurasAtuais.porId[a.id] then
-			colide += 1
-		end
+		local ativa = AurasAtuais.porId[a.id]
+		igual("v2: aura disponível no sorteio " .. a.id, ativa ~= nil, true)
+		igual("v2: chance ativa " .. a.id, ativa and ativa.chance, a.chance)
 		local tier = AurasAtuais.Tiers[AurasAtuais.tierDe(math.floor(a.chance))].nome
 		igual("v2: raridade bate com a chance " .. a.id, a.tier, tier)
-		if i > 2 then -- a reserva (nº 1) fica de fora: a chance dela é o que sobra
+		if i > 1 then
 			igual("v2: ordem crescente " .. a.id, a.chance > V2.lista[i - 1].chance, true)
 		end
 	end
 	igual("v2: ids únicos", ids, 67)
-	igual("v2: nenhum id igual ao catálogo atual", colide, 0)
 	for tier, n in
 		{
 			Comum = 4,
@@ -49,8 +48,12 @@ do
 	do
 		igual("v2: quantidade " .. tier, contagem[tier], n)
 	end
-	igual("v2: soma das explícitas", math.abs(V2.SOMA_EXPLICITAS - 0.823367) < 1e-6, true)
-	igual("v2: reserva ~1 em 5,66", math.floor(V2.porId.centelha_do_nexo.chance * 100), 566)
+	igual(
+		"v2: soma das explícitas",
+		math.abs(V2.SOMA_EXPLICITAS - 0.7900337720738687) < 1e-12,
+		true
+	)
+	igual("v2: reserva ~1 em 4,76", math.floor(V2.porId.centelha_do_nexo.chance * 100), 476)
 	local total = 0
 	for _, a in V2.lista do
 		total += 1 / a.chance
@@ -451,7 +454,7 @@ igual("possui", Perfil.possui(p, "faisca"), true)
 igual("nao possui", Perfil.possui(p, "brasa"), false)
 
 local Auras = req("Auras")
-igual("30 auras", #Auras.lista, 30)
+igual("67 auras", #Auras.lista, 67)
 local ids, crescente = {}, true
 for i, a in Auras.lista do
 	igual("id unico " .. a.id, ids[a.id], nil)
@@ -461,23 +464,23 @@ for i, a in Auras.lista do
 	end
 end
 igual("chances crescentes", crescente, true)
-igual("mais rara", Auras.lista[30].chance, 1000000)
-igual("tier comum", Auras.porId.faisca.tier, 1)
-igual("tier divino", Auras.porId.despertar_absoluto.tier, 7)
+igual("mais rara", Auras.lista[67].chance, 100000000)
+igual("tier comum", Auras.porId.centelha_do_nexo.tier, 1)
+igual("tier divino", Auras.porId.soberania_do_vazio.tier, 7)
 igual("tier epico", Auras.tierDe(1000), 4)
 igual(
 	"rng 0 = mais rara",
 	Auras.sortear(function()
 		return 0
 	end).id,
-	"despertar_absoluto"
+	"soberania_do_vazio"
 )
 igual(
 	"rng alto = reserva",
 	Auras.sortear(function()
 		return 0.9999
 	end).id,
-	"faisca"
+	"centelha_do_nexo"
 )
 
 -- A chance exibida ("1 em N") é a probabilidade real de cada aura, inclusive a de reserva
@@ -495,7 +498,7 @@ igual("probabilidades somam 1", math.abs(soma - 1) < 1e-9, true)
 igual("chance exibida = chance real (todas)", todasExatas, true)
 igual(
 	"reserva continua a mais comum",
-	Auras.probabilidadeReal("faisca") > Auras.probabilidadeReal("nevoa"),
+	Auras.probabilidadeReal("centelha_do_nexo") > Auras.probabilidadeReal("musgo_luminoso"),
 	true
 )
 
@@ -509,7 +512,9 @@ for _ = 1, N do
 	local a = Auras.sortear(math.random)
 	contagem[a.id] = (contagem[a.id] or 0) + 1
 end
-for _, id in { "faisca", "nevoa", "brasa", "pedra_viva", "trovao_jovem" } do
+for _, id in
+	{ "centelha_do_nexo", "musgo_luminoso", "fagulha_de_cobre", "gelo_de_neon", "coroa_de_coral" }
+do
 	local exibido = lerTexto(Formato.chance(Auras.porId[id].chance))
 	local efetivo = N / (contagem[id] or 1)
 	igual(
@@ -524,21 +529,101 @@ for _, id in { "faisca", "nevoa", "brasa", "pedra_viva", "trovao_jovem" } do
 		true
 	)
 end
-igual("texto reserva", Formato.chance(Auras.porId.faisca.chance), "4,2")
+igual("texto reserva", Formato.chance(Auras.porId.centelha_do_nexo.chance), "4,8")
 igual("texto inteiro", Formato.chance(1000), "1.000")
 igual("texto curto", Formato.chanceCurta(25000), "25 mil")
 igual("texto curto pequeno", Formato.chanceCurta(4.26), "4,3")
 igual(
 	"melhor da colecao",
-	Auras.melhorDe({ faisca = 3, chama_azul = 1, inexistente = 9 }).id,
-	"chama_azul"
+	Auras.melhorDe({ centelha_do_nexo = 3, esporos_de_safira = 1, inexistente = 9 }).id,
+	"esporos_de_safira"
 )
 igual("colecao vazia sem melhor", Auras.melhorDe({}), nil)
-igual("descobertas", Auras.contarDescobertas({ faisca = 1, brasa = 0, x = 2 }), 1)
+igual(
+	"descobertas",
+	Auras.contarDescobertas({ centelha_do_nexo = 1, fagulha_de_cobre = 0, x = 2 }),
+	1
+)
+-- Contas antigas preservam descobertas e quantidades ao entrar no catálogo de 67.
+do
+	local antigas = {
+		faisca = 1,
+		nevoa = 5,
+		brasa = 7,
+		orvalho = 9,
+		folha_dancante = 12,
+		pedra_viva = 16,
+		mare_calma = 20,
+		brasa_sussurrante = 30,
+		vento_cortante = 45,
+		raiz_antiga = 60,
+		gelo_fino = 80,
+		trovao_jovem = 100,
+		lotus_rubra = 150,
+		pluma_celeste = 250,
+		chama_azul = 400,
+		eco_do_vazio = 500,
+		cristal_lunar = 750,
+		tempestade_rubra = 1000,
+		sombra_gemea = 1500,
+		sol_nascente = 2500,
+		dragao_de_jade = 5000,
+		aurora_boreal = 7500,
+		coracao_estelar = 10000,
+		lamina_do_crepusculo = 25000,
+		lotus_celestial = 50000,
+		fenix_eterna = 100000,
+		eclipse_carmesim = 250000,
+		olho_do_abismo = 500000,
+		nebulosa_primordial = 750000,
+		despertar_absoluto = 1000000,
+	}
+	local destinos = {}
+	for id, chance in antigas do
+		local estado = Perfil.padrao()
+		estado.auras[id] = 2
+		estado.equipada = id
+		Perfil.migrarAuras(estado)
+		local destino = estado.equipada
+		local aura = Auras.porId[destino]
+		igual(
+			"migração: destino da mesma raridade " .. id,
+			aura and aura.tier,
+			Auras.tierDe(chance)
+		)
+		igual("migração: duas cópias " .. id, estado.auras[destino], 2)
+		igual("migração: origem removida " .. id, estado.auras[id], nil)
+		igual("migração: destino exclusivo " .. id, destinos[destino], nil)
+		igual("migração: origem fora do sorteio " .. id, Auras.porId[id], nil)
+		destinos[destino] = true
+	end
+
+	local conta = Perfil.padrao()
+	conta.giros = 1842
+	conta.transcendencia.nivel = 5
+	conta.auras = { faisca = 8, centelha_do_nexo = 2, brasa = 1, futura = 3 }
+	conta.equipada = "faisca"
+	Perfil.migrarAuras(conta)
+	Perfil.migrarAuras(conta)
+	igual("migração: soma idempotente", conta.auras.centelha_do_nexo, 10)
+	igual("migração: aura equipada convertida", conta.equipada, "centelha_do_nexo")
+	igual("migração: saldo de giros", conta.giros, 1842)
+	igual("migração: Transcendência", conta.transcendencia.nivel, 5)
+	igual("migração: IDs desconhecidos preservados", conta.auras.futura, 3)
+	igual("migração: coleção aparece no Índice", Auras.contarDescobertas(conta.auras), 2)
+
+	local invalida = Perfil.padrao()
+	invalida.auras.brasa = -1
+	invalida.equipada = "brasa"
+	Perfil.migrarAuras(invalida)
+	igual("migração: não concede saldo inválido", invalida.auras.fagulha_de_cobre, nil)
+	igual("migração: não equipa aura sem posse", invalida.equipada, nil)
+end
+
 -- Apresentação do giro: categorias pela chance real e durações dentro das faixas do design
 local Apresentacao = req("Apresentacao")
 igual("6 categorias", #Apresentacao.Categorias, 6)
-igual("faisca = baixa", Apresentacao.de(Auras.porId.faisca.chance).id, "baixa")
+igual("centelha = baixa", Apresentacao.de(Auras.porId.centelha_do_nexo.chance).id, "baixa")
 igual("1 em 49 = baixa", Apresentacao.de(49).id, "baixa")
 igual("1 em 50 = moderada", Apresentacao.de(50).id, "moderada")
 igual("1 em 999 = moderada", Apresentacao.de(999).id, "moderada")
@@ -727,15 +812,14 @@ igual("inc 3 universos", #Inc.UNIVERSOS, 3)
 
 -- Matematica do RNG, limite seguro de sorte e nova tabela de 67 originais.
 local Probabilidades = req("Probabilidades")
-local C67 = req("Catalogo67Probabilidades")
-igual("catalogo 67 entradas", #C67.lista, 67)
-igual("Musgo alterado para 1 em 6", C67.porId.musgo_luminoso.chance, 6)
+igual("catalogo 67 entradas", #Auras.lista, 67)
+igual("Musgo alterado para 1 em 6", Auras.porId.musgo_luminoso.chance, 6)
 igual(
 	"Centelha mais comum",
-	C67.porId.centelha_do_nexo.pBase > C67.porId.musgo_luminoso.pBase,
+	Auras.porId.centelha_do_nexo.pBase > Auras.porId.musgo_luminoso.pBase,
 	true
 )
-igual("Centelha 20.9966%", math.abs(C67.PROBABILIDADE_RESERVA - 0.2099662279261313) < 1e-12, true)
+igual("Centelha 20.9966%", math.abs(Auras.PROBABILIDADE_RESERVA - 0.2099662279261313) < 1e-12, true)
 igual("sorte NaN segura", Probabilidades.sorteValida(0 / 0), 1)
 igual("sorte infinito segura", Probabilidades.sorteValida(math.huge), 1)
 igual("sorte negativa segura", Probabilidades.sorteValida(-1), 1)
@@ -748,14 +832,14 @@ local anteriorCoroa = 0
 local anteriorDivino = 0
 for nivel = 0, 10 do
 	local sorte = Probabilidades.sorteTranscendencia(nivel)
-	local pesos, z = Probabilidades.distribuicao(C67.lista, sorte)
+	local pesos, z = Probabilidades.distribuicao(Auras.lista, sorte)
 	local somaEfetiva = 0
 	for _, peso in pesos do
 		somaEfetiva += peso / z
 	end
 	igual("67 total no nivel " .. nivel, math.abs(somaEfetiva - 1) < 1e-10, true)
-	local coroa = Probabilidades.chanceEfetiva(C67.lista, "coroa_de_coral", sorte)
-	local divino = Probabilidades.chanceEfetiva(C67.lista, "soberania_do_vazio", sorte)
+	local coroa = Probabilidades.chanceEfetiva(Auras.lista, "coroa_de_coral", sorte)
+	local divino = Probabilidades.chanceEfetiva(Auras.lista, "soberania_do_vazio", sorte)
 	igual("67 Coroa cresce nivel " .. nivel, coroa >= anteriorCoroa, true)
 	igual("67 Soberania cresce nivel " .. nivel, divino >= anteriorDivino, true)
 	anteriorCoroa = coroa
@@ -763,24 +847,25 @@ for nivel = 0, 10 do
 end
 igual(
 	"67 Centelha no nivel X",
-	math.abs(Probabilidades.chanceEfetiva(C67.lista, "centelha_do_nexo", 1.5) - 0.19779318528564926)
-		< 1e-11,
+	math.abs(
+		Probabilidades.chanceEfetiva(Auras.lista, "centelha_do_nexo", 1.5) - 0.19779318528564926
+	) < 1e-11,
 	true
 )
 igual(
 	"67 Musgo no nivel X",
-	math.abs(Probabilidades.chanceEfetiva(C67.lista, "musgo_luminoso", 1.5) - 0.15700396776446937)
+	math.abs(Probabilidades.chanceEfetiva(Auras.lista, "musgo_luminoso", 1.5) - 0.15700396776446937)
 		< 1e-11,
 	true
 )
 igual(
 	"67 Soberania no nivel X",
 	math.abs(
-		Probabilidades.chanceEfetiva(C67.lista, "soberania_do_vazio", 1.5) - 1.954457110930131e-8
+		Probabilidades.chanceEfetiva(Auras.lista, "soberania_do_vazio", 1.5) - 1.954457110930131e-8
 	) < 1e-16,
 	true
 )
-local pesos3, z3 = Probabilidades.distribuicao(C67.lista, 3)
+local pesos3, z3 = Probabilidades.distribuicao(Auras.lista, 3)
 local soma3 = 0
 for _, peso in pesos3 do
 	soma3 += peso / z3
@@ -788,19 +873,19 @@ end
 igual("67 sorte 3 segue 100%", math.abs(soma3 - 1) < 1e-10, true)
 igual(
 	"67 RNG zero = divino",
-	Probabilidades.sortear(C67.lista, 1.5, function()
+	Probabilidades.sortear(Auras.lista, 1.5, function()
 		return 0
 	end).id,
 	"soberania_do_vazio"
 )
 igual(
 	"67 RNG alto = Centelha",
-	Probabilidades.sortear(C67.lista, 1.5, function()
+	Probabilidades.sortear(Auras.lista, 1.5, function()
 		return 0.999999
 	end).id,
 	"centelha_do_nexo"
 )
-igual("67 aura inexistente", Probabilidades.chanceEfetiva(C67.lista, "desconhecida", 1.5), 0)
+igual("67 aura inexistente", Probabilidades.chanceEfetiva(Auras.lista, "desconhecida", 1.5), 0)
 local somaAtual3 = 0
 for _, aura in Auras.lista do
 	somaAtual3 += Auras.probabilidadeReal(aura.id, 3)
@@ -808,8 +893,8 @@ end
 igual("catalogo atual em 3x soma 100%", math.abs(somaAtual3 - 1) < 1e-10, true)
 igual(
 	"catalogo atual aumenta chance divina",
-	Auras.probabilidadeReal("despertar_absoluto", 1.5)
-		> Auras.probabilidadeReal("despertar_absoluto"),
+	Auras.probabilidadeReal("soberania_do_vazio", 1.5)
+		> Auras.probabilidadeReal("soberania_do_vazio"),
 	true
 )
 
@@ -977,7 +1062,7 @@ for nivel = 0, 10 do
 	end
 	igual("sorte soma 1 no nível " .. nivel, math.abs(anterior - 1) < 1e-12, true)
 end
-local rara = "trovao_jovem"
+local rara = "coroa_de_coral"
 igual(
 	"T1 aumenta a probabilidade rara no RNG normalizado",
 	Auras.probabilidadeReal(rara, 1.05) > Auras.probabilidadeReal(rara),

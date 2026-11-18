@@ -32,7 +32,7 @@ local MODULOS: { [string]: Modulo } = {
 	monarca = Monarca,
 	senbonzakura = Senbonzakura, -- templates clonados de ReplicatedStorage.AuraAssets (pipeline v2)
 }
--- lote inicial das auras originais v2 (só prévia; templates em ReplicatedStorage.AurasOriginais)
+-- Auras originais do sorteio, com templates em ReplicatedStorage.AurasOriginais.
 for _, id in MotorOriginais.IDS do
 	MODULOS[id] = MotorOriginais.modulo(id)
 end

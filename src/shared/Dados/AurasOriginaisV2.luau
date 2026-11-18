@@ -1,6 +1,5 @@
 -- Catálogo das 67 auras originais (docs/despertar/CATALOGO_67_AURAS_ORIGINAIS.md).
--- SEPARADO do sorteio: src/shared/Dados/Auras.luau continua sendo o catálogo em uso. Trocar exige
--- aprovação do dono e um plano de migração dos IDs antigos. Chances = proposta de balanceamento.
+-- Dados do catálogo sorteado em Auras.luau e exibido nas prévias do Painel Dev.
 -- Lógica pura (sem APIs do Roblox) para rodar nos testes.
 local V2 = {}
 
@@ -19,7 +18,7 @@ V2.RESERVA = "centelha_do_nexo"
 -- numero, id, nome, chance (0 = reserva), tier, família, cor principal, cor secundária
 local DEFINICOES = {
 	{ 1, "centelha_do_nexo", "Centelha do Nexo", 0, "Comum", "Cristal", "FFE6A0", "8F71FF" },
-	{ 2, "musgo_luminoso", "Musgo Luminoso", 5, "Comum", "Natureza", "A1F5A6", "2A805B" },
+	{ 2, "musgo_luminoso", "Musgo Luminoso", 6, "Comum", "Natureza", "A1F5A6", "2A805B" },
 	{ 3, "fagulha_de_cobre", "Fagulha de Cobre", 7, "Comum", "Forja", "FFB15E", "7A3F29" },
 	{ 4, "chuvisco_de_vidro", "Chuvisco de Vidro", 9, "Comum", "Cristal", "9BE9FF", "3970AB" },
 	{
@@ -402,6 +401,7 @@ for _, d in DEFINICOES do
 	end
 end
 -- A reserva fica com o restante: "1 em N" mostrado = probabilidade real
+assert(soma > 0 and soma < 1, "chances explícitas inválidas")
 V2.SOMA_EXPLICITAS = soma
 V2.PROBABILIDADE_RESERVA = 1 - soma
 for _, d in DEFINICOES do
