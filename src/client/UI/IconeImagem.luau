@@ -1,68 +1,79 @@
-local AssetService = game:GetService("AssetService")
-local EncodingService = game:GetService("EncodingService")
-local Shared = game:GetService("ReplicatedStorage").Shared
-
-local Icones = require(Shared.Dados.Icones)
 local Dados = require(script.Parent.DadosAtlasOrbita)
 
 local IconeImagem = {}
-local atlas: Content? = nil
-local tentou = false
-local tamanho = Vector2.new(Dados.celula, Dados.celula)
+local modelos: { [number]: Frame } = {}
+local LADO = Dados.lado
 
-local function carregar(): Content?
-	if not tentou then
-		tentou = true
-		local ok, conteudo = pcall(function()
-			local comprimido =
-				EncodingService:Base64Decode(buffer.fromstring((string.gsub(Dados.rgba, "%s", ""))))
-			local rgba =
-				EncodingService:DecompressBuffer(comprimido, Enum.CompressionAlgorithm.Zstd)
-			local lado = Dados.celula * Icones.COLUNAS
-			local dimensoes = Vector2.new(lado, lado)
-			local imagem = AssetService:CreateEditableImage({ Size = dimensoes })
-			if not imagem then
-				return nil
-			end
-			imagem:WritePixelsBuffer(Vector2.zero, dimensoes, rgba)
-			return Content.fromObject(imagem)
-		end)
-		if ok then
-			atlas = conteudo
-		end
-		if not atlas then
-			warn("[HUD] Atlas de ícones indisponível neste cliente.")
-		end
+local function modelo(indice: number): Frame
+	local pronto = modelos[indice]
+	if pronto then
+		return pronto
 	end
-	return atlas
-end
 
-function IconeImagem.definir(imagem: ImageLabel, indice: number)
-	local i = indice - 1
-	imagem.ImageRectOffset =
-		Vector2.new((i % Icones.COLUNAS) * Dados.celula, (i // Icones.COLUNAS) * Dados.celula)
-end
+	local dados = Dados.desenhos[indice]
+	local paleta, retangulos = dados[1], dados[2]
+	local cores = {}
+	for i = 1, #paleta, 6 do
+		table.insert(cores, Color3.fromHex(string.sub(paleta, i, i + 5)))
+	end
 
-function IconeImagem.criar(
-	pai: Instance,
-	indice: number,
-	posicao: UDim2,
-	dimensoes: UDim2
-): ImageLabel
-	local imagem = Instance.new("ImageLabel")
-	imagem.Name = "Icone"
+	local imagem = Instance.new("Frame")
+	imagem.Name = "Arte"
 	imagem.BackgroundTransparency = 1
-	imagem.Position = posicao
-	imagem.Size = dimensoes
-	imagem.ScaleType = Enum.ScaleType.Fit
-	imagem.ImageRectSize = tamanho
-	IconeImagem.definir(imagem, indice)
-	local conteudo = carregar()
-	if conteudo then
-		imagem.ImageContent = conteudo
+	imagem.AnchorPoint = Vector2.new(0.5, 0.5)
+	imagem.Position = UDim2.fromScale(0.5, 0.5)
+	imagem.Size = UDim2.fromScale(1, 1)
+	local aspecto = Instance.new("UIAspectRatioConstraint")
+	aspecto.AspectType = Enum.AspectType.FitWithinMaxSize
+	aspecto.Parent = imagem
+	for i = 1, #retangulos, 5 do
+		local x, y, largura, altura, cor = string.byte(retangulos, i, i + 4)
+		local trecho = Instance.new("Frame")
+		trecho.BorderSizePixel = 0
+		trecho.BackgroundColor3 = cores[cor - 64]
+		trecho.Position = UDim2.fromScale((x - 65) / LADO, (y - 65) / LADO)
+		trecho.Size = UDim2.fromScale((largura - 65) / LADO, (altura - 65) / LADO)
+		trecho.Parent = imagem
 	end
-	imagem.Parent = pai
+
+	modelos[indice] = imagem
 	return imagem
+end
+
+function IconeImagem.definir(quadro: Frame, indice: number, cor: Color3?)
+	if
+		quadro:GetAttribute("Indice") == indice
+		and (quadro:GetAttribute("Cor") :: Color3?) == cor
+	then
+		return
+	end
+	quadro:SetAttribute("Indice", indice)
+	quadro:SetAttribute("Cor", cor)
+
+	local anterior = quadro:FindFirstChild("Arte")
+	if anterior then
+		anterior:Destroy()
+	end
+	local imagem = modelo(indice):Clone()
+	if cor then
+		for _, trecho in imagem:GetChildren() do
+			if trecho:IsA("Frame") then
+				trecho.BackgroundColor3 = trecho.BackgroundColor3:Lerp(cor, 0.72)
+			end
+		end
+	end
+	imagem.Parent = quadro
+end
+
+function IconeImagem.criar(pai: Instance, indice: number, posicao: UDim2, dimensoes: UDim2): Frame
+	local quadro = Instance.new("Frame")
+	quadro.Name = "Icone"
+	quadro.BackgroundTransparency = 1
+	quadro.Position = posicao
+	quadro.Size = dimensoes
+	IconeImagem.definir(quadro, indice)
+	quadro.Parent = pai
+	return quadro
 end
 
 return IconeImagem

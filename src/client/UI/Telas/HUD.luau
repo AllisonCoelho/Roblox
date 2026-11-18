@@ -339,7 +339,7 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 		Position = UDim2.fromOffset(12, 0),
 		Size = UDim2.new(1, -24, 0, 28),
 	})
-	type Linha = { quadro: Frame, nome: TextLabel, chance: TextLabel, marca: ImageLabel }
+	type Linha = { quadro: Frame, nome: TextLabel, chance: TextLabel, marca: Frame }
 	local linhas: { Linha } = {}
 	local recentes: { { aura: Auras.Aura, chance: number } } = {}
 	local recentesTeste: { { aura: Auras.Aura, chance: number } } = {}
@@ -391,7 +391,7 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 
 	type Espaco = {
 		placa: Kit.Placa,
-		simbolo: ImageLabel,
+		simbolo: Frame,
 		titulo: TextLabel,
 		valor: TextLabel,
 		botao: TextButton,
@@ -595,7 +595,7 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 			if g then
 				linha.nome.Text = g.aura.nome
 				linha.chance.Text = "1/" .. Formato.chanceCurta(g.chance)
-				linha.marca.ImageColor3 = corTier(g.aura)
+				IconeImagem.definir(linha.marca, Icones.STATUS.Despertar, corTier(g.aura))
 			end
 		end
 	end
