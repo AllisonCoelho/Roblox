@@ -4,11 +4,13 @@ local Players = game:GetService("Players")
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Cosmeticos = require(Shared.Dados.Cosmeticos)
+local Icones = require(Shared.Dados.Icones)
 local Monetizacao = require(Shared.Dados.Monetizacao)
 local Temporada = require(Shared.Dados.Temporada)
 local Cores = require(Shared.Tema).Orbita
 local Estado = require(script.Parent.Parent.Estado)
 local Kit = require(script.Parent.Parent.Kit)
+local IconeImagem = require(script.Parent.Parent.IconeImagem)
 local Navegacao = require(script.Parent.Parent.Navegacao)
 
 local Loja = {}
@@ -50,8 +52,8 @@ local function linha(texto: string, cor: Color3?, tamanho: number?)
 	})
 end
 
-local function botao(texto: string, tom: any, aoClicar: () -> ()): Kit.BotaoPlaca
-	return Kit.botaoPlaca({
+local function botao(texto: string, tom: any, aoClicar: () -> (), icone: number?): Kit.BotaoPlaca
+	local b = Kit.botaoPlaca({
 		texto = texto,
 		tamanho = UDim2.new(1, -12, 0, 50),
 		tamanhoTexto = 16,
@@ -60,6 +62,17 @@ local function botao(texto: string, tom: any, aoClicar: () -> ()): Kit.BotaoPlac
 		ordem = proxima(),
 		aoClicar = aoClicar,
 	})
+	if icone then
+		IconeImagem.criar(
+			b.placa.conteudo,
+			icone,
+			UDim2.fromOffset(8, 13),
+			UDim2.fromOffset(24, 24)
+		)
+		b.rotulo.Position = UDim2.fromOffset(34, 0)
+		b.rotulo.Size = UDim2.new(1, -40, 1, 0)
+	end
+	return b
 end
 
 local function pedir(acao: string, ...: any)
@@ -170,8 +183,8 @@ local function mostrarTemporada(estado: any)
 					local bloqueado = trilha == "premium" and not premium
 					local alcancado = nivel >= n
 					local estadoTexto = if resgatado
-						then "✓ resgatado"
-						elseif bloqueado then "🔒 premium"
+						then "Resgatado"
+						elseif bloqueado then "Bloqueado"
 						elseif alcancado then "Resgatar"
 						else "nível " .. n
 					local b = botao(
@@ -192,7 +205,11 @@ local function mostrarTemporada(estado: any)
 							elseif not resgatado and alcancado then
 								pedir("ResgatarTemporada", n, trilha)
 							end
-						end
+						end,
+						if resgatado
+							then Icones.STATUS.Concluido
+							elseif bloqueado then Icones.STATUS.Cadeado
+							else nil
 					)
 					b.rotulo.RichText = true
 				end
@@ -223,11 +240,11 @@ local function mostrarPacotes()
 		if id == "vip" then
 			linha("Também: nome dourado no chat e +10% de XP da Temporada.", Cores.Texto, 15)
 		end
-		botao(if tem then "Possui ✓" else "Comprar", if tem then "menta" else "lilas", function()
+		botao(if tem then "Possui" else "Comprar", if tem then "menta" else "lilas", function()
 			if not tem then
 				op.oferecer(id)
 			end
-		end)
+		end, if tem then Icones.STATUS.Concluido else nil)
 	end
 end
 
@@ -252,14 +269,15 @@ local function mostrarCosmeticos(estado: any)
 					string.format(
 						'<font color="#%s">%s</font>%s  —  %s',
 						item.cor,
-						if tipo == "distintivo" then item.texto .. "  " .. item.nome else item.nome,
+						item.nome,
 						if tipo == "rastro" then "  ·  " .. item.texto else "",
-						if usando then "Equipado ✓" else "Equipar"
+						if usando then "Equipado" else "Equipar"
 					),
 					if usando then "menta" else "neutro",
 					function()
 						pedir("EquiparCosmetico", tipo, if usando then "" else item.id)
-					end
+					end,
+					Icones.DISTINTIVOS[item.id] or (if usando then Icones.STATUS.Concluido else nil)
 				)
 				b.rotulo.RichText = true
 			end
@@ -318,8 +336,11 @@ end
 
 function Loja.montar(opcoes: Opcoes)
 	op = opcoes
-	local painel =
-		Navegacao.criarPainel("Loja", { titulo = "Loja do Nexo", icone = "✦" }, atualizar)
+	local painel = Navegacao.criarPainel(
+		"Loja",
+		{ titulo = "Loja do Nexo", icone = Icones.MENU.Loja },
+		atualizar
+	)
 	local barra: Frame = Kit.novo("Frame", {
 		BackgroundTransparency = 1,
 		Position = UDim2.fromOffset(12, 4),

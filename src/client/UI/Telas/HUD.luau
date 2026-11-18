@@ -18,6 +18,8 @@ local Transcendencia = require(Shared.Dados.Transcendencia)
 local Cores = require(Shared.Tema).Orbita
 local Escala = require(script.Parent.Parent.Escala)
 local Kit = require(script.Parent.Parent.Kit)
+local IconeImagem = require(script.Parent.Parent.IconeImagem)
+local Navegacao = require(script.Parent.Parent.Navegacao)
 
 local HUD = {}
 local RECENTES = 3
@@ -216,7 +218,7 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 		Parent = moedas,
 	})
 	local placasMoeda: { Kit.Placa } = {}
-	local function moeda(ordem: number, simbolo: string, nome: string, cor: Color3): TextLabel
+	local function moeda(ordem: number, simbolo: number, nome: string, cor: Color3): TextLabel
 		local p = Kit.placa({
 			tamanho = UDim2.fromOffset(164, 40),
 			ordem = ordem,
@@ -224,30 +226,27 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 			pai = moedas,
 		})
 		table.insert(placasMoeda, p)
-		texto(p.conteudo, {
-			Text = simbolo,
-			TextSize = 20,
-			Position = UDim2.fromOffset(6, 0),
-			Size = UDim2.fromOffset(28, 40),
-		})
+		IconeImagem.criar(p.conteudo, simbolo, UDim2.fromOffset(8, 9), UDim2.fromOffset(22, 22))
 		texto(p.conteudo, {
 			Text = nome,
 			TextSize = 12,
 			TextColor3 = Cores.TextoSuave,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			Position = UDim2.fromOffset(36, 0),
-			Size = UDim2.new(0, 70, 1, 0),
+			Size = UDim2.new(0, 44, 1, 0),
 		})
-		return texto(p.conteudo, {
+		local valor = texto(p.conteudo, {
 			fonte = "mono",
 			Text = "0",
 			TextSize = 18,
 			TextColor3 = cor,
 			TextXAlignment = Enum.TextXAlignment.Right,
-			TextTruncate = Enum.TextTruncate.AtEnd,
-			Position = UDim2.fromOffset(60, 0),
-			Size = UDim2.new(1, -70, 1, 0),
+			TextScaled = true,
+			Position = UDim2.fromOffset(83, 0),
+			Size = UDim2.new(1, -91, 1, 0),
 		})
+		Kit.novo("UITextSizeConstraint", { MinTextSize = 8, MaxTextSize = 18, Parent = valor })
+		return valor
 	end
 	local giros = moeda(1, Icones.MENU.Giros, "GIROS", DESTAQUE.Giros)
 	local fragmentos = moeda(2, Icones.MENU.Fragmentos, "FRAGM.", DESTAQUE.Fragmentos)
@@ -272,7 +271,7 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 	local function atalho(
 		ordem: number,
 		nome: string,
-		simbolo: string,
+		simbolo: number,
 		cor: Color3,
 		acao: () -> ()
 	): TextButton
@@ -294,16 +293,17 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 			Size = UDim2.new(1, -4, 0, 24),
 			Parent = p.conteudo,
 		})
-		texto(p.conteudo, {
-			Text = simbolo,
-			TextSize = 30,
-			Position = UDim2.fromOffset(0, 6),
-			Size = UDim2.new(1, 0, 0, 40),
-		})
+		local imagem = IconeImagem.criar(
+			p.conteudo,
+			simbolo,
+			UDim2.new(0.5, 0, 0, 5),
+			UDim2.new(0, 34, 1, -28)
+		)
+		imagem.AnchorPoint = Vector2.new(0.5, 0)
 		texto(p.conteudo, {
 			fonte = "titulo",
 			Text = string.upper(nome),
-			TextSize = 14,
+			TextSize = 12,
 			TextColor3 = Kit.corLegivel(cor),
 			AnchorPoint = Vector2.new(0.5, 1),
 			Position = UDim2.new(0.5, 0, 1, -4),
@@ -321,10 +321,6 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 	atalho(4, "Passe", Icones.MENU.Temporada, DESTAQUE.Passe, op.aoAbrirTemporada or op.aoAbrirLoja)
 	local ajustesBotao =
 		atalho(5, "Ajustes", Icones.MENU.Ajustes, DESTAQUE.Ajustes, op.aoAbrirAjustes)
-	for i, b in botoesMenu do
-		b.NextSelectionUp = botoesMenu[i - 1]
-		b.NextSelectionDown = botoesMenu[i + 1]
-	end
 
 	-- ================================================================ últimos despertares
 	local feed = Kit.placa({
@@ -343,7 +339,7 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 		Position = UDim2.fromOffset(12, 0),
 		Size = UDim2.new(1, -24, 0, 28),
 	})
-	type Linha = { quadro: Frame, nome: TextLabel, chance: TextLabel, marca: TextLabel }
+	type Linha = { quadro: Frame, nome: TextLabel, chance: TextLabel, marca: ImageLabel }
 	local linhas: { Linha } = {}
 	local recentes: { { aura: Auras.Aura, chance: number } } = {}
 	local recentesTeste: { { aura: Auras.Aura, chance: number } } = {}
@@ -358,7 +354,12 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 			Visible = false,
 			Parent = feed.conteudo,
 		})
-		local marca = texto(quadro, { Text = "◆", TextSize = 12, Size = UDim2.new(0, 22, 1, 0) })
+		local marca = IconeImagem.criar(
+			quadro,
+			Icones.STATUS.Despertar,
+			UDim2.fromOffset(4, 8),
+			UDim2.fromOffset(16, 16)
+		)
 		local nome = texto(quadro, {
 			fonte = "titulo",
 			TextSize = 18,
@@ -390,7 +391,7 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 
 	type Espaco = {
 		placa: Kit.Placa,
-		simbolo: TextLabel,
+		simbolo: ImageLabel,
 		titulo: TextLabel,
 		valor: TextLabel,
 		botao: TextButton,
@@ -399,7 +400,7 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 		numero: string,
 		x: number,
 		titulo: string,
-		simbolo: string,
+		simbolo: number,
 		acao: () -> ()
 	): Espaco
 		local p = Kit.placa({
@@ -410,12 +411,13 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 			corte = 12,
 			pai = barraAcoes,
 		})
-		local simb = texto(p.conteudo, {
-			Text = simbolo,
-			TextSize = 32,
-			Position = UDim2.fromOffset(0, 8),
-			Size = UDim2.new(1, 0, 0, 40),
-		})
+		local simb = IconeImagem.criar(
+			p.conteudo,
+			simbolo,
+			UDim2.new(0.5, 0, 0, 9),
+			UDim2.fromOffset(38, 38)
+		)
+		simb.AnchorPoint = Vector2.new(0.5, 0)
 		local tit = texto(p.conteudo, {
 			Text = titulo,
 			TextSize = 12,
@@ -541,7 +543,14 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 
 	-- Teclas 1–4 (Alt continua reservado aos testes do Studio)
 	UserInputService.InputBegan:Connect(function(input, processado)
-		if processado or not hud.Visible or UserInputService:IsKeyDown(Enum.KeyCode.LeftAlt) then
+		if
+			processado
+			or not hud.Visible
+			or Navegacao.aberto()
+			or UserInputService:GetFocusedTextBox()
+			or UserInputService:IsKeyDown(Enum.KeyCode.LeftAlt)
+			or UserInputService:IsKeyDown(Enum.KeyCode.RightAlt)
+		then
 			return
 		end
 		local acao = ({
@@ -586,7 +595,7 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 			if g then
 				linha.nome.Text = g.aura.nome
 				linha.chance.Text = "1/" .. Formato.chanceCurta(g.chance)
-				linha.marca.TextColor3 = corTier(g.aura)
+				linha.marca.ImageColor3 = corTier(g.aura)
 			end
 		end
 	end
@@ -598,19 +607,42 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 
 	Escala.aoMudar(function()
 		local compacto = Escala.compacto
-		local estreito = Escala.tamanho.X < 760
-		escalaBarra.Scale = if estreito then 0.7 elseif compacto then 0.85 else 1
+		local tela = Escala.tamanho
+		local estreito = tela.X < 760
+		local horizontal = estreito or tela.Y < 610
+		local escalaMaxima = if estreito then 0.7 elseif compacto then 0.85 else 1
+		escalaBarra.Scale = math.min(escalaMaxima, math.max(0.25, (tela.X - 24) / 600))
 		local margem = if Escala.toque then 26 else 22
 		barraAcoes.Position =
 			UDim2.new(0.5, if Escala.toque and not estreito then -60 else 0, 1, -margem)
-		local lado = if compacto then 60 else 78
+		local lado = if horizontal
+			then math.min(56, math.floor((tela.X - 44) / 5))
+			elseif compacto then 60
+			else 78
+		local folga = if horizontal or compacto then 5 else 8
+		local total = (lado + folga) * #placasMenu - folga
 		for _, p in placasMenu do
 			p.quadro.Size = UDim2.fromOffset(lado, lado)
 		end
-		menu.Size = UDim2.fromOffset(lado + 2, (lado + 8) * #placasMenu)
-		listaMenu.Padding = UDim.new(0, if compacto then 5 else 8)
-		menu.Position = UDim2.new(0, if compacto then 12 else 22, 0.5, if compacto then 30 else 40)
-		local largura = if estreito then 250 else 336
+		listaMenu.FillDirection = if horizontal
+			then Enum.FillDirection.Horizontal
+			else Enum.FillDirection.Vertical
+		listaMenu.Padding = UDim.new(0, folga)
+		menu.AnchorPoint = Vector2.new(0, if horizontal then 0 else 0.5)
+		menu.Size = if horizontal
+			then UDim2.fromOffset(total, lado)
+			else UDim2.fromOffset(lado + 2, total)
+		menu.Position = if horizontal
+			then UDim2.fromOffset(12, if compacto then 154 else 162)
+			else UDim2.new(0, if compacto then 12 else 22, 0.5, 64)
+		for i, b in botoesMenu do
+			b.NextSelectionUp = if horizontal then nil else botoesMenu[i - 1]
+			b.NextSelectionDown = if horizontal then nil else botoesMenu[i + 1]
+			b.NextSelectionLeft = if horizontal then botoesMenu[i - 1] else nil
+			b.NextSelectionRight = if horizontal then botoesMenu[i + 1] else nil
+		end
+		local largura = if estreito then math.min(250, tela.X - 24) else 336
+		moedas.Size = UDim2.fromOffset(largura, 40)
 		cartao.quadro.Size = UDim2.fromOffset(largura, 92)
 		cartao.quadro.Position =
 			UDim2.fromOffset(if compacto then 12 else 22, if compacto then 10 else 16)
@@ -701,7 +733,7 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 			if aura then
 				local cor = corTier(aura)
 				espAura.placa.definirCor(Cores.Painel, cor)
-				espAura.simbolo.Text = Icones.aura(aura.estilo)
+				IconeImagem.definir(espAura.simbolo, Icones.aura(aura.estilo))
 				espAura.valor.Text = aura.nome
 				espAura.valor.TextColor3 = Kit.corLegivel(cor)
 				espAura.titulo.Text = "1 em "
@@ -710,7 +742,7 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 					)
 			else
 				espAura.placa.definirCor(Cores.Painel, Cores.Borda)
-				espAura.simbolo.Text = Icones.MENU.Aura
+				IconeImagem.definir(espAura.simbolo, Icones.MENU.Aura)
 				espAura.valor.Text = "Nenhuma"
 				espAura.valor.TextColor3 = Cores.TextoSuave
 				espAura.titulo.Text = "AURA"
@@ -737,12 +769,15 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 			if item then
 				local cor = Color3.fromHex(Itens.Tiers[item.raridade].cor)
 				espArtefato.placa.definirCor(Cores.Painel, cor)
-				espArtefato.simbolo.Text = Icones.item(artefato :: string, item.categoria)
+				IconeImagem.definir(
+					espArtefato.simbolo,
+					Icones.item(artefato :: string, item.categoria)
+				)
 				espArtefato.valor.Text = item.nome
 				espArtefato.valor.TextColor3 = Kit.corLegivel(cor)
 			else
 				espArtefato.placa.definirCor(Cores.Painel, Cores.Borda)
-				espArtefato.simbolo.Text = Icones.MENU.Artefato
+				IconeImagem.definir(espArtefato.simbolo, Icones.MENU.Artefato)
 				espArtefato.valor.Text = "Vazio"
 				espArtefato.valor.TextColor3 = Cores.TextoSuave
 			end
