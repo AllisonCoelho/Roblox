@@ -1,7 +1,7 @@
 -- Auras que têm VFX próprio montado no cliente (malhas 3D + movimento procedural).
 -- O servidor só replica QUAL aura está ativa (atributo "AuraVfx" no personagem); cada cliente
 -- monta o efeito localmente. Para essas, o efeito antigo de partículas do servidor não é criado.
--- Essas auras estão disponíveis como prévia no Studio e no painel de desenvolvimento.
+-- O Painel Dev também permite testar efeitos avulsos.
 return {
 	gear5 = true,
 	-- família Naruto (Mundo/Auras/Caudas.luau)
@@ -16,8 +16,7 @@ return {
 	naruto_seis = true,
 	-- Monarca das Sombras (Mundo/Auras/Monarca.luau)
 	monarca = true,
-	-- Auras originais v2 (Mundo/Auras/Originais): SÓ prévia, fora do sorteio atual. Todas têm efeitos;
-	-- as malhas 3D aparecem quando ReplicatedStorage.AurasOriginais.<id> existir (importação no Studio).
+	-- Auras originais do sorteio, com malhas em ReplicatedStorage.AurasOriginais.<id>.
 	centelha_do_nexo = true,
 	musgo_luminoso = true,
 	fagulha_de_cobre = true,
