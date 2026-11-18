@@ -1,8 +1,14 @@
 # Arena do Trono
 
 Aproxime-se do Primeiro Soberano no Nexo e escolha **Desafiar**. O atalho no teclado é **F**.
-O Soberano se levanta, os dois ocupam os pedestais e o painel mostra a intenção dele. Um jogador
-por vez pode ocupar a Arena em cada servidor. Quem espera pode assistir do próprio ponto de vista.
+O diálogo oferece duas respostas.
+
+- **Eu te desafio pelo trono.** O Soberano se levanta, os dois ocupam os pedestais e o painel
+  mostra a intenção dele.
+- **Hoje não. Vou embora.** O personagem recua até a entrada da Arena.
+
+Um jogador por vez pode ocupar a Arena em cada servidor. Quem espera pode assistir do próprio
+ponto de vista.
 
 ## Como funciona
 
@@ -29,8 +35,8 @@ Os comandos aceitam toque, mouse, seleção por controle e teclas **1–4**.
 
 ## Playtest
 
-1. Abra o build no Studio, chegue ao trono e desafie o Soberano. Confira os dois avatares, a espada,
-   a coroa e os botões em janela de PC e no emulador de celular em paisagem.
+1. Abra o build no Studio e use **Desafiar** perto do trono. Teste a fuga primeiro e depois confirme
+   o duelo. Confira a câmera e os botões no PC e no emulador de celular em paisagem.
 2. Use Guarda na Sentença, confira as recargas das duas técnicas e carregue o Despertar com uma
    aura equipada. Observe o dano, a resposta do Soberano e a volta ao enquadramento de decisão.
 3. Com dois clientes, verifique se o segundo consegue assistir e desafiar depois que a Arena for

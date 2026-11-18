@@ -29,6 +29,7 @@ type Registro = {
 	icone: GuiObject,
 	aoAbrir: (() -> ())?,
 	reserva: number,
+	dimensoes: Vector2,
 }
 
 local registros: { [string]: Registro } = {}
@@ -64,12 +65,18 @@ end
 
 function Navegacao.criarPainel(
 	nome: string,
-	op: { titulo: string, icone: string | number, reserva: number? },
+	op: {
+		titulo: string,
+		icone: string | number,
+		reserva: number?,
+		dimensoes: Vector2?,
+	},
 	aoAbrir: (() -> ())?
 ): Painel
+	local dimensoes = op.dimensoes or Vector2.new(1120, 650)
 	local placa = Kit.placa({
 		nome = "Painel_" .. nome,
-		tamanho = UDim2.fromOffset(1120, 650),
+		tamanho = UDim2.fromOffset(dimensoes.X, dimensoes.Y),
 		posicao = UDim2.fromScale(0.5, 0.5),
 		ancora = Vector2.new(0.5, 0.5),
 		corte = 16,
@@ -155,6 +162,7 @@ function Navegacao.criarPainel(
 		icone = icone,
 		aoAbrir = aoAbrir,
 		reserva = op.reserva or 0,
+		dimensoes = dimensoes,
 	}
 	return painel
 end
@@ -193,13 +201,13 @@ function Navegacao.alternar(nome: string)
 end
 
 function Navegacao.ajustar()
-	local w = math.min(1120, Escala.tamanho.X - 24)
-	local h = math.min(650, Escala.tamanho.Y - 24)
 	local compacto = Escala.compacto
 	local altura = if compacto then 70 else 82
-	local estreito = w < 520
-	local x = if estreito then 16 else 56
 	for _, r in registros do
+		local w = math.min(r.dimensoes.X, Escala.tamanho.X - 24)
+		local h = math.min(r.dimensoes.Y, Escala.tamanho.Y - 24)
+		local estreito = w < 520
+		local x = if estreito then 16 else 56
 		local painel = r.painel
 		painel.quadro.Size = UDim2.fromOffset(w, h)
 		painel.cabecalho.Size = UDim2.new(1, -2, 0, altura)
