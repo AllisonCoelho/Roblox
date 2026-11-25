@@ -1,0 +1,27 @@
+{
+  "auraId": "ambar_vivo",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/ambar_vivo",
+  "templateFile": "assets/roblox/auras_originais/ambar_vivo.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "placa",
+      "triangles": 52,
+      "sizeStuds": [
+        0.737,
+        1.0515,
+        0.4002
+      ],
+      "centerFromPivot": [
+        -0.0211,
+        0.0175,
+        0.0055
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 4
+}

@@ -1,8 +1,14 @@
 # Arena do Trono
 
 Aproxime-se do Primeiro Soberano no Nexo e escolha **Desafiar**. O atalho no teclado é **F**.
-O Soberano se levanta, os dois ocupam os pedestais e o painel mostra a intenção dele. Um jogador
-por vez pode ocupar a Arena em cada servidor. Quem espera pode assistir do próprio ponto de vista.
+O diálogo oferece duas respostas.
+
+- **Eu te desafio pelo trono.** O Soberano se levanta, os dois ocupam os pedestais e o painel
+  mostra a intenção dele.
+- **Hoje não. Vou embora.** O personagem recua até a entrada da Arena.
+
+Um jogador por vez pode ocupar a Arena em cada servidor. Quem espera pode assistir do próprio
+ponto de vista.
 
 ## Como funciona
 
@@ -27,10 +33,46 @@ A câmera de decisão mostra o avatar à esquerda, o Soberano à direita e o tro
 Despertar e Sentença usam um corte lateral. O modo movimento reduzido conserva a câmera de decisão.
 Os comandos aceitam toque, mouse, seleção por controle e teclas **1–4**.
 
+## Animações do duelo
+
+As animações são feitas por código, sem assets publicados. Os quadros-chave e os tempos ficam em `src/shared/Dados/ArenaAnimacoes.luau`. O servidor escreve qual clipe tocar e em que instante: `ArenaAnim`/`ArenaAnimEm` no Player e `DueloAnim`/`DueloAnimEm` no Soberano. Assim, quem assiste vê o mesmo movimento do desafiante.
+
+**Pernas plantadas:** os pés de cada clipe são posições no chão, e coxa e joelho saem de cinemática inversa. Quando o corpo avança, o pé de trás continua no chão.
+
+**Jogador** (`src/client/Mundo/ArenaCorpo.luau`, R15; o R6 usa braços, tronco e quadris)
+- Postura de luta com respiração entre as ações.
+- **Ataque:** corre até o Soberano, solta um direto e volta com um salto para trás.
+- **Corte:** avança, salta e gira com o braço esticado.
+- **Selo:** abre a base e empurra as duas palmas.
+- **Guarda:** cruza os braços e segura a pose até o golpe chegar; no impacto, desliza para trás.
+- **Despertar:** junta energia agachado, sobe com os braços ao céu e descarrega à frente.
+- **Golpe recebido:** recua no golpe leve; no pesado, é arremessado e cai sobre um joelho.
+- **Fim:** punho erguido na vitória, joelho no chão na derrota.
+
+**Soberano** (`src/client/Mundo/NPCs/PrimeiroSoberano.luau`). As pernas agora são cinco peças articuladas: quadril, duas coxas e duas canelas.
+- **Entrada:** levanta do trono, agacha, salta até o ringue e pousa com o espadão no chão (poeira no piso).
+- **Aviso do próximo golpe:**
+  - Investida: aponta a espada.
+  - Sentença: espadão acima da cabeça.
+  - Baluarte: guarda fechada.
+- **Investida:** torce o corpo, arranca com passadas e corta de lado.
+- **Sentença:** agacha, salta e crava o espadão no chão, com onda de poeira e tremor de câmera.
+- **Baluarte:** firma a base com a lâmina na frente do peito.
+- **Golpe recebido:** recua no leve; no Corte e no Despertar, é empurrado e derrapa.
+- **Fim:** ajoelha com a espada fincada quando perde; ergue o espadão quando vence.
+
+**Tempos:** o duelo ficou um pouco mais lento para as animações caberem. O golpe comum leva ~0,9 s e a Sentença ~1,6 s; a entrada leva 2,6 s.
+
+**Acessibilidade:**
+- Movimento reduzido: sem giros completos nem saltos altos, com deslocamentos pela metade.
+- Qualidade baixa: sem a poeira do pouso.
+
+**Prévias:** `assets/npcs/primeiro_soberano/previews/duelo_*` são renders do Blender com as poses calculadas pelo mesmo módulo, não prints do Roblox.
+
 ## Playtest
 
-1. Abra o build no Studio, chegue ao trono e desafie o Soberano. Confira os dois avatares, a espada,
-   a coroa e os botões em janela de PC e no emulador de celular em paisagem.
+1. Abra o build no Studio e use **Desafiar** perto do trono. Na entrada, o Soberano deve saltar do trono e pousar no ringue sem atravessar o chão. Os pés não podem deslizar nem afundar; se afundarem, ajuste `PERNA_R15` ou as posições `peD`/`peE` dos clipes. Teste a fuga primeiro e depois confirme
+   o duelo. Confira a câmera e os botões no PC e no emulador de celular em paisagem.
 2. Use Guarda na Sentença, confira as recargas das duas técnicas e carregue o Despertar com uma
    aura equipada. Observe o dano, a resposta do Soberano e a volta ao enquadramento de decisão.
 3. Com dois clientes, verifique se o segundo consegue assistir e desafiar depois que a Arena for

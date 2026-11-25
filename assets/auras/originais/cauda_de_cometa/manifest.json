@@ -1,0 +1,42 @@
+{
+  "auraId": "cauda_de_cometa",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/cauda_de_cometa",
+  "templateFile": "assets/roblox/auras_originais/cauda_de_cometa.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "nucleo",
+      "triangles": 20,
+      "sizeStuds": [
+        0.5999,
+        0.6251,
+        0.5442
+      ],
+      "centerFromPivot": [
+        0.009,
+        0.0059,
+        0.0056
+      ],
+      "meshId": null
+    },
+    {
+      "name": "faixa",
+      "triangles": 192,
+      "sizeStuds": [
+        0.5398,
+        0.9336,
+        3.776
+      ],
+      "centerFromPivot": [
+        0.0333,
+        -0.2903,
+        1.8627
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 4
+}

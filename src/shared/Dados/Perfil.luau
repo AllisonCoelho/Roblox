@@ -19,6 +19,14 @@ export type Estado = {
 	auto: { pararChance: number, pararNova: boolean }, -- Auto Inteligente (Dados/Conveniencia)
 	presets: { any }, -- Presets de Auras: { aura, cosmeticos }
 	compras: { [string]: boolean }, -- PurchaseId já entregues (Developer Products, sem duplicar)
+	-- Pontos de Aura (Dados/PontosAura.luau): saldo, total gerado e níveis das evoluções
+	poder: { pontos: number, total: number, nivel: number, fluxo: number, sorte: number },
+	-- Corredor dos Perdidos (Dados/Corredor.luau): Fragmentos, fases concluídas e o bônus
+	corredor: { [string]: any },
+	-- Ecos (Dados/Pets.luau): coleção, equipados e o índice dos já vistos
+	pets: { [string]: any },
+	-- Equipamento (Dados/Equipamento.luau): peças, equipadas por espaço e visuais ocultos
+	equipamento: { [string]: any },
 }
 
 Perfil.VERSAO = 1
@@ -66,6 +74,10 @@ function Perfil.padrao(): Estado
 		auto = { pararChance = 0, pararNova = false },
 		presets = {},
 		compras = {},
+		poder = { pontos = 0, total = 0, nivel = 0, fluxo = 0, sorte = 0 },
+		corredor = { fragmentos = 0, concluidas = {}, ultima = {}, bonusAte = 0 },
+		pets = { lista = {}, equipados = {}, contador = 0, vistos = {} },
+		equipamento = { lista = {}, equipados = {}, ocultos = {}, contador = 0 },
 	}
 end
 
@@ -82,6 +94,65 @@ end
 
 function Perfil.copiar(estado: Estado): Estado
 	return copiarTabela(estado) :: Estado
+end
+
+-- Um destino distinto da mesma raridade, escolhido por proximidade da chance-base.
+local AURAS_ANTIGAS: { [string]: string } = {
+	faisca = "centelha_do_nexo",
+	nevoa = "musgo_luminoso",
+	brasa = "fagulha_de_cobre",
+	orvalho = "chuvisco_de_vidro",
+	folha_dancante = "borboletas_de_cinza",
+	pedra_viva = "gelo_de_neon",
+	mare_calma = "mare_de_quartzo",
+	brasa_sussurrante = "raiz_cintilante",
+	vento_cortante = "nevoa_de_amora",
+	raiz_antiga = "vento_de_papel",
+	gelo_fino = "engrenagem_de_orvalho",
+	trovao_jovem = "coroa_de_coral",
+	lotus_rubra = "prisma_partilhado",
+	pluma_celeste = "fenda_de_porcelana",
+	chama_azul = "esporos_de_safira",
+	eco_do_vazio = "solsticio_de_areia",
+	cristal_lunar = "espelho_de_chuva",
+	tempestade_rubra = "arquivista_espectral",
+	sombra_gemea = "jardim_das_agulhas",
+	sol_nascente = "coracao_de_basalto",
+	dragao_de_jade = "navio_de_papel_fantasma",
+	aurora_boreal = "catedral_de_sal",
+	coracao_estelar = "arquiduque_de_cinzas",
+	lamina_do_crepusculo = "trono_de_raios",
+	lotus_celestial = "atlas_fragmentado",
+	fenix_eterna = "devorador_de_alvoradas",
+	eclipse_carmesim = "oceano_sem_fundo",
+	olho_do_abismo = "leviata_astral",
+	nebulosa_primordial = "labirinto_vivo",
+	despertar_absoluto = "alvorecer_dos_titas",
+}
+
+local function copiasValidas(valor: any): number
+	return if type(valor) == "number" and valor > 0 and valor < math.huge then valor else 0
+end
+
+-- Executada depois de adquirir a trava do perfil, antes de expor a coleção ao jogo.
+-- Remover os IDs antigos depois de somar suas cópias torna a migração idempotente.
+function Perfil.migrarAuras(estado: Estado)
+	if type(estado.auras) ~= "table" then
+		estado.auras = {}
+	end
+	local colecao = estado.auras
+	for origem, destino in AURAS_ANTIGAS do
+		local antigas = copiasValidas(colecao[origem])
+		if antigas > 0 then
+			colecao[destino] = copiasValidas(colecao[destino]) + antigas
+		end
+		colecao[origem] = nil
+	end
+	local equipada = estado.equipada
+	local destino = if equipada then AURAS_ANTIGAS[equipada] else nil
+	if destino then
+		estado.equipada = if copiasValidas(colecao[destino]) > 0 then destino else nil
+	end
 end
 
 -- Conta um giro e guarda a aura sorteada na coleção

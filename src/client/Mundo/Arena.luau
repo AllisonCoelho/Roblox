@@ -1,6 +1,5 @@
 -- Câmera e efeitos do desafiante. O resultado de cada golpe já veio do servidor.
 local Debris = game:GetService("Debris")
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -8,7 +7,6 @@ local TweenService = game:GetService("TweenService")
 local Shared = ReplicatedStorage.Shared
 local Dados = require(Shared.Dados.Arena)
 local Cena = require(Shared.Dados.ArenaCena)
-local Motion = require(script.Parent.Motion)
 
 local Arena = {}
 local VIOLETA = Color3.fromHex("C0ADFF")
@@ -145,13 +143,11 @@ export type Controle = {
 }
 
 function Arena.iniciar(op: Opcoes): Controle
-	local jogador = Players.LocalPlayer
 	local camera = workspace.CurrentCamera
 	local tipoAnterior = if camera then camera.CameraType else Enum.CameraType.Custom
 	local fovAnterior = if camera then camera.FieldOfView else 70
 	local focusAnterior = if camera then camera.Focus else CFrame.identity
 	local cfAnterior = if camera then camera.CFrame else CFrame.identity
-	local personagem = jogador.Character
 	local efeito = Instance.new("Folder")
 	efeito.Name = "EfeitosArena"
 	efeito.Parent = workspace
@@ -159,8 +155,7 @@ function Arena.iniciar(op: Opcoes): Controle
 	local lateral = false
 	local ultimo = 0
 	local trocarAte = 0
-	local pose: Motion.Controle? = nil
-	local guardando = false
+	local tremor = 0 -- força do tremor da câmera (cai rápido)
 
 	if camera then
 		local destino, foco, fov =
@@ -179,17 +174,18 @@ function Arena.iniciar(op: Opcoes): Controle
 		local passo = if workspace:GetServerTimeNow() < trocarAte and lateral
 			then 1
 			else math.min(1, dt * (if op.movimentoReduzido then 12 else 8))
-		camera.CFrame = camera.CFrame:Lerp(destino, passo)
+		tremor = math.max(0, tremor - dt * 3.2)
+		local abalo = if tremor > 0
+			then CFrame.new(
+				math.noise(os.clock() * 31, 0.3) * tremor,
+				math.noise(0.7, os.clock() * 29) * tremor,
+				0
+			)
+			else CFrame.identity
+		camera.CFrame = camera.CFrame:Lerp(destino, passo) * abalo
 		camera.Focus = foco
 		camera.FieldOfView += (fov - camera.FieldOfView) * passo
 	end)
-
-	local function limparPose()
-		if pose then
-			pose.restaurar()
-			pose = nil
-		end
-	end
 
 	return {
 		tocar = function(golpe, instante, fim)
@@ -198,35 +194,17 @@ function Arena.iniciar(op: Opcoes): Controle
 			local agora = workspace:GetServerTimeNow()
 			lateral = golpe.especial and not op.movimentoReduzido
 			trocarAte = agora + 0.11
-			if golpe.ator == "jogador" then
-				limparPose()
-				guardando = golpe.id == "guarda"
-			end
-			if golpe.ator == "jogador" and personagem and not op.movimentoReduzido then
-				local novaPose = Motion.criar(personagem)
-				pose = novaPose
-				novaPose.aplicar(
-					"neutra",
-					if golpe.id == "guarda" then "agarrar" else "alcancar",
-					1,
-					0,
-					0,
-					0
-				)
-			end
 			task.delay(math.max(0, instante - agora), function()
 				if morto or ultimo ~= token then
 					return
 				end
-				local atual = pose
-				if atual and golpe.ator == "jogador" and not guardando then
-					atual.aplicar(
-						"neutra",
-						if golpe.id == "despertar" then "rasgar" else "impulso",
-						1,
-						0,
-						0,
-						0
+				if not op.movimentoReduzido and golpe.dano > 0 then
+					tremor = math.max(
+						tremor,
+						if golpe.id == "pesado" or golpe.id == "despertar"
+							then 0.55
+							elseif golpe.especial then 0.32
+							else 0.18
 					)
 				end
 				impacto(efeito, golpe, op)
@@ -234,17 +212,12 @@ function Arena.iniciar(op: Opcoes): Controle
 			task.delay(math.max(0, fim - agora), function()
 				if not morto and ultimo == token then
 					lateral = false
-					if golpe.id ~= "guarda" then
-						limparPose()
-						guardando = false
-					end
 				end
 			end)
 		end,
 		encerrar = function()
 			morto = true
 			render:Disconnect()
-			limparPose()
 			efeito:Destroy()
 			if camera and camera == workspace.CurrentCamera then
 				camera.FieldOfView = fovAnterior

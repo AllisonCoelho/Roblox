@@ -1,25 +1,127 @@
--- Coleção de auras, com as chances e raridades reais do catálogo.
+-- Índice de auras no estilo das coleções dos jogos do Roblox: raridades na lateral (com quantas
+-- você já tem), cartões com ícone, chance real e quantidade, e o botão de equipar.
+-- As auras que faltam aparecem como "???" bloqueadas.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage.Shared
 local Auras = require(Shared.Dados.Auras)
 local Formato = require(Shared.Formato)
+local Icones = require(Shared.Dados.Icones)
 local Perfil = require(Shared.Dados.Perfil)
-local Transcendencia = require(Shared.Dados.Transcendencia)
+local PontosAura = require(Shared.Dados.PontosAura)
 local Cores = require(Shared.Tema).Orbita
-local Escala = require(script.Parent.Parent.Escala)
+local Cartoes = require(script.Parent.Parent.Cartoes)
 local Estado = require(script.Parent.Parent.Estado)
 local Kit = require(script.Parent.Parent.Kit)
 local Navegacao = require(script.Parent.Parent.Navegacao)
 
 local Indice = {}
 
+local filtro = 0 -- 0 = todas; 1..7 = raridade
+local estrutura: Cartoes.Estrutura
+local abas: { [number]: Cartoes.Aba } = {}
+local contagens: { [number]: TextLabel } = {}
+local aviso: (string) -> ()
+local contador: TextLabel
+local progresso: Frame
+
+local function equipar(aura: Auras.Aura)
+	local estado = Estado.atual
+	if not estado then
+		aviso("Aguardando perfil")
+		return
+	end
+	if not Perfil.possui(estado, aura.id) then
+		aviso(
+			string.format(
+				"Desperte esta aura (1 em %s) para poder equipar.",
+				Formato.chance(aura.chance)
+			)
+		)
+		return
+	end
+	local alvo = if estado.equipada == aura.id then "" else aura.id
+	task.spawn(function()
+		local ok, msg = Estado.pedir("Equipar", alvo)
+		if not ok and msg then
+			aviso(msg)
+		end
+	end)
+end
+
+local function atualizar()
+	local estado = Estado.atual
+	if not estado then
+		return
+	end
+	local descobertas = Auras.contarDescobertas(estado.auras)
+	contador.Text = string.format("%d / %d", descobertas, #Auras.lista)
+	progresso.Size = UDim2.fromScale(descobertas / #Auras.lista, 1)
+	local porTier: { [number]: { tem: number, total: number } } = {}
+	for _, aura in Auras.lista do
+		local c = porTier[aura.tier] or { tem = 0, total = 0 }
+		c.total += 1
+		if Perfil.possui(estado, aura.id) then
+			c.tem += 1
+		end
+		porTier[aura.tier] = c
+	end
+	for tier, rotulo in contagens do
+		local c = if tier == 0 then { tem = descobertas, total = #Auras.lista } else porTier[tier]
+		rotulo.Text = if c then string.format("%d/%d", c.tem, c.total) else "0/0"
+	end
+	for tier, a in abas do
+		a.definirAtiva(tier == filtro)
+	end
+	if Navegacao.aberto() ~= "Indice" then
+		return
+	end
+
+	local lista = estrutura.lista
+	for _, filho in lista:GetChildren() do
+		if filho:IsA("GuiObject") then
+			filho:Destroy()
+		end
+	end
+	local sorte = PontosAura.sorteTotal(estado)
+	local nomeFiltro = if filtro == 0 then "Todas as auras" else Auras.Tiers[filtro].nome
+	Cartoes.secao(lista, 1, nomeFiltro, "Toque numa aura sua para equipar")
+	local grade = Cartoes.grade(lista, 2, Vector2.new(204, 236))
+	for _, aura in Auras.lista do
+		if filtro == 0 or aura.tier == filtro then
+			local tier = Auras.Tiers[aura.tier]
+			local tem = Perfil.possui(estado, aura.id)
+			local equipada = tem and estado.equipada == aura.id
+			Cartoes.cartao({
+				pai = grade,
+				ordem = aura.ordem,
+				cor = Color3.fromHex(tier.cor),
+				icone = if tem then Icones.aura(aura.estilo) else 32,
+				titulo = if tem then aura.nome else "???",
+				subtitulo = string.format(
+					"%s · 1 em %s",
+					tier.nome,
+					Formato.chanceCurta(Auras.chanceEfetiva(aura, sorte))
+				),
+				etiqueta = if tem then "×" .. Formato.curto(estado.auras[aura.id]) else nil,
+				estado = if not tem then "travado" elseif equipada then "equipado" else "equipar",
+				textoBotao = if not tem then "A descobrir" elseif equipada then "Equipada" else nil,
+				aoClicar = function()
+					equipar(aura)
+				end,
+			})
+		end
+	end
+end
+
 function Indice.montar(aoAviso: (string) -> ())
+	aviso = aoAviso
 	local painel = Navegacao.criarPainel(
 		"Indice",
-		{ titulo = "Índice de Auras", icone = "◆", reserva = 110 }
+		{ titulo = "Índice de Auras", icone = Icones.MENU.Indice, reserva = 110 },
+		atualizar
 	)
-	local contador = Kit.texto({
+	contador = Kit.texto({
 		Name = "Descobertas",
 		fonte = "mono",
 		Text = "0 / " .. #Auras.lista,
@@ -39,176 +141,40 @@ function Indice.montar(aoAviso: (string) -> ())
 		Size = UDim2.fromOffset(90, 3),
 		Parent = painel.cabecalho,
 	})
-	local progresso = Kit.novo("Frame", {
+	progresso = Kit.novo("Frame", {
 		BackgroundColor3 = Cores.Lilas,
 		BorderSizePixel = 0,
 		Size = UDim2.fromScale(0, 1),
 		Parent = trilho,
 	})
 
-	local rolagem = Kit.rolagem(painel.conteudo)
-	local grade = Kit.novo("UIGridLayout", {
-		CellPadding = UDim2.fromOffset(12, 12),
-		HorizontalAlignment = Enum.HorizontalAlignment.Center,
-		SortOrder = Enum.SortOrder.LayoutOrder,
-		Parent = rolagem,
-	})
-
-	local function ajustarGrade()
-		local largura = math.max(1, math.floor(rolagem.AbsoluteSize.X / Escala.escala) - 18)
-		local maximo = if Escala.compacto then 2 else 4
-		local colunas = math.clamp(math.floor((largura + 12) / 232), 1, maximo)
-		grade.FillDirectionMaxCells = colunas
-		grade.CellSize = UDim2.fromOffset(math.floor((largura - (colunas - 1) * 12) / colunas), 190)
-	end
-	rolagem:GetPropertyChangedSignal("AbsoluteSize"):Connect(ajustarGrade)
-	Escala.aoMudar(ajustarGrade)
-
-	type Cartao = {
-		placa: Kit.Placa,
-		botao: TextButton,
-		nome: TextLabel,
-		quantidade: TextLabel,
-		chance: TextLabel,
-		situacao: TextLabel,
-		gema: Frame,
-		oculta: TextLabel,
-		cor: Color3,
-	}
-	local cartoes: { [string]: Cartao } = {}
-	for _, aura in Auras.lista do
-		local tier = Auras.Tiers[aura.tier]
-		local cor = Color3.fromHex(tier.cor)
-		local placa = Kit.placa({
-			nome = aura.id,
-			tamanho = UDim2.fromOffset(226, 190),
-			ordem = aura.ordem,
-			pai = rolagem,
-		})
-		local conteudo = placa.conteudo
-		Kit.texto({
-			Text = string.upper(tier.nome),
-			TextSize = 14,
-			TextColor3 = Kit.corLegivel(cor),
-			TextXAlignment = Enum.TextXAlignment.Left,
-			Position = UDim2.fromOffset(12, 6),
-			Size = UDim2.new(1, -24, 0, 24),
-			Parent = conteudo,
-		})
-		local cristal, gema = Kit.cristal(conteudo, 48, Cores.Borda)
-		cristal.AnchorPoint = Vector2.new(0.5, 0)
-		cristal.Position = UDim2.new(0.5, 0, 0, 30)
-		local oculta = Kit.texto({
-			fonte = "titulo",
-			Text = "?",
-			TextSize = 18,
-			Size = UDim2.fromScale(1, 1),
-			ZIndex = 2,
-			Parent = cristal,
-		})
-		local nome = Kit.texto({
-			Name = "Nome",
-			fonte = "titulo",
-			Text = "???",
-			TextSize = 22,
-			TextWrapped = true,
-			Position = UDim2.fromOffset(10, 80),
-			Size = UDim2.new(1, -20, 0, 53),
-			Parent = conteudo,
-		})
-		local chance = Kit.texto({
-			Name = "Chance",
+	estrutura = Cartoes.estrutura(painel.conteudo)
+	-- lateral rolável: 8 abas (todas + 7 raridades) não cabem em telas baixas
+	estrutura.lateral.ClipsDescendants = true
+	local function criarAba(tier: number, nome: string, cor: Color3, icone: number)
+		local a = Cartoes.aba(estrutura.lateral, tier + 1, nome, icone, cor, function()
+			filtro = tier
+			estrutura.conteudo.CanvasPosition = Vector2.zero
+			atualizar()
+		end)
+		a.placa.quadro.Size = UDim2.new(1, 0, 0, 48)
+		contagens[tier] = Kit.texto({
 			fonte = "mono",
-			Text = "1 em " .. Formato.chance(aura.chance),
-			TextSize = 16,
-			TextColor3 = Cores.TextoSuave,
-			Position = UDim2.fromOffset(10, 131),
-			Size = UDim2.new(1, -20, 0, 24),
-			Parent = conteudo,
-		})
-		local quantidade = Kit.texto({
-			Name = "Quantidade",
-			fonte = "mono",
-			TextSize = 16,
-			TextXAlignment = Enum.TextXAlignment.Left,
-			Position = UDim2.new(0, 12, 1, -31),
-			Size = UDim2.new(0.45, -10, 0, 25),
-			Parent = conteudo,
-		})
-		local situacao = Kit.texto({
-			Name = "Estado",
-			fonte = "titulo",
-			Text = "A descobrir",
-			TextSize = 17,
+			TextSize = 13,
 			TextColor3 = Cores.TextoSuave,
 			TextXAlignment = Enum.TextXAlignment.Right,
-			AnchorPoint = Vector2.new(1, 0),
-			Position = UDim2.new(1, -12, 1, -31),
-			Size = UDim2.new(0.55, -10, 0, 25),
-			Parent = conteudo,
+			Position = UDim2.new(1, -52, 0, 0),
+			Size = UDim2.new(0, 44, 1, 0),
+			Parent = a.placa.conteudo,
 		})
-		local botao = Kit.alvo(placa.quadro, "Aura a descobrir", function()
-			local estado = Estado.atual
-			if not estado then
-				aoAviso("Aguardando perfil")
-				return
-			end
-			if not Perfil.possui(estado, aura.id) then
-				aoAviso("Desperte essa aura para poder equipá-la.")
-				return
-			end
-			local alvo = if estado.equipada == aura.id then "" else aura.id
-			task.spawn(function()
-				local ok, msg = Estado.pedir("Equipar", alvo)
-				if not ok and msg then
-					aoAviso(msg)
-				end
-			end)
-		end)
-		cartoes[aura.id] = {
-			placa = placa,
-			botao = botao,
-			nome = nome,
-			quantidade = quantidade,
-			chance = chance,
-			situacao = situacao,
-			gema = gema,
-			oculta = oculta,
-			cor = cor,
-		}
+		abas[tier] = a
 	end
-
-	Estado.aoMudar(function(estado)
-		local sorte = Transcendencia.sorte(estado.transcendencia.nivel)
-		local descobertas = Auras.contarDescobertas(estado.auras)
-		contador.Text = string.format("%d / %d", descobertas, #Auras.lista)
-		progresso.Size = UDim2.fromScale(descobertas / #Auras.lista, 1)
-		for _, aura in Auras.lista do
-			local c = cartoes[aura.id]
-			c.chance.Text = "1 em " .. Formato.chance(Auras.chanceEfetiva(aura, sorte))
-			local tem = Perfil.possui(estado, aura.id)
-			local equipada = tem and estado.equipada == aura.id
-			local cor = if tem then c.cor else Cores.Borda
-			c.placa.definirCor(
-				if tem then Cores.Painel:Lerp(c.cor, 0.09) else Cores.Painel,
-				if equipada then Cores.Menta else cor
-			)
-			c.nome.Text = if tem then aura.nome else "???"
-			c.quantidade.Text = if tem then "×" .. Formato.curto(estado.auras[aura.id]) else ""
-			c.situacao.Text = if equipada
-				then "Equipada"
-				elseif tem then "Equipar"
-				else "A descobrir"
-			c.situacao.TextColor3 = if equipada
-				then Cores.Menta
-				elseif tem then Cores.Lilas
-				else Cores.TextoSuave
-			c.gema.BackgroundColor3 = cor
-			c.oculta.Visible = not tem
-			c.botao.Text = if tem
-				then (if equipada then "Desequipar " else "Equipar ") .. aura.nome
-				else "Aura a descobrir"
-		end
+	criarAba(0, "Todas", Cores.Lilas, Icones.MENU.Indice)
+	for i, tier in Auras.Tiers do
+		criarAba(i, tier.nome, Color3.fromHex(tier.cor), Icones.AURAS.brilho)
+	end
+	Estado.aoMudar(function()
+		atualizar()
 	end)
 end
 

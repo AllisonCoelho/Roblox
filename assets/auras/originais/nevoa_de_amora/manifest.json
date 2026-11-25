@@ -1,0 +1,42 @@
+{
+  "auraId": "nevoa_de_amora",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/nevoa_de_amora",
+  "templateFile": "assets/roblox/auras_originais/nevoa_de_amora.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "massa",
+      "triangles": 400,
+      "sizeStuds": [
+        1.3373,
+        1.0953,
+        1.2233
+      ],
+      "centerFromPivot": [
+        -0.0564,
+        -0.0557,
+        -0.0386
+      ],
+      "meshId": null
+    },
+    {
+      "name": "caroco",
+      "triangles": 120,
+      "sizeStuds": [
+        0.3781,
+        0.3111,
+        0.3518
+      ],
+      "centerFromPivot": [
+        -0.0006,
+        -0.0004,
+        -0.002
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 5
+}

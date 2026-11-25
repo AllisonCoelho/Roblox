@@ -1,0 +1,11 @@
+-- GERADO por assets/equipamento/source/generate_equipamento.py. Não editar à mão.
+-- Peça de equipamento (mesmo formato do kit do Nexo).
+return {
+	vertices = 72,
+	triangulos = 24,
+	minimo = { -0.1510, -0.1816, -1.4560 },
+	tamanho = { 0.3343, 0.3542, 0.7560 },
+	dados = {
+		"AAAx0DOqe2rDfP//TWf//7Oke2rDfP//je3es3yTTWf//7Okje3es3yTF5uw3m5iTWf//7OkF5uw3m5i6kJx5PZQTWf//7Ok6kJx5PZQAAAx0DOqTWf//7Ok6kJx5PZQyxN9h85aAAAx0DOqyxN9h85aFwo0MoWZAAAx0DOqFwo0MoWZe2rDfP//AAAx0DOqFwo0MoWZWmQAAHmXe2rDfP//WmQAAHmX//9dNuebe2rDfP////9dNuebje3es3yTe2rDfP////9dNuebJ+LPhKVhje3es3yTJ+LPhKVhF5uw3m5ije3es3yTJ+LPhKVhkHqahwAAF5uw3m5ikHqahwAA6kJx5PZQF5uw3m5ikHqahwAAyxN9h85a6kJx5PZQkHqahwAAADa5O9JVyxN9h85aADa5O9JVFwo0MoWZyxN9h85aADa5O9JVWmQAAHmXFwo0MoWZADa5O9JVc5ZdMElXWmQAAHmXc5ZdMElX//9dNuebWmQAAHmXc5ZdMElXkHqahwAA//9dNuebkHqahwAAJ+LPhKVh//9dNuebc5ZdMElXADa5O9JVkHqahwAAXUZ8TDVtXkd9TDVtYUqBXkd9e16ihmqtdlmejW+2knS6fF6mjG+zdlmed1qglXe/k3S8fl+pi26zfF6keFqgYEl/TDVtXUZ8YEl/YEmATDVtYEmAYEl/TDVtYEl/YUqBTDVtfV+njG+1gGGplHW/lHW/h2eylXXArI3VlXW/r5DZnHzHl3fDsJHamnrGnX3JsJHanHzHmnrGlXa/g2SulHW+kXO6gWKqgGGqmXnEmHnDh2ezkXO6f2GpgWKrmnrGr5DZh2e0r5DZl3fDiGe0m3vGm3vHr5DZAAABAAIAAwAEAAUABgAHAAgACQAKAAsADAANAA4ADwAQABEAEgATABQAFQAWABcAGAAZABoAGwAcAB0AHgAfACAAIQAiACMAJAAlACYAJwAoACkAKgArACwALQAuAC8AMAAxADIAMwA0ADUANgA3ADgAOQA6ADsAPAA9AD4APwBAAEEAQgBDAEQARQBGAEcA",
+	},
+}

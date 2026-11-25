@@ -1,0 +1,42 @@
+{
+  "auraId": "alvorecer_dos_titas",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/alvorecer_dos_titas",
+  "templateFile": "assets/roblox/auras_originais/alvorecer_dos_titas.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "mao",
+      "triangles": 348,
+      "sizeStuds": [
+        1.5226,
+        2.5229,
+        0.5743
+      ],
+      "centerFromPivot": [
+        0.2613,
+        0.5114,
+        -0.0871
+      ],
+      "meshId": null
+    },
+    {
+      "name": "halo_solar",
+      "triangles": 800,
+      "sizeStuds": [
+        4.4346,
+        4.4346,
+        3.1195
+      ],
+      "centerFromPivot": [
+        0.0,
+        0.0,
+        0.0036
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 3
+}

@@ -1,4 +1,4 @@
--- Ranking do servidor (leaderstats): Giros e Melhor aura.
+-- Ranking do servidor (leaderstats): Pontuação de Aura, Giros e Melhor aura.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -28,6 +28,14 @@ end
 local function criar(player: Player, estado: Perfil.Estado)
 	local pasta = Instance.new("Folder")
 	pasta.Name = "leaderstats"
+	-- Primeira coluna = ordem da lista de jogadores do Roblox
+	local pontuacao = Instance.new("IntValue")
+	pontuacao.Name = "Pontuação"
+	pontuacao.Value = math.floor(tonumber(player:GetAttribute("Pontuacao")) or 0)
+	pontuacao.Parent = pasta
+	player:GetAttributeChangedSignal("Pontuacao"):Connect(function()
+		pontuacao.Value = math.floor(tonumber(player:GetAttribute("Pontuacao")) or 0)
+	end)
 	local giros = Instance.new("IntValue")
 	giros.Name = "Giros"
 	giros.Parent = pasta

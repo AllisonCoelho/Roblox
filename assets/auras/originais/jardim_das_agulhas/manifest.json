@@ -1,0 +1,27 @@
+{
+  "auraId": "jardim_das_agulhas",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/jardim_das_agulhas",
+  "templateFile": "assets/roblox/auras_originais/jardim_das_agulhas.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "flor",
+      "triangles": 210,
+      "sizeStuds": [
+        1.3976,
+        1.7331,
+        1.671
+      ],
+      "centerFromPivot": [
+        -0.084,
+        -0.0394,
+        -0.0
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 5
+}

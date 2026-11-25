@@ -12,11 +12,11 @@ local Conveniencia = require(Shared.Dados.Conveniencia)
 local Monetizacao = require(Shared.Dados.Monetizacao)
 local Perfil = require(Shared.Dados.Perfil)
 local Remotos = require(Shared.Remotos)
-local Transcendencia = require(Shared.Dados.Transcendencia)
 local Acoes = require(script.Parent.Acoes)
 local Dados = require(script.Parent.Dados)
 local Passes = require(script.Parent.Passes)
 local TemporadaServico = require(script.Parent.Temporada)
+local PontosAuraServico = require(script.Parent.PontosAura)
 
 local Sorteio = {}
 
@@ -96,7 +96,7 @@ local function despertar(player: Player): (boolean, string?, { [string]: any }?)
 	if agora < (liberadoEm[player] or 0) then
 		return false, nil -- a animação ainda está correndo (pular é um passe)
 	end
-	local sorte = Transcendencia.sorte(estado.transcendencia.nivel)
+	local sorte = PontosAuraServico.sorte(player)
 	ultimoGiro[player] = agora
 	local aura = Auras.sortear(aleatorio, sorte)
 	local ok, id, dados = entregar(player, aura, sorte)
@@ -126,8 +126,7 @@ function Sorteio.simular(player: Player, aura: Auras.Aura?): (boolean, string?, 
 	if not Dados.emTeste(player) then
 		return false, "Abra uma sessão de teste"
 	end
-	local estado = Dados.de(player)
-	local sorte = Transcendencia.sorte(if estado then estado.transcendencia.nivel else 0)
+	local sorte = PontosAuraServico.sorte(player)
 	return entregar(player, aura or Auras.sortear(aleatorio, sorte), sorte)
 end
 

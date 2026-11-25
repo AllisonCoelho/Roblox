@@ -1,0 +1,57 @@
+{
+  "auraId": "coracao_de_basalto",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/coracao_de_basalto",
+  "templateFile": "assets/roblox/auras_originais/coracao_de_basalto.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "coracao",
+      "triangles": 90,
+      "sizeStuds": [
+        0.8516,
+        1.0178,
+        0.7209
+      ],
+      "centerFromPivot": [
+        0.0153,
+        0.0214,
+        -0.0551
+      ],
+      "meshId": null
+    },
+    {
+      "name": "veio",
+      "triangles": 96,
+      "sizeStuds": [
+        0.663,
+        0.7303,
+        0.5119
+      ],
+      "centerFromPivot": [
+        -0.0014,
+        -0.1418,
+        0.0003
+      ],
+      "meshId": null
+    },
+    {
+      "name": "pedra",
+      "triangles": 10,
+      "sizeStuds": [
+        0.282,
+        0.3575,
+        0.3068
+      ],
+      "centerFromPivot": [
+        0.0122,
+        0.0094,
+        0.0084
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 6
+}

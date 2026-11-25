@@ -1,0 +1,42 @@
+{
+  "auraId": "arquiduque_de_cinzas",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/arquiduque_de_cinzas",
+  "templateFile": "assets/roblox/auras_originais/arquiduque_de_cinzas.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "capa",
+      "triangles": 500,
+      "sizeStuds": [
+        2.3855,
+        2.6485,
+        0.1651
+      ],
+      "centerFromPivot": [
+        -0.0279,
+        -0.2756,
+        0.0626
+      ],
+      "meshId": null
+    },
+    {
+      "name": "broche",
+      "triangles": 216,
+      "sizeStuds": [
+        0.5344,
+        0.4179,
+        0.5371
+      ],
+      "centerFromPivot": [
+        0.0018,
+        -0.0206,
+        -0.0001
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 3
+}

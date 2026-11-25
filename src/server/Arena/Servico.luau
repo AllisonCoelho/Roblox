@@ -5,6 +5,7 @@ local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Arena = require(Shared.Dados.Arena)
+local Animacoes = require(Shared.Dados.ArenaAnimacoes)
 local Cena = require(Shared.Dados.ArenaCena)
 local Auras = require(Shared.Dados.Auras)
 local Remotos = require(Shared.Remotos)
@@ -15,9 +16,13 @@ local Cosmeticos = require(Servicos.Cosmeticos)
 local Incursoes = require(script.Parent.Parent.Incursoes.Servico)
 
 local Servico = {}
-local INTRODUCAO = 1.8
+local INTRODUCAO = Animacoes.INTRODUCAO
 local MOSTRAR_RESULTADO = 5
-local DISTANCIA = 14
+local DISTANCIA = 16
+local FOLGA_DISTANCIA = 3
+local TEMPO_DIALOGO = 30
+local INTERVALO_INTERACAO = 0.8
+local INTERVALO_ALERTA = 25
 
 type Duelo = {
 	id: number,
@@ -40,6 +45,36 @@ type Duelo = {
 
 local atual: Duelo? = nil
 local contador = 0
+local convites: { [Player]: { id: number, personagem: Model, venceEm: number } } = {}
+
+local function personagemPerto(player: Player, ponto: BasePart): (Model?, BasePart?, Humanoid?)
+	local personagem = player.Character
+	local corpo = personagem and personagem:FindFirstChild("HumanoidRootPart")
+	local humanoide = personagem and personagem:FindFirstChildOfClass("Humanoid")
+	if
+		not personagem
+		or not corpo
+		or not corpo:IsA("BasePart")
+		or corpo.Anchored
+		or not humanoide
+		or humanoide.Health <= 0
+		or (corpo.Position - ponto.Position).Magnitude > DISTANCIA + FOLGA_DISTANCIA
+	then
+		return nil, nil, nil
+	end
+	return personagem, corpo, humanoide
+end
+
+local function alturaDoCorpo(personagem: Model, corpo: BasePart, humanoide: Humanoid): number
+	local altura = humanoide.HipHeight + corpo.Size.Y / 2
+	if humanoide.RigType == Enum.HumanoidRigType.R6 then
+		local perna = personagem:FindFirstChild("Left Leg")
+		if perna and perna:IsA("BasePart") then
+			altura += perna.Size.Y
+		end
+	end
+	return altura
+end
 
 local function enviar(d: Duelo, tipo: string, dados: { [string]: any }?)
 	if d.player.Parent ~= Players then
@@ -49,6 +84,18 @@ local function enviar(d: Duelo, tipo: string, dados: { [string]: any }?)
 	pacote.id = d.id
 	pacote.tipo = tipo
 	Remotos.evento("Arena"):FireClient(d.player, pacote)
+end
+
+-- Animações compartilhadas: todo cliente lê estes atributos e toca o mesmo clipe no mesmo
+-- instante do relógio do servidor (o instante pode estar no futuro: a reação ao impacto).
+local function animarJogador(d: Duelo, clipe: string?, quando: number)
+	d.player:SetAttribute("ArenaAnim", clipe)
+	d.player:SetAttribute("ArenaAnimEm", if clipe then quando else nil)
+end
+
+local function animarSoberano(d: Duelo, clipe: string?, quando: number)
+	d.soberano:SetAttribute("DueloAnim", clipe)
+	d.soberano:SetAttribute("DueloAnimEm", if clipe then quando else nil)
 end
 
 local function encerrar(d: Duelo)
@@ -70,11 +117,12 @@ local function encerrar(d: Duelo)
 		end
 		d.corpo.Anchored = d.ancorado
 	end
-	d.soberano:SetAttribute("DueloGolpe", nil)
+	animarSoberano(d, nil, 0)
 	d.soberano:SetAttribute("DueloIntencao", nil)
 	d.soberano:SetAttribute("DueloInicio", nil)
 	d.soberano:SetAttribute("Estado", "NPC_OCUPANTE")
 	d.prompt.Enabled = true
+	animarJogador(d, nil, 0)
 	d.player:SetAttribute("EmDueloArena", nil)
 	enviar(d, "fechar")
 end
@@ -85,10 +133,17 @@ local function terminar(d: Duelo, resultado: string)
 	end
 	d.fase = "fim"
 	d.prazo = nil
+	local agora = workspace:GetServerTimeNow()
+	d.soberano:SetAttribute("DueloIntencao", nil)
 	if resultado == "vitoria" then
-		d.soberano:SetAttribute("DueloGolpe", "derrota")
-		d.soberano:SetAttribute("DueloGolpeEm", workspace:GetServerTimeNow())
+		animarSoberano(d, "derrota", agora)
+		animarJogador(d, "vitoria", agora + 0.3)
 		Cosmeticos.celebrar(d.player, d.corpo, d.soberano)
+	elseif resultado == "derrota" then
+		animarJogador(d, "derrota", agora)
+		animarSoberano(d, "vitoria", agora + 0.3)
+	else
+		animarSoberano(d, "vitoria", agora)
 	end
 	enviar(d, "fim", { resultado = resultado, estado = d.estado })
 	task.delay(MOSTRAR_RESULTADO, encerrar, d)
@@ -99,7 +154,6 @@ local function abrirTurno(d: Duelo)
 		return
 	end
 	d.fase = "escolha"
-	d.soberano:SetAttribute("DueloGolpe", nil)
 	d.soberano:SetAttribute("DueloIntencao", Arena.intencao(d.estado.rodada).id)
 	local prazo = workspace:GetServerTimeNow() + Arena.ESPERA_TURNO
 	d.prazo = prazo
@@ -121,41 +175,63 @@ local function mover(d: Duelo, alvo: CFrame, duracao: number, estilo: Enum.Easin
 end
 
 local function encenar(d: Duelo, resolucao: Arena.Resolucao)
+	local guardou = resolucao.golpes[1] ~= nil and resolucao.golpes[1].id == "guarda"
 	for _, golpe in resolucao.golpes do
 		if atual ~= d then
 			return
 		end
-		local preparacao = if golpe.especial then 0.46 else 0.27
-		local retorno = if golpe.especial then 0.62 else 0.42
+		local tempo = Animacoes.tempo(golpe.id)
+		local preparacao, retorno = tempo.preparo, tempo.retorno
 		local quando = workspace:GetServerTimeNow()
+		local impacto = quando + preparacao
 		d.soberano:SetAttribute("DueloIntencao", nil)
 		if golpe.ator == "soberano" then
-			d.soberano:SetAttribute("DueloGolpeEm", quando)
-			d.soberano:SetAttribute("DueloGolpe", golpe.id)
+			animarSoberano(d, golpe.id, quando)
+			local reacao = if golpe.estado.vida > 0
+				then Animacoes.reacaoJogador(guardou, golpe.dano)
+				else nil
+			if reacao then
+				animarJogador(d, reacao, impacto)
+			end
+		else
+			animarJogador(d, golpe.id, quando)
+			local reacao = if golpe.estado.soberano > 0
+				then Animacoes.reacaoSoberano(golpe.id, golpe.dano)
+				else nil
+			if reacao then
+				animarSoberano(d, reacao, impacto)
+			end
 		end
 		enviar(d, "golpe", {
 			golpe = golpe,
-			impacto = quando + preparacao,
-			fim = quando + preparacao + retorno,
+			impacto = impacto,
+			fim = impacto + retorno,
 		})
-		local avancou = golpe.ator == "jogador" and (golpe.id == "ataque" or golpe.id == "corte")
-		if avancou then
-			mover(d, d.posto * CFrame.new(0, 0, -9), preparacao, Enum.EasingStyle.Quad)
+		local avanco = if golpe.ator == "jogador" then Animacoes.AVANCO[golpe.id] else nil
+		if avanco then
+			-- corre até o Soberano; a pose de corrida vem do clipe
+			mover(d, d.posto * CFrame.new(0, 0, -avanco), preparacao * 0.92, Enum.EasingStyle.Sine)
 		end
 		task.wait(preparacao)
 		if atual ~= d then
 			return
 		end
 		d.estado = golpe.estado
-		if avancou then
-			mover(d, d.posto, retorno - 0.08, Enum.EasingStyle.Sine)
+		if avanco then
+			-- segura o golpe um instante e volta ao posto (salto para trás no clipe)
+			task.wait(retorno * 0.3)
+			if atual ~= d then
+				return
+			end
+			mover(d, d.posto, retorno * 0.55, Enum.EasingStyle.Quad)
+			task.wait(retorno * 0.7)
+		else
+			task.wait(retorno)
 		end
-		task.wait(retorno)
 	end
 	if atual ~= d then
 		return
 	end
-	d.soberano:SetAttribute("DueloGolpe", nil)
 	d.estado = resolucao.estado
 	if resolucao.resultado then
 		terminar(d, resolucao.resultado)
@@ -208,6 +284,7 @@ function Servico.iniciar()
 	Acoes.registrar("ArenaAgir", agir)
 	Acoes.registrar("ArenaSair", desistir)
 	Players.PlayerRemoving:Connect(function(player)
+		convites[player] = nil
 		if atual and atual.player == player then
 			encerrar(atual)
 		end
@@ -225,43 +302,78 @@ function Servico.montar(soberano: BasePart, ponto: BasePart)
 	prompt.RequiresLineOfSight = false
 	prompt.Parent = ponto
 
+	local ultimoAlerta = -math.huge
 	prompt.Triggered:Connect(function(player)
-		local personagem = player.Character
-		local corpo = personagem and personagem:FindFirstChild("HumanoidRootPart")
-		local humanoide = personagem and personagem:FindFirstChildOfClass("Humanoid")
-		if
-			atual
-			or not personagem
-			or not corpo
-			or not corpo:IsA("BasePart")
-			or corpo.Anchored
-			or not humanoide
-			or humanoide.Health <= 0
-			or (corpo.Position - ponto.Position).Magnitude > DISTANCIA + 3
-		then
+		local personagem = personagemPerto(player, ponto)
+		if atual or not prompt.Enabled or not personagem then
 			return
 		end
-		local perfil = Dados.de(player)
-		if Incursoes.ocupado(player) or not perfil then
-			Remotos.evento("Aviso"):FireClient(player, {
-				tipo = "npc",
-				texto = if perfil
-					then "Saia da fila de Incursões antes do duelo."
-					else "Aguarde seu perfil carregar.",
-			})
+		local agora = workspace:GetServerTimeNow()
+		local anterior = convites[player]
+		if anterior and agora < anterior.venceEm - TEMPO_DIALOGO + INTERVALO_INTERACAO then
 			return
-		end
-
-		local altura = humanoide.HipHeight + corpo.Size.Y / 2
-		if humanoide.RigType == Enum.HumanoidRigType.R6 then
-			local perna = personagem:FindFirstChild("Left Leg")
-			if perna and perna:IsA("BasePart") then
-				altura += perna.Size.Y
-			end
 		end
 		contador += 1
+		local convite = { id = contador, personagem = personagem, venceEm = agora + TEMPO_DIALOGO }
+		convites[player] = convite
+		task.delay(TEMPO_DIALOGO, function()
+			if convites[player] == convite then
+				convites[player] = nil
+			end
+		end)
+		if agora - ultimoAlerta >= INTERVALO_ALERTA then
+			ultimoAlerta = agora
+			soberano:SetAttribute("Alerta", agora)
+		end
+		Remotos.evento("Arena"):FireClient(player, {
+			tipo = "dialogo",
+			id = convite.id,
+			prazo = convite.venceEm,
+		})
+	end)
+
+	Acoes.registrar("ArenaResponder", function(player, id: any, resposta: any): (boolean, string?)
+		if type(id) ~= "number" or (resposta ~= "duelar" and resposta ~= "fugir") then
+			return false, "Resposta inválida."
+		end
+		local convite = convites[player]
+		if not convite or convite.id ~= id then
+			return false, "Fale com o Soberano para responder."
+		end
+		convites[player] = nil
+		local personagem, corpo, humanoide = personagemPerto(player, ponto)
+		if
+			not personagem
+			or not corpo
+			or not humanoide
+			or personagem ~= convite.personagem
+			or workspace:GetServerTimeNow() >= convite.venceEm
+		then
+			return false, "Aproxime-se do Soberano e abra o diálogo de novo."
+		end
+		if Incursoes.ocupado(player) then
+			return false, "Saia das Incursões antes de responder ao Soberano."
+		end
+
+		local altura = alturaDoCorpo(personagem, corpo, humanoide)
+		if resposta == "fugir" then
+			local destino = Cena.referencia * CFrame.new(0, altura + 0.6, -22)
+			personagem:PivotTo(destino * corpo.CFrame:ToObjectSpace(personagem:GetPivot()))
+			corpo.AssemblyLinearVelocity = Vector3.zero
+			corpo.AssemblyAngularVelocity = Vector3.zero
+			return true, nil
+		end
+
+		if atual or not prompt.Enabled then
+			return false, "O Soberano já está em duelo. Aguarde a Arena ficar livre."
+		end
+		local perfil = Dados.de(player)
+		if not perfil then
+			return false, "Aguarde seu perfil carregar para desafiar o Soberano."
+		end
+
 		local d: Duelo = {
-			id = contador,
+			id = convite.id,
 			player = player,
 			personagem = personagem,
 			corpo = corpo,
@@ -281,9 +393,11 @@ function Servico.montar(soberano: BasePart, ponto: BasePart)
 		prompt.Enabled = false
 		corpo.Anchored = true
 		personagem:PivotTo(d.posto * corpo.CFrame:ToObjectSpace(d.original))
-		soberano:SetAttribute("DueloGolpe", nil)
+		local inicio = workspace:GetServerTimeNow()
+		animarSoberano(d, nil, 0)
 		soberano:SetAttribute("DueloIntencao", nil)
-		soberano:SetAttribute("DueloInicio", workspace:GetServerTimeNow())
+		soberano:SetAttribute("DueloInicio", inicio)
+		animarJogador(d, "entrada", inicio)
 		soberano:SetAttribute("Estado", "DESAFIO_EM_ANDAMENTO")
 
 		table.insert(
@@ -306,6 +420,7 @@ function Servico.montar(soberano: BasePart, ponto: BasePart)
 			estilo = if d.aura then d.aura.estilo else nil,
 		})
 		task.delay(INTRODUCAO, abrirTurno, d)
+		return true, nil
 	end)
 end
 

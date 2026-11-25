@@ -1,0 +1,42 @@
+{
+  "auraId": "prisma_partilhado",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/prisma_partilhado",
+  "templateFile": "assets/roblox/auras_originais/prisma_partilhado.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "cunha",
+      "triangles": 16,
+      "sizeStuds": [
+        0.56,
+        1.12,
+        0.22
+      ],
+      "centerFromPivot": [
+        0.0,
+        0.06,
+        -0.0
+      ],
+      "meshId": null
+    },
+    {
+      "name": "raio",
+      "triangles": 8,
+      "sizeStuds": [
+        0.1012,
+        3.2,
+        0.1012
+      ],
+      "centerFromPivot": [
+        -0.0004,
+        1.6,
+        0.0004
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 6
+}

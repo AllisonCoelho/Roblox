@@ -3,6 +3,7 @@
 --
 -- Sorte 1.00 preserva 1/chance; sorte superior usa pesos por raridade normalizados.
 -- A primeira aura e reserva: recebe a probabilidade que sobra das demais.
+local Catalogo = require(script.Parent.AurasOriginaisV2)
 local Probabilidades = require(script.Parent.Probabilidades)
 local Auras = {}
 
@@ -35,41 +36,14 @@ Auras.Tiers = {
 -- Auras raras a partir desta chance geram anúncio para o servidor inteiro
 Auras.ANUNCIO_MINIMO = 1000
 
--- Marca da aura de reserva (a primeira): a chance real é calculada a partir das outras
-local CHANCE_RESERVA = 0
-
--- Nomes originais (sem referência a obras existentes). Ordem: mais comum -> mais rara.
-local DEFINICOES = {
-	{ "faisca", "Faísca", CHANCE_RESERVA, "FFF1A8", "FFB13D", "brilho" },
-	{ "nevoa", "Névoa", 5, "DDE6F0", "9AA8B8", "nevoa" },
-	{ "brasa", "Brasa", 7, "FF9A4D", "D9480F", "chama" },
-	{ "orvalho", "Orvalho", 9, "B8F2FF", "4CC9F0", "brilho" },
-	{ "folha_dancante", "Folha Dançante", 12, "B6F27A", "3FA34D", "nevoa" },
-	{ "pedra_viva", "Pedra Viva", 16, "D8C3A5", "8D6E4C", "nevoa" },
-	{ "mare_calma", "Maré Calma", 20, "7FD8FF", "1E6FD9", "nevoa" },
-	{ "brasa_sussurrante", "Brasa Sussurrante", 30, "FFC46B", "FF5A1F", "chama" },
-	{ "vento_cortante", "Vento Cortante", 45, "E8FFF6", "6FE3C1", "brilho" },
-	{ "raiz_antiga", "Raiz Antiga", 60, "C9E39A", "5C7A2E", "nevoa" },
-	{ "gelo_fino", "Gelo Fino", 80, "E6FBFF", "7CC4FF", "brilho" },
-	{ "trovao_jovem", "Trovão Jovem", 100, "FFF6A0", "F5C400", "brilho" },
-	{ "lotus_rubra", "Lótus Rubra", 150, "FF9EC1", "E0245E", "brilho" },
-	{ "pluma_celeste", "Pluma Celeste", 250, "FFFFFF", "9FD3FF", "nevoa" },
-	{ "chama_azul", "Chama Azul", 400, "9EE7FF", "1F6BFF", "chama" },
-	{ "eco_do_vazio", "Eco do Vazio", 500, "B79CFF", "2A0E5C", "nevoa" },
-	{ "cristal_lunar", "Cristal Lunar", 750, "F0F4FF", "A3B4FF", "brilho" },
-	{ "tempestade_rubra", "Tempestade Rubra", 1000, "FF7A7A", "B3001B", "chama" },
-	{ "sombra_gemea", "Sombra Gêmea", 1500, "8A7FA8", "1A1026", "nevoa" },
-	{ "sol_nascente", "Sol Nascente", 2500, "FFE7A3", "FF7A00", "chama" },
-	{ "dragao_de_jade", "Dragão de Jade", 5000, "A8FFCF", "00A86B", "chama" },
-	{ "aurora_boreal", "Aurora Boreal", 7500, "7CFFCB", "8B5CF6", "nevoa" },
-	{ "coracao_estelar", "Coração Estelar", 10000, "FFF3B0", "FF5FA2", "brilho" },
-	{ "lamina_do_crepusculo", "Lâmina do Crepúsculo", 25000, "FFB38A", "6A1B9A", "brilho" },
-	{ "lotus_celestial", "Lótus Celestial", 50000, "FFFFFF", "FFB3E6", "brilho" },
-	{ "fenix_eterna", "Fênix Eterna", 100000, "FFE066", "FF3D00", "chama" },
-	{ "eclipse_carmesim", "Eclipse Carmesim", 250000, "FF2E4D", "120008", "chama" },
-	{ "olho_do_abismo", "Olho do Abismo", 500000, "7DF9FF", "05001A", "nevoa" },
-	{ "nebulosa_primordial", "Nebulosa Primordial", 750000, "FF8AF0", "3A0CA3", "nevoa" },
-	{ "despertar_absoluto", "Despertar Absoluto", 1000000, "FFFFFF", "FFD700", "brilho" },
+-- Estilo dos ícones, da arena e dos efeitos genéricos. As malhas usam o motor das originais.
+local ESTILO_POR_FAMILIA: { [string]: string } = {
+	Forja = "chama",
+	["Fênix"] = "chama",
+	["Espírito"] = "nevoa",
+	Abismo = "nevoa",
+	Fenda = "nevoa",
+	Oceano = "nevoa",
 }
 
 function Auras.tierDe(chance: number): number
@@ -85,34 +59,29 @@ end
 Auras.lista = {} :: { Aura }
 Auras.porId = {} :: { [string]: Aura }
 
--- Probabilidade somada de todas as auras exceto a de reserva
-local somaOutras = 0
-for i = 2, #DEFINICOES do
-	somaOutras += 1 / DEFINICOES[i][3]
-end
-assert(somaOutras < 1, "As chances das auras somam 100% ou mais: aumente o 1 em N das comuns")
-Auras.PROBABILIDADE_RESERVA = 1 - somaOutras
-DEFINICOES[1][3] = 1 / Auras.PROBABILIDADE_RESERVA
+Auras.PROBABILIDADE_RESERVA = Catalogo.PROBABILIDADE_RESERVA
 
-for i, d in DEFINICOES do
+for i, d in Catalogo.lista do
+	local tier = Auras.tierDe(d.chance)
+	assert(Auras.Tiers[tier].nome == d.tier, "raridade inválida para " .. d.id)
 	local aura: Aura = {
-		id = d[1],
-		nome = d[2],
-		chance = d[3],
-		pBase = 1 / d[3],
-		tierNome = Auras.Tiers[Auras.tierDe(d[3])].nome,
-		reserva = i == 1,
-		cores = { d[4], d[5] },
-		estilo = d[6],
-		tier = Auras.tierDe(d[3]),
+		id = d.id,
+		nome = d.nome,
+		chance = d.chance,
+		pBase = if d.id == Catalogo.RESERVA then Catalogo.PROBABILIDADE_RESERVA else 1 / d.chance,
+		tierNome = d.tier,
+		reserva = d.id == Catalogo.RESERVA,
+		cores = d.cores,
+		estilo = ESTILO_POR_FAMILIA[d.familia] or "brilho",
+		tier = tier,
 		ordem = i,
 	}
 	table.insert(Auras.lista, aura)
 	Auras.porId[aura.id] = aura
 end
 
--- Tabelas dos 11 niveis de Transcendencia em cache, montadas uma vez.
--- Fontes futuras de sorte podem usar ate 3.00 sem provocar overflow de probabilidades.
+-- Tabelas dos 11 niveis de Transcendencia em cache, montadas uma vez. A sorte total
+-- (Dados/PontosAura: evolução x Transcendência x pets) vai até Probabilidades.MAX_SORTE.
 Probabilidades.validarCatalogo(Auras.lista)
 local precalculadas: { [number]: { pesos: { number }, total: number } } = {}
 for nivel = 0, Probabilidades.MAX_NIVEL do
@@ -121,6 +90,10 @@ for nivel = 0, Probabilidades.MAX_NIVEL do
 	precalculadas[nivel] = { pesos = pesos, total = total }
 end
 
+-- Outras sortes (evolução e pets): guarda as últimas usadas (o Índice pede 67 vezes seguidas)
+local recentes: { [number]: { pesos: { number }, total: number } } = {}
+local quantasRecentes = 0
+
 local function pesosPara(sorte: number?): ({ number }, number)
 	local s = Probabilidades.sorteValida(sorte)
 	local nivel = math.floor((s - 1) / 0.05 + 0.5)
@@ -128,7 +101,18 @@ local function pesosPara(sorte: number?): ({ number }, number)
 	if pronta and math.abs(s - Probabilidades.sorteTranscendencia(nivel)) < 1e-9 then
 		return pronta.pesos, pronta.total
 	end
-	return Probabilidades.distribuicao(Auras.lista, s)
+	local guardada = recentes[s]
+	if guardada then
+		return guardada.pesos, guardada.total
+	end
+	local pesos, total = Probabilidades.distribuicao(Auras.lista, s)
+	if quantasRecentes >= 32 then
+		table.clear(recentes)
+		quantasRecentes = 0
+	end
+	recentes[s] = { pesos = pesos, total = total }
+	quantasRecentes += 1
+	return pesos, total
 end
 
 function Auras.sorteTranscendencia(nivel: any): number

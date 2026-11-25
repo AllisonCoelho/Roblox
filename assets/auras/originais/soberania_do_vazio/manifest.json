@@ -1,0 +1,72 @@
+{
+  "auraId": "soberania_do_vazio",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/soberania_do_vazio",
+  "templateFile": "assets/roblox/auras_originais/soberania_do_vazio.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "coroa",
+      "triangles": 464,
+      "sizeStuds": [
+        1.594,
+        0.7983,
+        1.5965
+      ],
+      "centerFromPivot": [
+        0.0026,
+        0.3508,
+        -0.0004
+      ],
+      "meshId": null
+    },
+    {
+      "name": "monolito",
+      "triangles": 20,
+      "sizeStuds": [
+        0.48,
+        2.05,
+        0.26
+      ],
+      "centerFromPivot": [
+        0.0,
+        0.025,
+        -0.0
+      ],
+      "meshId": null
+    },
+    {
+      "name": "estrela_vazio",
+      "triangles": 64,
+      "sizeStuds": [
+        3.0166,
+        2.7612,
+        0.06
+      ],
+      "centerFromPivot": [
+        0.1709,
+        0.1027,
+        -0.0
+      ],
+      "meshId": null
+    },
+    {
+      "name": "estrela_borda",
+      "triangles": 160,
+      "sizeStuds": [
+        3.2469,
+        2.9493,
+        0.0696
+      ],
+      "centerFromPivot": [
+        0.18,
+        0.0937,
+        -0.0
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 9
+}

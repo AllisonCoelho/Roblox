@@ -1,0 +1,57 @@
+{
+  "auraId": "oceano_sem_fundo",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/oceano_sem_fundo",
+  "templateFile": "assets/roblox/auras_originais/oceano_sem_fundo.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "janela",
+      "triangles": 12,
+      "sizeStuds": [
+        1.6,
+        3.2,
+        0.08
+      ],
+      "centerFromPivot": [
+        0.0,
+        0.0,
+        -0.0
+      ],
+      "meshId": null
+    },
+    {
+      "name": "moldura",
+      "triangles": 60,
+      "sizeStuds": [
+        1.9355,
+        3.4468,
+        0.1399
+      ],
+      "centerFromPivot": [
+        -0.0014,
+        0.0069,
+        0.06
+      ],
+      "meshId": null
+    },
+    {
+      "name": "peixe",
+      "triangles": 48,
+      "sizeStuds": [
+        0.7221,
+        0.24,
+        0.1273
+      ],
+      "centerFromPivot": [
+        0.0589,
+        0.0,
+        -0.0
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 5
+}

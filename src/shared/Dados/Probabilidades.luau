@@ -11,7 +11,7 @@ local EXPOENTES: { [string]: number } = {
 	["Mítico"] = 1.6,
 	Divino = 1.8,
 }
-Probabilidades.MAX_SORTE = 3
+Probabilidades.MAX_SORTE = 20
 Probabilidades.MAX_NIVEL = 10
 
 local function finito(valor: any): boolean

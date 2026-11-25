@@ -6,12 +6,15 @@
 -- Não é malha com pele/ossos: cada peça é rígida e gira em volta da sua junta (SoberanoPecas).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Debris = game:GetService("Debris")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 local Dados = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Dados")
 local Pecas = require(Dados:WaitForChild("SoberanoPecas"))
 local ArenaCena = require(Dados:WaitForChild("ArenaCena"))
+local Animacoes = require(Dados:WaitForChild("ArenaAnimacoes"))
 local Malha = require(script.Parent.Parent:WaitForChild("Nexo3D"):WaitForChild("Malha"))
 
 local PrimeiroSoberano = {}
@@ -44,62 +47,48 @@ local function suave(x: number): number
 	return a * a * (3 - 2 * a)
 end
 
--- As poses usam o relógio replicado. Quem passa pela Arena vê a mesma entrada e os ataques.
-local function poseDuelo(
-	p: { [string]: Peca },
-	raiz: BasePart,
-	origem: CFrame
-): (CFrame, boolean, number)
+-- O duelo usa o relógio replicado: quem passa pela Arena vê a mesma entrada e os mesmos golpes.
+-- Devolve a pose do quadro, se ela é de um golpe (brilho), o nome do clipe e o tempo dentro dele.
+local AVISOS = {
+	pesado = "avisoPesado",
+	investida = "avisoInvestida",
+	baluarte = "avisoBaluarte",
+}
+local ATAQUES = { investida = true, pesado = true, baluarte = true }
+
+local function poseDuelo(raiz: BasePart): (Animacoes.Pose?, number, string?, number, number)
 	local agora = Workspace:GetServerTimeNow()
 	local inicio = raiz:GetAttribute("DueloInicio")
 	if raiz:GetAttribute("Estado") ~= "DESAFIO_EM_ANDAMENTO" or type(inicio) ~= "number" then
-		return origem, false, 0
+		return nil, 0, nil, 0, 0
 	end
-
 	local t = agora - inicio
-	local emPe = t >= 0.34
-	local avanco = suave((t - 0.45) / 1.18)
-	local de = origem * CFrame.new(0, 0, -2.1)
-	local base = origem:Lerp(de, suave(t / 0.44)):Lerp(ArenaCena.soberano, avanco)
-	local andar = if avanco > 0 and avanco < 1 then math.sin(avanco * math.pi * 5) else 0
-	local altura = if emPe then 1.35 else 1.35 * suave(t / 0.34)
-	local arma = raiz:GetAttribute("DueloGolpe")
-	local intencao = raiz:GetAttribute("DueloIntencao")
-	local quando = raiz:GetAttribute("DueloGolpeEm")
-	local preparo, corte, recuo, derrota = 0, 0, 0, 0
-	if arma and type(quando) == "number" then
-		local f = math.max(0, agora - quando)
-		local impacto = if arma == "pesado" then 0.46 else 0.27
-		local fim = impacto + (if arma == "pesado" then 0.62 else 0.42)
-		if arma == "pesado" or arma == "investida" then
-			preparo = 1 - suave(f / impacto)
-			corte = suave(f / impacto) * (1 - suave((f - impacto) / (fim - impacto)))
-			recuo = corte * (if arma == "pesado" then 7.7 else 6.3)
-		elseif arma == "baluarte" then
-			preparo = 1 - suave(f / fim)
-		elseif arma == "derrota" then
-			derrota = suave(f / 0.66)
+	local nome = raiz:GetAttribute("DueloAnim")
+	local em = raiz:GetAttribute("DueloAnimEm")
+	local clipe = if type(nome) == "string" then Animacoes.SOBERANO[nome] else nil
+	if clipe and type(em) == "number" and agora >= em then
+		local tc = agora - em
+		if tc < clipe.duracao or clipe.segurar then
+			local brilho = if ATAQUES[nome]
+				then math.sin(math.min(tc / clipe.duracao, 1) * math.pi)
+				else 0
+			return Animacoes.amostrar(clipe, tc), brilho, nome, tc, t
 		end
-	elseif intencao == "pesado" or intencao == "baluarte" then
-		preparo = if intencao == "pesado" then 0.83 else 0.53
 	end
+	local entrada = Animacoes.SOBERANO.entrada
+	if t < entrada.duracao then
+		return Animacoes.amostrar(entrada, t), 0, "entrada", t, t
+	end
+	local intencao = raiz:GetAttribute("DueloIntencao")
+	local aviso = if type(intencao) == "string" then AVISOS[intencao] else nil
+	local laco = Animacoes.SOBERANO[aviso or "espera"]
+	return Animacoes.amostrar(laco, os.clock()), if intencao == "pesado" then 0.5 else 0, nil, 0, t
+end
 
-	local rad = math.rad
-	if emPe then
-		base *= CFrame.new(0, math.abs(andar) * 0.12 - derrota * 0.7, -recuo) * CFrame.Angles(
-			rad(-11 * corte - 15 * derrota),
-			0,
-			rad(21 * derrota)
-		)
-		p.braco_dir.giro =
-			CFrame.Angles(rad(37 + preparo * 82 - corte * 62), 0, rad(18 - corte * 30))
-		p.braco_esq.giro = CFrame.Angles(rad(46 - preparo * 38 + corte * 14), 0, rad(-14))
-		p.antebraco_dir.giro = CFrame.Angles(rad(16 - preparo * 32), 0, 0)
-		p.antebraco_esq.giro = CFrame.Angles(rad(18 - preparo * 35), 0, 0)
-		p.cabeca.giro = CFrame.Angles(rad(-6 + derrota * 22), 0, 0)
-	end
-	p.torso.giro = CFrame.new(0, altura, 0) * CFrame.Angles(rad(-5 * andar - 8 * corte), 0, 0)
-	return base, emPe, math.max(preparo * 0.6, corte)
+local PERNAS = { "quadril_duelo", "coxa_dir", "coxa_esq", "canela_dir", "canela_esq" }
+local DUELO: { [string]: boolean } = {}
+for _, d in Pecas.duelo :: { { [string]: any } } do
+	DUELO[d.nome] = true
 end
 
 local function montar(modelo: Model, raiz: BasePart): { [string]: Peca }
@@ -109,14 +98,9 @@ local function montar(modelo: Model, raiz: BasePart): { [string]: Peca }
 	local pecas: { [string]: Peca } = {}
 	local ok, erro = pcall(function()
 		local descricoes = table.clone(Pecas.pecas) :: { { [string]: any } }
-		table.insert(
-			descricoes,
-			{ nome = "base_duelo", malha = "soberano_base_duelo", material = "Metal" }
-		)
-		table.insert(
-			descricoes,
-			{ nome = "lamina_duelo", malha = "soberano_lamina_duelo", material = "Metal" }
-		)
+		for _, d in Pecas.duelo :: { { [string]: any } } do
+			table.insert(descricoes, d)
+		end
 		for _, d in descricoes do
 			local parte, centro = Malha.criar(d.malha, prontas)
 			parte.Name = d.nome
@@ -125,7 +109,7 @@ local function montar(modelo: Model, raiz: BasePart): { [string]: Peca }
 			if d.material == "Neon" then
 				parte.Color = COR_LUZ -- as peças de luz são brancas nos vértices: a cor vem daqui
 			end
-			if d.nome == "base_duelo" or d.nome == "lamina_duelo" then
+			if DUELO[d.nome] then
 				parte.Transparency = 1
 			end
 			parte.Parent = pasta
@@ -234,6 +218,48 @@ function PrimeiroSoberano.iniciar()
 		end
 	end)
 
+	-- estado do duelo neste cliente
+	local poseAnterior: Animacoes.Pose? = nil
+	local ultimoClipe: string? = nil
+	local ultimoTempoClipe = 0
+
+	-- anel de poeira e luz que corre pelo piso quando ele bate no chão
+	local function pousar(onde: CFrame, forte: boolean)
+		if prefs.qualidadeBaixa then
+			return
+		end
+		local chao = onde * CFrame.new(0, 0.08, 0) * CFrame.Angles(0, 0, math.rad(90))
+		for i, cor in { COR_LUZ, Color3.fromHex("8C8296") } do
+			local anel = Instance.new("Part")
+			anel.Name = "PousoSoberano"
+			anel.Shape = Enum.PartType.Cylinder
+			anel.Material = if i == 1 then Enum.Material.Neon else Enum.Material.SmoothPlastic
+			anel.Color = cor
+			anel.Anchored = true
+			anel.CanCollide = false
+			anel.CanQuery = false
+			anel.CanTouch = false
+			anel.CastShadow = false
+			anel.Transparency = if i == 1 then 0.35 else 0.55
+			anel.Size = Vector3.new(0.05, 2, 2)
+			anel.CFrame = chao
+			anel.Parent = modelo
+			local raio = (if forte then 22 else 15) * (if i == 1 then 1 else 0.7)
+			local duracao = if i == 1 then 0.5 else 0.8
+			TweenService
+				:Create(
+					anel,
+					TweenInfo.new(duracao, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+					{
+						Size = Vector3.new(0.05, raio, raio),
+						Transparency = 1,
+					}
+				)
+				:Play()
+			Debris:AddItem(anel, duracao + 0.1)
+		end
+	end
+
 	RunService.Heartbeat:Connect(function(dt)
 		if not modelo.Parent then
 			return
@@ -297,10 +323,101 @@ function PrimeiroSoberano.iniciar()
 			math.rad(-1.1) * math.sin(t * 0.55 + 0.7) * capa
 		)
 
-		local referencial, emPe, intensidade = poseDuelo(pecas, raiz, origem)
+		-- duelo: a pose do clipe substitui o repouso; o tronco passa a ser filho do quadril
+		local pose, intensidade, clipeNome, tClipe, tDuelo = poseDuelo(raiz)
+		local referencial = origem
+		local emPe = false
+		local quadrilTotal = CFrame.identity
+		if pose then
+			if prefs.movimentoReduzido then
+				-- sem salto alto: o corpo anda o mesmo trajeto, rente ao chão
+				pose.raiz2 = math.min(pose.raiz2 or 0, 0.4)
+				pose.peD1 = math.min(pose.peD1 or 0, 0.8)
+				pose.peE1 = math.min(pose.peE1 or 0, 0.8)
+			end
+			local anterior = poseAnterior
+			if anterior and clipeNome ~= "entrada" then
+				pose = Animacoes.misturar(
+					anterior,
+					pose,
+					1 - math.exp(-dt * (if clipeNome then 26 else 8))
+				)
+			end
+			poseAnterior = pose
+			emPe = tDuelo >= 0.34
+			local de = origem * CFrame.new(0, 0, -2.1)
+			local base =
+				origem:Lerp(de, suave(tDuelo / 0.44)):Lerp(ArenaCena.soberano, pose.viagem1 or 1)
+			referencial = base
+				* CFrame.new(pose.raiz1 or 0, pose.raiz2 or 0, pose.raiz3 or 0)
+				* CFrame.Angles(
+					math.rad(pose.raiz4 or 0),
+					math.rad(pose.raiz5 or 0),
+					math.rad(pose.raiz6 or 0)
+				)
+			local function g(nome: string): CFrame
+				return CFrame.Angles(
+					math.rad(pose[nome .. "1"] or 0),
+					math.rad(pose[nome .. "2"] or 0),
+					math.rad(pose[nome .. "3"] or 0)
+				)
+			end
+			pecas.torso.giro = if emPe
+				then g("torso") * CFrame.Angles(math.rad(0.7) * respira * amp, 0, 0)
+				else CFrame.new(0, 1.35 * suave(math.clamp(pose.erguer1 or 1, 0, 1)), 0)
+			pecas.cabeca.giro = g("cabeca")
+			pecas.braco_dir.giro = g("bracoD")
+			pecas.antebraco_dir.giro = g("antebracoD")
+			pecas.braco_esq.giro = g("bracoE")
+			pecas.antebraco_esq.giro = g("antebracoE")
+			if emPe then
+				-- pernas: cinemática inversa a partir dos pés do clipe (ficam plantados no chão)
+				local pernas =
+					Animacoes.resolverPernas(table.clone(pose), Pecas.pernas.dir, Pecas.pernas.esq)
+				local q = pecas.quadril_duelo
+				local jq = q.junta :: Vector3
+				q.total = CFrame.new(jq) * g("quadril") * CFrame.new(-jq)
+				quadrilTotal = q.total * CFrame.new(0, 1.35, 0)
+				for _, lado in { { "dir", "D" }, { "esq", "E" } } do
+					local coxa = pecas["coxa_" .. lado[1]]
+					local canela = pecas["canela_" .. lado[1]]
+					local jc, jj = coxa.junta :: Vector3, canela.junta :: Vector3
+					coxa.total = q.total
+						* CFrame.new(jc)
+						* CFrame.Angles(math.rad(pernas["quadril" .. lado[2] .. "1"] or 0), 0, 0)
+						* CFrame.new(-jc)
+					canela.total = coxa.total
+						* CFrame.new(jj)
+						* CFrame.Angles(math.rad(pernas["joelho" .. lado[2] .. "1"] or 0), 0, 0)
+						* CFrame.new(-jj)
+				end
+			end
+			-- poeira no pouso do salto e no golpe que racha o chão
+			if clipeNome then
+				for _, instante in Animacoes.POUSOS[clipeNome] or {} do
+					if
+						tClipe >= instante
+						and ultimoTempoClipe < instante
+						and ultimoClipe == clipeNome
+					then
+						pousar(
+							base * CFrame.new(pose.raiz1 or 0, 0, pose.raiz3 or 0),
+							clipeNome == "pesado"
+						)
+					end
+				end
+			end
+			ultimoClipe, ultimoTempoClipe = clipeNome, tClipe
+		else
+			poseAnterior = nil
+			ultimoClipe = nil
+		end
 		local guardiao = raiz:GetAttribute("Estado") == "DESAFIO_EM_ANDAMENTO"
 		for _, p in ordem do
-			local base = if p.pai then p.pai.total else CFrame.identity
+			local base = if p.pai
+				then p.pai.total
+				elseif emPe and p == pecas.torso then quadrilTotal
+				else CFrame.identity
 			local junta = p.junta
 			if junta then
 				p.total = base * CFrame.new(junta) * p.giro * CFrame.new(-junta)
@@ -312,10 +429,14 @@ function PrimeiroSoberano.iniciar()
 
 		pecas.base.parte.Transparency = if emPe then 1 else 0
 		pecas.espada.parte.Transparency = if emPe then 1 else 0
-		pecas.base_duelo.parte.Transparency = if emPe then 0 else 1
-		pecas.lamina_duelo.parte.Transparency = if emPe then 0 else 1
+		for nome in DUELO do
+			pecas[nome].parte.Transparency = if emPe then 0 else 1
+		end
 		if emPe then
-			pecas.base_duelo.parte.CFrame = referencial * CFrame.new(pecas.base_duelo.centro)
+			for _, nome in PERNAS do
+				local p = pecas[nome]
+				p.parte.CFrame = referencial * p.total * CFrame.new(p.centro)
+			end
 			pecas.lamina_duelo.parte.CFrame = referencial
 				* pecas.antebraco_dir.total
 				* CFrame.new(3.0, 3.75, -2.35)

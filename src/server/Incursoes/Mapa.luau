@@ -78,7 +78,8 @@ function Mapa.construir(
 	universo: string,
 	n: number,
 	origem: CFrame,
-	seed: number
+	seed: number,
+	quantosNucleos: number? -- tipos de andar sem purificação pedem 0 (ou 1 na Escolta)
 ): Andar
 	local u = Incursoes.porId[universo]
 	local rng = Random.new(seed)
@@ -110,8 +111,9 @@ function Mapa.construir(
 	local nucleos: { BasePart } = {}
 	local ocupados: { Vector3 } = { spawn.Position, saida.Position }
 	local giroBase = rng:NextNumber(0, math.pi * 2)
-	for k = 1, cfg.nucleos do
-		local a = giroBase + 2 * math.pi * (k - 1) / cfg.nucleos + rng:NextNumber(-0.25, 0.25)
+	local total = quantosNucleos or cfg.nucleos
+	for k = 1, total do
+		local a = giroBase + 2 * math.pi * (k - 1) / total + rng:NextNumber(-0.25, 0.25)
 		local r = rng:NextNumber(20, 34)
 		local pivo = origem * CFrame.new(math.sin(a) * r, TOPO, math.cos(a) * r)
 		local base = Mapa.peca(pasta, "inc_" .. universo .. "_nucleo", pivo, 1, corPedra)

@@ -18,11 +18,9 @@ local Nexo = require(script.Parent.Parent.Mundo.Nexo)
 local ServicoIncursoes = require(script.Parent.Parent.Incursoes.Servico)
 
 local PainelDev = {}
-local NOME_CONTA_DEV = "umrnoobzz"
 local studioTeste = RunService:IsStudio() and Config.ModoTeste
 local privada = PermissaoDev.experienciaPrivada(game.GameId, game.PlaceId)
 local dono: number? = if game.CreatorType == Enum.CreatorType.User then game.CreatorId else nil
-local contaDev: number? = nil
 local renascendo: { [Player]: boolean } = {}
 
 local function autorizado(player: Player): boolean
@@ -33,7 +31,7 @@ local function autorizado(player: Player): boolean
 			studioTeste,
 			dono,
 			player.UserId,
-			contaDev
+			PermissaoDev.contaDeTeste(player.Name, player.UserId)
 		)
 end
 
@@ -167,6 +165,21 @@ local function fragmentos(player: Player, total: any): (boolean, string?)
 	return true, "Fragmentos atualizados na sessão de teste"
 end
 
+-- Só na sessão de teste (perfil temporário): nada disto chega ao DataStore
+local function pontosAura(player: Player, total: any): (boolean, string?)
+	if not inteiro(total) then
+		return false, "Informe um inteiro de 0 a 1 bilhão"
+	end
+	local estado = estadoDeTeste(player)
+	if not estado then
+		return false, "Aguardando o perfil carregar"
+	end
+	estado.poder.pontos = total
+	player:SetAttribute("PontosAura", total)
+	Dados.enviar(player)
+	return true, "Pontos de Aura atualizados na sessão de teste"
+end
+
 local function incursao(player: Player, universo: any, andar: any): (boolean, string?)
 	if type(universo) ~= "string" or not Incursoes.porId[universo] then
 		return false, "Universo desconhecido"
@@ -224,6 +237,7 @@ local comandos: { [string]: Comando } = {
 	quantidade = quantidade,
 	girar = girar,
 	fragmentos = fragmentos,
+	pontosAura = pontosAura,
 	incursao = incursao,
 	previa = AuraVisual.definirPrevia,
 	ritual = function(_, indice)
@@ -254,10 +268,6 @@ local function executar(player: Player, nome: any, ...: any): (boolean, string?,
 end
 
 local function marcar(player: Player)
-	-- A conta de teste é vinculada ao UserId do Player autenticado pelo Roblox.
-	if privada and string.lower(player.Name) == NOME_CONTA_DEV and player.UserId > 0 then
-		contaDev = player.UserId
-	end
 	if autorizado(player) then
 		player:SetAttribute("PainelDev", true)
 	end

@@ -22,7 +22,14 @@ local cache: { [Player]: { [string]: boolean } } = {}
 local ouvintes: { (Player) -> () } = {}
 
 local function dev(player: Player): boolean
-	return PermissaoDev.autoriza(game.GameId, game.PlaceId, studioTeste, dono, player.UserId, nil)
+	return PermissaoDev.autoriza(
+		game.GameId,
+		game.PlaceId,
+		studioTeste,
+		dono,
+		player.UserId,
+		PermissaoDev.contaDeTeste(player.Name, player.UserId)
+	)
 end
 
 local function definir(player: Player, id: string, tem: boolean)

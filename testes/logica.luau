@@ -13,6 +13,98 @@ igual("negativo", Formato.inteiro(-1500), "-1.500")
 igual("abreviado", Formato.curto(15000), "15 mil")
 igual("tempo", Formato.tempo(42), "0:42")
 
+-- O catálogo de dados e o catálogo do sorteio usam os mesmos IDs, nomes e chances.
+do
+	local V2 = req("AurasOriginaisV2")
+	local AurasAtuais = req("Auras")
+	igual("v2: 67 auras", #V2.lista, 67)
+	local ids, contagem = 0, {}
+	for i, a in V2.lista do
+		igual("v2: numeração " .. a.id, a.numero, i)
+		if V2.porId[a.id] == a then
+			ids += 1
+		end
+		contagem[a.tier] = (contagem[a.tier] or 0) + 1
+		local ativa = AurasAtuais.porId[a.id]
+		igual("v2: aura disponível no sorteio " .. a.id, ativa ~= nil, true)
+		igual("v2: chance ativa " .. a.id, ativa and ativa.chance, a.chance)
+		local tier = AurasAtuais.Tiers[AurasAtuais.tierDe(math.floor(a.chance))].nome
+		igual("v2: raridade bate com a chance " .. a.id, a.tier, tier)
+		if i > 1 then
+			igual("v2: ordem crescente " .. a.id, a.chance > V2.lista[i - 1].chance, true)
+		end
+	end
+	igual("v2: ids únicos", ids, 67)
+	for tier, n in
+		{
+			Comum = 4,
+			Incomum = 10,
+			Raro = 15,
+			["Épico"] = 15,
+			["Lendário"] = 12,
+			["Mítico"] = 7,
+			Divino = 4,
+		}
+	do
+		igual("v2: quantidade " .. tier, contagem[tier], n)
+	end
+	igual(
+		"v2: soma das explícitas",
+		math.abs(V2.SOMA_EXPLICITAS - 0.7900337720738687) < 1e-12,
+		true
+	)
+	igual("v2: reserva ~1 em 4,76", math.floor(V2.porId.centelha_do_nexo.chance * 100), 476)
+	local total = 0
+	for _, a in V2.lista do
+		total += 1 / a.chance
+	end
+	igual("v2: probabilidades somam 100%", math.abs(total - 1) < 1e-9, true)
+	igual("v2: lote inicial existe", #V2.LOTE_INICIAL, 7)
+	for _, id in V2.LOTE_INICIAL do
+		igual("v2: prévia de VFX " .. id, req("AurasVfx")[id], true)
+	end
+	for _, id in V2.LOTE_INICIAL do
+		igual("v2: lote " .. id, V2.porId[id] ~= nil, true)
+	end
+end
+
+-- Efeitos das 67: todas têm receita, presets existem e nenhuma receita repete outra
+do
+	local V2 = req("AurasOriginaisV2")
+	local E = req("EfeitosOriginais")
+	local assinaturas, repetidas, semReceita, presetFaltando = {}, 0, 0, 0
+	for _, a in V2.lista do
+		local r = E.AURAS[a.id]
+		if not r then
+			semReceita += 1
+			continue
+		end
+		local partes = {}
+		for _, c in r.camadas do
+			if not E.PRESETS[c[1]] then
+				presetFaltando += 1
+			end
+			table.insert(partes, c[1] .. ":" .. c[2])
+		end
+		table.sort(partes)
+		local chave = table.concat(partes, "|")
+		if assinaturas[chave] then
+			repetidas += 1
+			print("receita repetida: " .. a.id .. " = " .. assinaturas[chave])
+		end
+		assinaturas[chave] = a.id
+		igual("efeitos: 2+ camadas " .. a.id, #r.camadas >= 2, true)
+		igual("efeitos: prévia " .. a.id, req("AurasVfx")[a.id], true)
+	end
+	igual("efeitos: todas as 67 têm receita", semReceita, 0)
+	igual("efeitos: presets existem", presetFaltando, 0)
+	igual("efeitos: receitas únicas", repetidas, 0)
+end
+
+-- Senbonzakura: efeito de prévia, nunca entra no sorteio sem autorização do dono
+igual("senbonzakura como prévia de VFX", req("AurasVfx").senbonzakura, true)
+igual("senbonzakura fora do catálogo sorteável", req("Auras").porId.senbonzakura, nil)
+
 -- Combate das Incursões (fase 1)
 do
 	local C = req("Combate")
@@ -127,6 +219,154 @@ do
 	)
 end
 
+-- Incursões 2.0: andares variados, inimigos, Bênçãos e nota
+do
+	local R = req("IncursoesRun")
+	local semente = 0
+	local function aleatorio()
+		semente = (semente * 1103515245 + 12345) % 2147483648
+		return semente / 2147483648
+	end
+	for rodada = 1, 50 do
+		local andares = R.sortearAndares(5, aleatorio)
+		igual("run: 5 andares", #andares, 5)
+		igual("run: último é o Guardião", andares[5], "guardiao")
+		igual("run: 1º andar nunca é Cofre", andares[1] ~= "cofre" and andares[1] ~= "caca", true)
+		for n = 2, 4 do
+			if andares[n] == andares[n - 1] then
+				igual("run: não repete em seguida (rodada " .. rodada .. ")", false, true)
+			end
+		end
+	end
+	for _ = 1, 30 do
+		igual(
+			"run: andar 1 só Sombra/Corredor",
+			({ sombra = true, corredor = true })[R.sortearArquetipo(1, aleatorio)],
+			true
+		)
+		local afixos = R.sortearAfixos(3, aleatorio)
+		igual("run: 2 afixos no andar 3", #afixos, 2)
+		igual("run: afixos diferentes", afixos[1] ~= afixos[2], true)
+	end
+	local tem = {}
+	for _ = 1, #R.BENCAOS do
+		local ofertas = R.ofertas(tem, aleatorio, 1)
+		igual("run: sempre há oferta enquanto sobra Bênção", #ofertas, 1)
+		tem[ofertas[1]] = true
+	end
+	igual("run: sem repetição de Bênção", #R.ofertas(tem, aleatorio), 0)
+	local tres = R.ofertas({}, aleatorio)
+	igual("run: 3 ofertas", #tres, 3)
+	igual(
+		"run: ofertas distintas",
+		tres[1] ~= tres[2] and tres[2] ~= tres[3] and tres[1] ~= tres[3],
+		true
+	)
+	local m = R.modificadores({ furia = true, ganancia = true, vigor = true })
+	igual("run: dano somado", m.dano, 0.2)
+	igual("run: vida soma vigor e ganância", math.floor(m.vidaMax * 100 + 0.5), 15)
+	igual("run: nota S", R.nota("purificacao", 60, 0), "S")
+	igual("run: nota A com uma queda", R.nota("purificacao", 60, 1), "A")
+	igual("run: nota B lenta", R.nota("purificacao", 400, 0), "B")
+	igual("run: Horda só conta quedas", R.nota("horda", 999, 0), "S")
+	igual(
+		"run: nota S paga mais",
+		R.MULT_NOTA.S > R.MULT_NOTA.A and R.MULT_NOTA.A > R.MULT_NOTA.B,
+		true
+	)
+	-- Fase B: preparo (Marcas e Pesadelo) vindo do cliente é sempre validado
+	local vazio = R.preparo(nil)
+	igual("preparo: padrão sem Pesadelo", vazio.pesadelo, false)
+	igual("preparo: padrão normal", R.descreverPreparo(vazio), "Normal")
+	igual("preparo: padrão x1", R.multPreparo(vazio), 1)
+	local lixo =
+		R.preparo({ pesadelo = "sim", marcas = { inventada = true, densas = 1, vidro = true } })
+	igual("preparo: pesadelo só com true", lixo.pesadelo, false)
+	igual("preparo: ignora marca inventada", lixo.marcas.inventada, nil)
+	igual("preparo: ignora valor não booleano", lixo.marcas.densas, nil)
+	igual("preparo: aceita marca válida", lixo.marcas.vidro, true)
+	local tudo = R.preparo({ pesadelo = true, marcas = { densas = true, semVidas = true } })
+	igual(
+		"preparo: pesadelo dobra e marcas somam",
+		math.floor(R.multPreparo(tudo) * 100 + 0.5),
+		350
+	)
+	igual(
+		"preparo: descrição",
+		R.descreverPreparo(tudo),
+		"PESADELO · Hordas Densas · Sem Reviver"
+	)
+	igual("guardião: fases em ordem", R.FASES_GUARDIAO[1] > R.FASES_GUARDIAO[2], true)
+end
+
+-- Incursões fase C: Fenda do Dia, desafios semanais, reviver
+do
+	local D = req("IncursoesDesafios")
+	local R = req("IncursoesRun")
+	local t = 1763337600 -- 17/11/2025 00:00 UTC (segunda-feira)
+	igual("diaria: mesmo dia, mesmo número", D.dia(t), D.dia(t + 86399))
+	igual("diaria: dia seguinte muda", D.dia(t + 86400), D.dia(t) + 1)
+	igual("semana: segunda a domingo iguais", D.semana(t), D.semana(t + 6 * 86400 + 86399))
+	igual("semana: próxima segunda muda", D.semana(t + 7 * 86400), D.semana(t) + 1)
+	local a, b = D.fendaDoDia(D.dia(t)), D.fendaDoDia(D.dia(t))
+	igual("diaria: determinística (universo)", a.universo, b.universo)
+	igual("diaria: determinística (semente)", a.semente, b.semente)
+	local n = 0
+	for id in a.marcas do
+		n += 1
+		igual("diaria: marca válida " .. id, R.marcaPorId[id] ~= nil, true)
+		igual("diaria: nunca Sem Reviver", id ~= "semVidas", true)
+	end
+	igual("diaria: 2 marcas", n, 2)
+	local x, y = D.gerador(5), D.gerador(5)
+	igual("diaria: gerador repetível", x(), y())
+	local s1 = R.sortearAndares(5, D.gerador(a.semente))
+	local s2 = R.sortearAndares(5, D.gerador(a.semente))
+	igual("diaria: mesmos andares para todos", table.concat(s1, ","), table.concat(s2, ","))
+	igual(
+		"diaria: vitória vale mais",
+		D.pontuacao(5, true, 2, 50, 600) > D.pontuacao(5, false, 2, 50, 600),
+		true
+	)
+	igual("diaria: pontuação nunca negativa", D.pontuacao(0, false, 0, 0, 99999) >= 0, true)
+	igual("diaria: recompensa por nível", D.recompensaDia(2), 240)
+	local semana = D.semana(t)
+	local tres = D.desafiosDaSemana(semana)
+	igual("semana: 3 desafios", #tres, 3)
+	igual(
+		"semana: distintos",
+		tres[1] ~= tres[2] and tres[2] ~= tres[3] and tres[1] ~= tres[3],
+		true
+	)
+	local st = D.semanaDe({}, semana)
+	local alvo = D.desafioPorId[tres[1]]
+	igual(
+		"semana: progresso parcial sem prêmio",
+		D.progredir(st, semana, alvo.id, alvo.meta - 1, alvo.id == "sequencia"),
+		0
+	)
+	igual(
+		"semana: completar dá prêmio",
+		D.progredir(st, semana, alvo.id, alvo.meta, alvo.id == "sequencia"),
+		alvo.recompensa
+	)
+	igual("semana: não paga duas vezes", D.progredir(st, semana, alvo.id, 999, false), 0)
+	local fora
+	for _, d in D.DESAFIOS do
+		if not table.find(tres, d.id) then
+			fora = d.id
+			break
+		end
+	end
+	igual(
+		"semana: desafio de outra semana não conta",
+		D.progredir(st, semana, fora, 9999, false),
+		0
+	)
+	igual("semana: semana nova zera", next(D.semanaDe({ semana = st }, semana + 1).progresso), nil)
+	igual("reviver: tempos coerentes", D.REVIVER_TEMPO < D.ABATIDO_ESPERA, true)
+end
+
 local Perfil = req("Perfil")
 local p = Perfil.padrao()
 igual("versao", p.versao, 1)
@@ -214,7 +454,7 @@ igual("possui", Perfil.possui(p, "faisca"), true)
 igual("nao possui", Perfil.possui(p, "brasa"), false)
 
 local Auras = req("Auras")
-igual("30 auras", #Auras.lista, 30)
+igual("67 auras", #Auras.lista, 67)
 local ids, crescente = {}, true
 for i, a in Auras.lista do
 	igual("id unico " .. a.id, ids[a.id], nil)
@@ -224,23 +464,23 @@ for i, a in Auras.lista do
 	end
 end
 igual("chances crescentes", crescente, true)
-igual("mais rara", Auras.lista[30].chance, 1000000)
-igual("tier comum", Auras.porId.faisca.tier, 1)
-igual("tier divino", Auras.porId.despertar_absoluto.tier, 7)
+igual("mais rara", Auras.lista[67].chance, 100000000)
+igual("tier comum", Auras.porId.centelha_do_nexo.tier, 1)
+igual("tier divino", Auras.porId.soberania_do_vazio.tier, 7)
 igual("tier epico", Auras.tierDe(1000), 4)
 igual(
 	"rng 0 = mais rara",
 	Auras.sortear(function()
 		return 0
 	end).id,
-	"despertar_absoluto"
+	"soberania_do_vazio"
 )
 igual(
 	"rng alto = reserva",
 	Auras.sortear(function()
 		return 0.9999
 	end).id,
-	"faisca"
+	"centelha_do_nexo"
 )
 
 -- A chance exibida ("1 em N") é a probabilidade real de cada aura, inclusive a de reserva
@@ -258,7 +498,7 @@ igual("probabilidades somam 1", math.abs(soma - 1) < 1e-9, true)
 igual("chance exibida = chance real (todas)", todasExatas, true)
 igual(
 	"reserva continua a mais comum",
-	Auras.probabilidadeReal("faisca") > Auras.probabilidadeReal("nevoa"),
+	Auras.probabilidadeReal("centelha_do_nexo") > Auras.probabilidadeReal("musgo_luminoso"),
 	true
 )
 
@@ -272,7 +512,9 @@ for _ = 1, N do
 	local a = Auras.sortear(math.random)
 	contagem[a.id] = (contagem[a.id] or 0) + 1
 end
-for _, id in { "faisca", "nevoa", "brasa", "pedra_viva", "trovao_jovem" } do
+for _, id in
+	{ "centelha_do_nexo", "musgo_luminoso", "fagulha_de_cobre", "gelo_de_neon", "coroa_de_coral" }
+do
 	local exibido = lerTexto(Formato.chance(Auras.porId[id].chance))
 	local efetivo = N / (contagem[id] or 1)
 	igual(
@@ -287,21 +529,101 @@ for _, id in { "faisca", "nevoa", "brasa", "pedra_viva", "trovao_jovem" } do
 		true
 	)
 end
-igual("texto reserva", Formato.chance(Auras.porId.faisca.chance), "4,2")
+igual("texto reserva", Formato.chance(Auras.porId.centelha_do_nexo.chance), "4,8")
 igual("texto inteiro", Formato.chance(1000), "1.000")
 igual("texto curto", Formato.chanceCurta(25000), "25 mil")
 igual("texto curto pequeno", Formato.chanceCurta(4.26), "4,3")
 igual(
 	"melhor da colecao",
-	Auras.melhorDe({ faisca = 3, chama_azul = 1, inexistente = 9 }).id,
-	"chama_azul"
+	Auras.melhorDe({ centelha_do_nexo = 3, esporos_de_safira = 1, inexistente = 9 }).id,
+	"esporos_de_safira"
 )
 igual("colecao vazia sem melhor", Auras.melhorDe({}), nil)
-igual("descobertas", Auras.contarDescobertas({ faisca = 1, brasa = 0, x = 2 }), 1)
+igual(
+	"descobertas",
+	Auras.contarDescobertas({ centelha_do_nexo = 1, fagulha_de_cobre = 0, x = 2 }),
+	1
+)
+-- Contas antigas preservam descobertas e quantidades ao entrar no catálogo de 67.
+do
+	local antigas = {
+		faisca = 1,
+		nevoa = 5,
+		brasa = 7,
+		orvalho = 9,
+		folha_dancante = 12,
+		pedra_viva = 16,
+		mare_calma = 20,
+		brasa_sussurrante = 30,
+		vento_cortante = 45,
+		raiz_antiga = 60,
+		gelo_fino = 80,
+		trovao_jovem = 100,
+		lotus_rubra = 150,
+		pluma_celeste = 250,
+		chama_azul = 400,
+		eco_do_vazio = 500,
+		cristal_lunar = 750,
+		tempestade_rubra = 1000,
+		sombra_gemea = 1500,
+		sol_nascente = 2500,
+		dragao_de_jade = 5000,
+		aurora_boreal = 7500,
+		coracao_estelar = 10000,
+		lamina_do_crepusculo = 25000,
+		lotus_celestial = 50000,
+		fenix_eterna = 100000,
+		eclipse_carmesim = 250000,
+		olho_do_abismo = 500000,
+		nebulosa_primordial = 750000,
+		despertar_absoluto = 1000000,
+	}
+	local destinos = {}
+	for id, chance in antigas do
+		local estado = Perfil.padrao()
+		estado.auras[id] = 2
+		estado.equipada = id
+		Perfil.migrarAuras(estado)
+		local destino = estado.equipada
+		local aura = Auras.porId[destino]
+		igual(
+			"migração: destino da mesma raridade " .. id,
+			aura and aura.tier,
+			Auras.tierDe(chance)
+		)
+		igual("migração: duas cópias " .. id, estado.auras[destino], 2)
+		igual("migração: origem removida " .. id, estado.auras[id], nil)
+		igual("migração: destino exclusivo " .. id, destinos[destino], nil)
+		igual("migração: origem fora do sorteio " .. id, Auras.porId[id], nil)
+		destinos[destino] = true
+	end
+
+	local conta = Perfil.padrao()
+	conta.giros = 1842
+	conta.transcendencia.nivel = 5
+	conta.auras = { faisca = 8, centelha_do_nexo = 2, brasa = 1, futura = 3 }
+	conta.equipada = "faisca"
+	Perfil.migrarAuras(conta)
+	Perfil.migrarAuras(conta)
+	igual("migração: soma idempotente", conta.auras.centelha_do_nexo, 10)
+	igual("migração: aura equipada convertida", conta.equipada, "centelha_do_nexo")
+	igual("migração: saldo de giros", conta.giros, 1842)
+	igual("migração: Transcendência", conta.transcendencia.nivel, 5)
+	igual("migração: IDs desconhecidos preservados", conta.auras.futura, 3)
+	igual("migração: coleção aparece no Índice", Auras.contarDescobertas(conta.auras), 2)
+
+	local invalida = Perfil.padrao()
+	invalida.auras.brasa = -1
+	invalida.equipada = "brasa"
+	Perfil.migrarAuras(invalida)
+	igual("migração: não concede saldo inválido", invalida.auras.fagulha_de_cobre, nil)
+	igual("migração: não equipa aura sem posse", invalida.equipada, nil)
+end
+
 -- Apresentação do giro: categorias pela chance real e durações dentro das faixas do design
 local Apresentacao = req("Apresentacao")
 igual("6 categorias", #Apresentacao.Categorias, 6)
-igual("faisca = baixa", Apresentacao.de(Auras.porId.faisca.chance).id, "baixa")
+igual("centelha = baixa", Apresentacao.de(Auras.porId.centelha_do_nexo.chance).id, "baixa")
 igual("1 em 49 = baixa", Apresentacao.de(49).id, "baixa")
 igual("1 em 50 = moderada", Apresentacao.de(50).id, "moderada")
 igual("1 em 999 = moderada", Apresentacao.de(999).id, "moderada")
@@ -490,19 +812,18 @@ igual("inc 3 universos", #Inc.UNIVERSOS, 3)
 
 -- Matematica do RNG, limite seguro de sorte e nova tabela de 67 originais.
 local Probabilidades = req("Probabilidades")
-local C67 = req("Catalogo67Probabilidades")
-igual("catalogo 67 entradas", #C67.lista, 67)
-igual("Musgo alterado para 1 em 6", C67.porId.musgo_luminoso.chance, 6)
+igual("catalogo 67 entradas", #Auras.lista, 67)
+igual("Musgo alterado para 1 em 6", Auras.porId.musgo_luminoso.chance, 6)
 igual(
 	"Centelha mais comum",
-	C67.porId.centelha_do_nexo.pBase > C67.porId.musgo_luminoso.pBase,
+	Auras.porId.centelha_do_nexo.pBase > Auras.porId.musgo_luminoso.pBase,
 	true
 )
-igual("Centelha 20.9966%", math.abs(C67.PROBABILIDADE_RESERVA - 0.2099662279261313) < 1e-12, true)
+igual("Centelha 20.9966%", math.abs(Auras.PROBABILIDADE_RESERVA - 0.2099662279261313) < 1e-12, true)
 igual("sorte NaN segura", Probabilidades.sorteValida(0 / 0), 1)
 igual("sorte infinito segura", Probabilidades.sorteValida(math.huge), 1)
 igual("sorte negativa segura", Probabilidades.sorteValida(-1), 1)
-igual("limite superior de sorte 3", Probabilidades.sorteValida(10), 3)
+igual("limite superior de sorte 20", Probabilidades.sorteValida(50), 20)
 igual("transcendencia 0", Probabilidades.sorteTranscendencia(0), 1)
 igual("transcendencia X", Probabilidades.sorteTranscendencia(10), 1.5)
 igual("transcendencia maior que X", Probabilidades.sorteTranscendencia(20), 1.5)
@@ -511,14 +832,14 @@ local anteriorCoroa = 0
 local anteriorDivino = 0
 for nivel = 0, 10 do
 	local sorte = Probabilidades.sorteTranscendencia(nivel)
-	local pesos, z = Probabilidades.distribuicao(C67.lista, sorte)
+	local pesos, z = Probabilidades.distribuicao(Auras.lista, sorte)
 	local somaEfetiva = 0
 	for _, peso in pesos do
 		somaEfetiva += peso / z
 	end
 	igual("67 total no nivel " .. nivel, math.abs(somaEfetiva - 1) < 1e-10, true)
-	local coroa = Probabilidades.chanceEfetiva(C67.lista, "coroa_de_coral", sorte)
-	local divino = Probabilidades.chanceEfetiva(C67.lista, "soberania_do_vazio", sorte)
+	local coroa = Probabilidades.chanceEfetiva(Auras.lista, "coroa_de_coral", sorte)
+	local divino = Probabilidades.chanceEfetiva(Auras.lista, "soberania_do_vazio", sorte)
 	igual("67 Coroa cresce nivel " .. nivel, coroa >= anteriorCoroa, true)
 	igual("67 Soberania cresce nivel " .. nivel, divino >= anteriorDivino, true)
 	anteriorCoroa = coroa
@@ -526,24 +847,25 @@ for nivel = 0, 10 do
 end
 igual(
 	"67 Centelha no nivel X",
-	math.abs(Probabilidades.chanceEfetiva(C67.lista, "centelha_do_nexo", 1.5) - 0.19779318528564926)
-		< 1e-11,
+	math.abs(
+		Probabilidades.chanceEfetiva(Auras.lista, "centelha_do_nexo", 1.5) - 0.19779318528564926
+	) < 1e-11,
 	true
 )
 igual(
 	"67 Musgo no nivel X",
-	math.abs(Probabilidades.chanceEfetiva(C67.lista, "musgo_luminoso", 1.5) - 0.15700396776446937)
+	math.abs(Probabilidades.chanceEfetiva(Auras.lista, "musgo_luminoso", 1.5) - 0.15700396776446937)
 		< 1e-11,
 	true
 )
 igual(
 	"67 Soberania no nivel X",
 	math.abs(
-		Probabilidades.chanceEfetiva(C67.lista, "soberania_do_vazio", 1.5) - 1.954457110930131e-8
+		Probabilidades.chanceEfetiva(Auras.lista, "soberania_do_vazio", 1.5) - 1.954457110930131e-8
 	) < 1e-16,
 	true
 )
-local pesos3, z3 = Probabilidades.distribuicao(C67.lista, 3)
+local pesos3, z3 = Probabilidades.distribuicao(Auras.lista, 3)
 local soma3 = 0
 for _, peso in pesos3 do
 	soma3 += peso / z3
@@ -551,19 +873,19 @@ end
 igual("67 sorte 3 segue 100%", math.abs(soma3 - 1) < 1e-10, true)
 igual(
 	"67 RNG zero = divino",
-	Probabilidades.sortear(C67.lista, 1.5, function()
+	Probabilidades.sortear(Auras.lista, 1.5, function()
 		return 0
 	end).id,
 	"soberania_do_vazio"
 )
 igual(
 	"67 RNG alto = Centelha",
-	Probabilidades.sortear(C67.lista, 1.5, function()
+	Probabilidades.sortear(Auras.lista, 1.5, function()
 		return 0.999999
 	end).id,
 	"centelha_do_nexo"
 )
-igual("67 aura inexistente", Probabilidades.chanceEfetiva(C67.lista, "desconhecida", 1.5), 0)
+igual("67 aura inexistente", Probabilidades.chanceEfetiva(Auras.lista, "desconhecida", 1.5), 0)
 local somaAtual3 = 0
 for _, aura in Auras.lista do
 	somaAtual3 += Auras.probabilidadeReal(aura.id, 3)
@@ -571,8 +893,8 @@ end
 igual("catalogo atual em 3x soma 100%", math.abs(somaAtual3 - 1) < 1e-10, true)
 igual(
 	"catalogo atual aumenta chance divina",
-	Auras.probabilidadeReal("despertar_absoluto", 1.5)
-		> Auras.probabilidadeReal("despertar_absoluto"),
+	Auras.probabilidadeReal("soberania_do_vazio", 1.5)
+		> Auras.probabilidadeReal("soberania_do_vazio"),
 	true
 )
 
@@ -740,7 +1062,7 @@ for nivel = 0, 10 do
 	end
 	igual("sorte soma 1 no nível " .. nivel, math.abs(anterior - 1) < 1e-12, true)
 end
-local rara = "trovao_jovem"
+local rara = "coroa_de_coral"
 igual(
 	"T1 aumenta a probabilidade rara no RNG normalizado",
 	Auras.probabilidadeReal(rara, 1.05) > Auras.probabilidadeReal(rara),
@@ -984,6 +1306,559 @@ do
 	cos.titulo = "outro"
 	igual("presets: cópia dos cosméticos", p.cosmeticos.titulo, "tit_vip")
 	igual("presets: sem aura vira vazio", V.criarPreset(nil, nil).aura, "")
+end
+
+-- Gear 5: duas silhuetas em repouso e contatos no passo que move o corpo.
+do
+	local M = req("Gear5Movimento")
+	local risada, flutuar = M.parado(0.8)
+	igual("gear 5: sustenta a risada", risada, 0)
+	igual("gear 5: flutuação discreta", math.abs(flutuar) <= 0.075, true)
+	local transicao = M.parado(1.9)
+	igual("gear 5: mistura gradual das poses", transicao > 0 and transicao < 1, true)
+	local relaxado = M.parado(3)
+	igual("gear 5: sustenta o repouso", relaxado, 1)
+	local volta = M.parado(4.2)
+	igual("gear 5: volta gradualmente à risada", volta > 0 and volta < 1, true)
+	igual("gear 5: repete o ciclo", M.parado(4.8), 0)
+
+	local fase, pe = M.passo(0.49, 0.02, 14)
+	igual("gear 5: pousa no pé esquerdo", pe, "E")
+	igual("gear 5: sem segundo contato no quadro seguinte", select(2, M.passo(fase, 0.02, 14)), nil)
+	fase, pe = M.passo(0.99, 0.02, 14)
+	igual("gear 5: volta com o pé direito", pe, "D")
+	igual("gear 5: a fase volta ao começo", fase < 0.05, true)
+	igual("gear 5: parado não avança o passo", M.passo(0.2, 1, 0), 0.2)
+	local andando = M.passo(0, 0.2, 5)
+	local correndo = M.passo(0, 0.2, 16)
+	igual("gear 5: passo acelera com movimento", correndo > andando, true)
+	local esquerda, quadro, _, altura = M.corrida(0.819)
+	igual("gear 5: espelha a passada alternada", esquerda, true)
+	igual("gear 5: pose aérea no topo do passo", quadro, 3)
+	igual("gear 5: há quique na passada", altura > 0.55, true)
+	local _, _, _, contato = M.corrida(0.5)
+	igual("gear 5: volta à altura de apoio no contato", contato, 0)
+end
+
+-- Gear 5: Haki do Rei sincronizado com a animação parada
+do
+	local M = req("Gear5Movimento")
+	local T = M.TEMPO_PARADO
+	local eventos = {}
+	local t = 0
+	while t < T * 4 do
+		local e = M.hakiParado(t, t + 1 / 60)
+		if e then
+			table.insert(eventos, { e, t + 1 / 60 })
+		end
+		t += 1 / 60
+	end
+	igual("haki: 4 eventos em 4 ciclos parados", #eventos, 4)
+	igual("haki: primeiro são faíscas no repouso", eventos[1][1], "fraco")
+	igual(
+		"haki: faíscas no quadro do repouso",
+		math.abs(eventos[1][2] - M.HAKI_RELAXADO) < 0.02,
+		true
+	)
+	igual("haki: estouro forte no auge da risada", eventos[2][1], "forte")
+	igual(
+		"haki: forte no segundo ciclo",
+		math.abs(eventos[2][2] - (T + M.HAKI_RISADA)) < 0.02,
+		true
+	)
+	igual("haki: ciclos alternados", eventos[3][1] .. eventos[4][1], "fracoforte")
+	igual("haki: nada ao começar a ficar parado", M.hakiParado(0, 0.3), nil)
+	igual("haki: um quadro longo não perde o evento", M.hakiParado(T + 0.3, T + 0.4), "forte")
+	igual("haki: queda baixa só borracha", M.hakiPouso(-20), nil)
+	igual("haki: queda forte estoura", M.hakiPouso(-45), 1)
+	igual("haki: intensidade do pouso limitada", M.hakiPouso(-500), 1.6)
+	igual("haki: queda média tem mínimo", M.hakiPouso(-31), 0.8)
+end
+
+-- Ícones da interface
+do
+	local I = req("Icones")
+	local It = req("Itens")
+	for id, item in It.porId do
+		igual("ícone: item tem símbolo próprio " .. id, I.ITENS[id] ~= nil, true)
+		igual("ícone: categoria conhecida " .. id, I.CATEGORIAS[item.categoria] ~= nil, true)
+	end
+	igual(
+		"ícone: item desconhecido usa a categoria",
+		I.item("xx", "Artefatos"),
+		I.CATEGORIAS.Artefatos
+	)
+	igual("ícone: sem categoria", I.item("xx", nil), I.DESCONHECIDO)
+	igual("ícone: aura sem estilo", I.aura(nil), I.AURAS.brilho)
+	local vistos = { [I.DESCONHECIDO] = true }
+	for _, grupo in { I.ITENS, I.CATEGORIAS, I.AURAS, I.MENU, I.STATUS, I.DISTINTIVOS } do
+		for nome, indice in grupo do
+			igual(
+				"ícone: célula válida " .. nome,
+				indice % 1 == 0 and indice >= 1 and indice <= I.TOTAL,
+				true
+			)
+			vistos[indice] = true
+		end
+	end
+	for i = 1, I.TOTAL do
+		igual("ícone: atlas usa a célula " .. i, vistos[i], true)
+	end
+end
+
+-- Animações da Arena: tempos, clipes e pernas com os pés no chão
+do
+	local Anim = req("ArenaAnimacoes")
+	local Pecas = req("SoberanoPecas")
+	local ArenaR = req("Arena")
+	local function perto(a, b)
+		return math.abs(a - b) < 0.05
+	end
+	-- todo golpe que o servidor encena tem tempo e clipe próprios
+	for id in ArenaR.Acoes do
+		igual("animação: tempo do golpe " .. id, Anim.TEMPOS[id] ~= nil, true)
+		igual("animação: clipe do jogador " .. id, Anim.JOGADOR[id] ~= nil, true)
+	end
+	for _, id in { "investida", "pesado", "baluarte" } do
+		igual("animação: tempo do Soberano " .. id, Anim.TEMPOS[id] ~= nil, true)
+		igual("animação: clipe do Soberano " .. id, Anim.SOBERANO[id] ~= nil, true)
+	end
+	-- o clipe cobre preparo + retorno (o próximo golpe não corta a animação no meio)
+	for id, tempo in Anim.TEMPOS do
+		local clipe = Anim.JOGADOR[id] or Anim.SOBERANO[id]
+		if clipe and not clipe.segurar then
+			igual(
+				"animação: " .. id .. " cabe no tempo do golpe",
+				clipe.duracao <= tempo.preparo + tempo.retorno + 0.6,
+				true
+			)
+		end
+	end
+	-- reações referenciam clipes existentes
+	for _, r in { Anim.reacaoJogador(true, 0), Anim.reacaoJogador(false, 260), Anim.reacaoJogador(false, 100) } do
+		igual("animação: reação " .. tostring(r), Anim.JOGADOR[r] ~= nil, true)
+	end
+	igual("animação: baluarte sem guarda não mexe no jogador", Anim.reacaoJogador(false, 0), nil)
+	igual("animação: corte derruba o Soberano", Anim.reacaoSoberano("corte", 175), "atingidoForte")
+	igual("animação: golpe sem dano não abala", Anim.reacaoSoberano("ataque", 0), nil)
+	-- chaves em ordem e dentro da duração
+	local function chavesOk(clipe)
+		local anterior = -1
+		for _, c in clipe.chaves do
+			if c.t < anterior or c.t > clipe.duracao + 1e-6 then
+				return false
+			end
+			anterior = c.t
+		end
+		return true
+	end
+	for nome, clipe in Anim.JOGADOR do
+		igual("animação: chaves do jogador " .. nome, chavesOk(clipe), true)
+	end
+	for nome, clipe in Anim.SOBERANO do
+		igual("animação: chaves do Soberano " .. nome, chavesOk(clipe), true)
+	end
+	-- amostragem: começo, fim, interpolação e laço
+	local postura = Anim.JOGADOR.postura
+	igual("animação: laço volta ao começo", perto(Anim.amostrar(postura, postura.duracao).raiz2, Anim.amostrar(postura, 0).raiz2), true)
+	local ataque = Anim.JOGADOR.ataque
+	local fim = Anim.amostrar(ataque, ataque.duracao + 5)
+	igual("animação: fim do ataque volta à postura", perto(fim.ombroD1, Anim.amostrar(postura, 0).ombroD1), true)
+	-- cinemática inversa: repouso = zero; agachar dobra o joelho para a frente; o pé alcança o alvo
+	for nome, perna in { r15 = Anim.PERNA_R15, dir = Pecas.pernas.dir, esq = Pecas.pernas.esq } do
+		local c, j = Anim.perna(perna, 0, 0, 0, 0)
+		igual("perna " .. nome .. ": repouso sem giro", perto(c, 0) and perto(j, 0), true)
+		c, j = Anim.perna(perna, 0, 0, -0.8, 0)
+		igual("perna " .. nome .. ": agachar leva a coxa à frente", c > 0.2, true)
+		igual("perna " .. nome .. ": agachar dobra o joelho", j < -0.4, true)
+	end
+	-- o tornozelo cai onde o clipe pediu (agachado e com o pé à frente)
+	do
+		local perna = Anim.PERNA_R15
+		local c, j = Anim.perna(perna, 0, -0.6, -0.5, 0)
+		local l = 1.2
+		local jy, jz = -math.cos(c) * l, -math.sin(c) * l
+		local ty = jy - math.cos(c + j) * l
+		local tz = jz - math.sin(c + j) * l
+		igual("perna r15: tornozelo na altura pedida", perto(ty, -2.4 + 0.5), true)
+		igual("perna r15: tornozelo à frente", perto(tz, -0.6), true)
+	end
+	-- salto do Soberano: a entrada vai do trono (viagem 0) ao ringue (viagem 1)
+	local entrada = Anim.SOBERANO.entrada
+	igual("soberano: entrada começa no trono", Anim.amostrar(entrada, 0).viagem1, 0)
+	igual("soberano: entrada termina no ringue", Anim.amostrar(entrada, entrada.duracao).viagem1, 1)
+	igual("soberano: entrada cabe na introdução", entrada.duracao <= Anim.INTRODUCAO, true)
+	igual("soberano: peças do duelo com pernas", #Pecas.duelo, 6)
+end
+
+-- Pontos de Aura, evoluções e sorte total
+do
+	local PA = req("PontosAura")
+	local AurasP = req("Auras")
+	local ProbP = req("Probabilidades")
+	local p = PA.padrao()
+	igual("pontos: começa zerado", p.pontos + p.nivel + p.fluxo + p.sorte, 0)
+	-- raridade gera mais, mas suavizado
+	local comum = PA.forcaDaAura("musgo_luminoso")
+	local divina = PA.forcaDaAura("soberania_do_vazio")
+	igual("pontos: aura rara gera mais", divina > comum, true)
+	igual("pontos: 1 em 100 milhões gera 100/s", math.abs(divina - 100) < 0.01, true)
+	igual("pontos: sem aura ainda gera um pouco", PA.forcaDaAura(nil), PA.SEM_AURA)
+	igual("pontos: aura inventada conta como sem aura", PA.forcaDaAura("nao_existe"), PA.SEM_AURA)
+	-- evoluir cobra, sobe o nível e respeita saldo e máximo
+	igual("evoluir: sem saldo falha", (PA.evoluir(p, "nivel")), false)
+	p.pontos = PA.custo("nivel", 0)
+	igual("evoluir: com saldo compra", (PA.evoluir(p, "nivel")), true)
+	igual("evoluir: nível sobe", p.nivel, 1)
+	igual("evoluir: saldo gasto", p.pontos, 0)
+	igual("evoluir: custo cresce", PA.custo("nivel", 1) > PA.custo("nivel", 0), true)
+	igual("evoluir: id inválido", (PA.evoluir(p, "voar")), false)
+	igual("evoluir: tipo inválido", (PA.evoluir(p, 12)), false)
+	local cheio = PA.normalizar({ pontos = 1e300, sorte = 999 })
+	igual("evoluir: normalizar limita o máximo", cheio.sorte, PA.porId.sorte.maximo)
+	igual("evoluir: no máximo não compra", (PA.evoluir(cheio, "sorte")), false)
+	local estranho = PA.normalizar({ pontos = 0 / 0, nivel = -3, fluxo = "x" })
+	igual("normalizar: NaN e negativos viram zero", estranho.pontos + estranho.nivel + estranho.fluxo, 0)
+	igual("normalizar: nil vira padrão", PA.normalizar(nil).total, 0)
+	-- fluxo e nível mudam ganho e pontuação
+	local base = PA.ganhoPorSegundo(PA.padrao(), "musgo_luminoso")
+	local comFluxo = PA.ganhoPorSegundo({ pontos = 0, total = 0, nivel = 0, fluxo = 10, sorte = 0 }, "musgo_luminoso")
+	igual("fluxo: 10 níveis dobram o ganho", math.abs(comFluxo - 2 * base) < 1e-9, true)
+	igual("fluxo: multiplicador extra", math.abs(PA.ganhoPorSegundo(PA.padrao(), "musgo_luminoso", 3) - 3 * base) < 1e-9, true)
+	local pt0 = PA.pontuacao(PA.padrao(), "musgo_luminoso")
+	local pt4 = PA.pontuacao({ pontos = 0, total = 0, nivel = 4, fluxo = 0, sorte = 0 }, "musgo_luminoso")
+	igual("pontuação: 4 níveis dobram", pt4, math.floor(2 * 10 * PA.forcaDaAura("musgo_luminoso")))
+	igual("pontuação: aura rara pesa mais", PA.pontuacao(PA.padrao(), "soberania_do_vazio") > pt0, true)
+	-- sorte total: evolução x Transcendência x extra, com teto
+	igual("sorte: começa em 1", PA.sorteTotal({ poder = PA.padrao(), transcendencia = { nivel = 0 } }), 1)
+	igual("sorte: estado estranho é 1", PA.sorteTotal(nil), 1)
+	local s5 = PA.sorteTotal({ poder = { sorte = 20 }, transcendencia = { nivel = 10 } })
+	igual("sorte: evolução x transcendência", math.abs(s5 - 5 * 1.5) < 1e-9, true)
+	local teto = PA.sorteTotal({ poder = { sorte = 95 }, transcendencia = { nivel = 10 } }, 50)
+	igual("sorte: respeita o teto", teto, PA.SORTE_MAXIMA)
+	igual("sorte: teto é o do sorteio", PA.SORTE_MAXIMA, ProbP.MAX_SORTE)
+	-- no teto, a aura mais rara continua rara (nunca fácil) e a sorte ajuda de verdade
+	local rara = AurasP.porId.soberania_do_vazio
+	local noTeto = AurasP.chanceEfetiva(rara, PA.SORTE_MAXIMA)
+	igual("sorte: no teto a mais rara ainda passa de 1 em 1 milhão", noTeto > 1000000, true)
+	igual("sorte: no teto fica bem mais fácil que a base", noTeto < rara.chance / 50, true)
+	local soma = 0
+	for _, a in AurasP.lista do
+		soma += AurasP.probabilidadeReal(a.id, 7.3)
+	end
+	igual("sorte: distribuição soma 100% em sorte qualquer", math.abs(soma - 1) < 1e-9, true)
+end
+
+-- Corredor dos Perdidos: acesso, conclusão, recompensas, bônus e o mapa gerado
+do
+	local C = req("Corredor")
+	local M = req("CorredorMapa")
+	igual("corredor: seis fases", C.TOTAL, 6)
+	igual("corredor: mapa com seis ilhas", #M.fases, 6)
+	local p = C.padrao()
+	igual("corredor: fase 1 aberta a todos", (C.podeEntrar(p, 1, 0)), true)
+	igual("corredor: fase 2 pede a 1 concluída", (C.podeEntrar(p, 2, 1e9)), false)
+	igual("corredor: fase inexistente", (C.podeEntrar(p, 7, 1e9)), false)
+	igual("corredor: fase de tipo errado", (C.podeEntrar(p, "2", 1e9)), false)
+	igual("corredor: acesso inicial", C.acesso(p, 1e9), 1)
+	local ganho, primeira = C.concluir(p, 1, 1000)
+	igual("corredor: primeira conclusão paga o bônus", ganho, C.FASES[1].primeira)
+	igual("corredor: marcada como primeira", primeira, true)
+	igual("corredor: fragmentos somados", p.fragmentos, C.FASES[1].primeira)
+	igual("corredor: fase 2 sem Pontuação", (C.podeEntrar(p, 2, C.FASES[2].requisito - 1)), false)
+	igual("corredor: fase 2 com Pontuação", (C.podeEntrar(p, 2, C.FASES[2].requisito)), true)
+	igual("corredor: acesso sobe", C.acesso(p, 1e9), 2)
+	local g2 = C.concluir(p, 1, 1000 + C.ESPERA_REPETIR - 1)
+	igual("corredor: repetir antes da espera não paga", g2, 0)
+	local g3 = C.concluir(p, 1, 1000 + C.ESPERA_REPETIR)
+	igual("corredor: repetir depois da espera paga menos", g3, C.FASES[1].repetir)
+	igual("corredor: bônus ativo", C.multiplicador(p, 1000 + C.ESPERA_REPETIR + 1), C.BONUS_MULTIPLICADOR)
+	igual("corredor: bônus acaba", C.multiplicador(p, 1000 + C.ESPERA_REPETIR + C.BONUS_DURACAO + 1), 1)
+	local estranho = C.normalizar({ fragmentos = -5, concluidas = { ["1"] = "x", ["9"] = 3 }, bonusAte = 0 / 0 })
+	igual("corredor: normalizar limpa", estranho.fragmentos + estranho.bonusAte, 0)
+	igual("corredor: normalizar ignora fase inválida", estranho.concluidas["9"], nil)
+	-- requisitos crescem; o mapa sobe em espiral e fica dentro da parede do Nexo (raio 238)
+	for i = 2, C.TOTAL do
+		igual("corredor: requisito cresce na fase " .. i, C.FASES[i].requisito > C.FASES[i - 1].requisito, true)
+		igual("corredor: ilha " .. i .. " mais alta", M.fases[i].centro[2] > M.fases[i - 1].centro[2], true)
+	end
+	for _, f in M.fases do
+		local dentro = true
+		for _, k in { "inicio", "retorno", "fim", "portao" } do
+			local pt = f.pontos[k]
+			if math.sqrt(pt[1] * pt[1] + pt[3] * pt[3]) > 230 then
+				dentro = false
+			end
+		end
+		igual("corredor: pontos da fase " .. f.fase .. " dentro do mapa", dentro, true)
+		igual("corredor: fase " .. f.fase .. " tem colisão", #f.colisores > 5, true)
+		local ini, fim, por = f.pontos.inicio, f.pontos.fim, f.pontos.portao
+		local d1 = math.sqrt((ini[1] - por[1]) ^ 2 + (ini[3] - por[3]) ^ 2)
+		local d2 = math.sqrt((fim[1] - por[1]) ^ 2 + (fim[3] - por[3]) ^ 2)
+		igual("corredor: a conclusão fica antes do Portão na fase " .. f.fase, d2 < d1, true)
+	end
+end
+
+-- Ecos (pets) e Núcleos
+do
+	local P = req("Pets")
+	local V = req("PetsVisual")
+	local C = req("Corredor")
+	igual("ecos: 27 Ecos (18 + 9 exclusivos)", #P.ECOS, 27)
+	igual("ecos: 9 Núcleos (6 + 3 exclusivos)", #P.NUCLEOS, 9)
+	for _, e in P.ECOS do
+		igual("ecos: visual de " .. e.id, V.ecos[e.id] ~= nil, true)
+		igual("ecos: raridade de " .. e.id, P.RARIDADES[e.raridade] ~= nil, true)
+	end
+	for i, n in P.NUCLEOS do
+		local soma = 0
+		for _, ch in P.chances(n) do
+			soma += ch.chance
+			igual("ecos: Núcleo " .. i .. " tem só Ecos do seu mundo", P.porId[ch.id].nucleo, i)
+		end
+		igual("ecos: chances do Núcleo " .. i .. " somam 100%", math.abs(soma - 1) < 1e-9, true)
+		igual("ecos: visual do Núcleo " .. i, V.nucleos[i] ~= nil, true)
+		if i > 1 and n.exclusivo == P.NUCLEOS[i - 1].exclusivo then
+			igual("ecos: Núcleo " .. i .. " mais caro", n.preco > P.NUCLEOS[i - 1].preco, true)
+		end
+		if n.exclusivo then
+			igual("ecos: exclusivo " .. i .. " tem série", type(n.serie), "string")
+			for _, ch in P.chances(n) do
+				igual("ecos: exclusivo " .. ch.id .. " é Épico ou mais", P.porId[ch.id].raridade >= 4, true)
+				igual("ecos: exclusivo " .. ch.id .. " da mesma série", P.porId[ch.id].serie, n.serie)
+			end
+		end
+	end
+	-- sorteio: o extremo baixo dá o primeiro, o alto dá o último; prisma só com o 2º número baixo
+	local seq = { 0, 0.99 }
+	local k = 0
+	local eco, prisma = P.sortear(P.NUCLEOS[1], function()
+		k += 1
+		return seq[k]
+	end)
+	igual("ecos: sorteio baixo dá o comum", eco, "lasquinho")
+	igual("ecos: sem prisma", prisma, false)
+	seq, k = { 0.999, 0 }, 0
+	eco, prisma = P.sortear(P.NUCLEOS[1], function()
+		k += 1
+		return seq[k]
+	end)
+	igual("ecos: sorteio alto dá o raro", eco, "lanterneiro")
+	igual("ecos: prisma com número baixo", prisma, true)
+	-- coleção: adicionar, equipar com limite, melhores, libertar e multiplicadores
+	local c = P.padrao()
+	local corredor = C.padrao()
+	igual("ecos: 3 espaços no começo", P.slots(corredor), 3)
+	corredor.concluidas["3"] = 1
+	corredor.concluidas["6"] = 1
+	igual("ecos: fases 3 e 6 dão mais 2 espaços", P.slots(corredor), 5)
+	igual("ecos: Núcleo 1 trancado sem a fase 1", P.nucleoLiberado(P.NUCLEOS[1], C.padrao()), false)
+	local u1 = P.adicionar(c, "lasquinho", false, 0)
+	local u2 = P.adicionar(c, "lanterneiro", true, 0)
+	local u3 = P.adicionar(c, "mariposa_vitral", false, 0)
+	local u4 = P.adicionar(c, "raposa_prisma", false, 0)
+	igual("ecos: id inventado não entra", P.adicionar(c, "nada", false, 0), nil)
+	igual("ecos: quatro na coleção", P.quantidade(c), 4)
+	igual("ecos: equipa", (P.equipar(c, u1, true, 2)), true)
+	igual("ecos: equipa o segundo", (P.equipar(c, u2, true, 2)), true)
+	igual("ecos: respeita os espaços", (P.equipar(c, u3, true, 2)), false)
+	igual("ecos: uid inválido", (P.equipar(c, 5, true, 2)), false)
+	local ganho, sorte, frag = P.multiplicadores(c)
+	igual("ecos: ganho soma (prisma em dobro)", math.abs(ganho - (1 + (15 + 45 * 2) / 100)) < 1e-9, true)
+	igual("ecos: sem sorte equipada", sorte, 1)
+	igual("ecos: sem fragmentos equipados", frag, 1)
+	igual("ecos: não liberta equipado", (P.libertar(c, u1)), nil)
+	P.equiparMelhores(c, 2)
+	igual("ecos: melhores começa pelo prismático", c.equipados[1], u2)
+	local volta = P.libertar(c, u3)
+	igual("ecos: libertar devolve parte do Núcleo", volta, math.floor(P.NUCLEOS[1].preco * P.DEVOLUCAO))
+	igual("ecos: some da coleção", c.lista[u3], nil)
+	igual("ecos: índice lembra quem já foi visto", c.vistos.mariposa_vitral, true)
+	igual("ecos: u4 ainda existe", c.lista[u4] ~= nil, true)
+	local n = P.normalizar({ lista = { x = { eco = "nada" }, e9 = { eco = "fagulha", prisma = true } }, equipados = { "e9", "e9", "zz" }, contador = -2 })
+	igual("ecos: normalizar descarta Eco inventado", n.lista.x, nil)
+	igual("ecos: normalizar mantém válido", n.lista.e9.prisma, true)
+	igual("ecos: normalizar remove repetidos e órfãos", #n.equipados, 1)
+	igual("ecos: normalizar contador", n.contador, 0)
+	-- capacidade
+	local cheia = P.padrao()
+	for _ = 1, P.CAPACIDADE do
+		P.adicionar(cheia, "lasquinho", false, 0)
+	end
+	igual("ecos: coleção cheia recusa", P.adicionar(cheia, "lasquinho", false, 0), nil)
+	-- fragmentos multiplicados na conclusão do Corredor
+	local pc = C.padrao()
+	local g = C.concluir(pc, 1, 0, 1.5)
+	igual("corredor: bônus de Fragmentos dos Ecos", g, math.floor(C.FASES[1].primeira * 1.5 + 0.5))
+end
+
+-- Criaturas do Corredor
+do
+	local K = req("Criaturas")
+	local V = req("CriaturasVisual")
+	local C = req("Corredor")
+	local M = req("CorredorMapa")
+	igual("criaturas: uma dupla por fase", #K.FASES, C.TOTAL)
+	for i, f in K.FASES do
+		for _, id in { f.lacaio, f.chefe } do
+			local v = V[id]
+			igual("criaturas: visual de " .. id, v ~= nil, true)
+			igual("criaturas: " .. id .. " é da fase " .. i, v and v.fase, i)
+			local nomes = {}
+			for _, p in (v and v.partes or {}) do
+				nomes[p.nome] = true
+				if p.pai then
+					igual("criaturas: pai de " .. id .. "." .. p.nome .. " vem antes", nomes[p.pai], true)
+				end
+			end
+			igual("criaturas: " .. id .. " tem tronco, cabeça, braços e pernas", nomes.tronco and nomes.cabeca and nomes.braco_d and nomes.perna_e, true)
+		end
+		igual("criaturas: chefe maior que o lacaio na fase " .. i, V[f.chefe].altura > V[f.lacaio].altura * 1.8, true)
+		igual("criaturas: chefe tem mais vida na fase " .. i, K.vida(i, "chefe") > K.vida(i, "lacaio") * 5, true)
+		if i > 1 then
+			igual("criaturas: lacaio mais resistente na fase " .. i, K.vida(i, "lacaio") > K.vida(i - 1, "lacaio"), true)
+		end
+		-- quem tem a Pontuação mínima derruba o lacaio em ~6 golpes
+		local golpes = math.ceil(K.vida(i, "lacaio") / K.danoJogador(math.max(C.FASES[i].requisito, 12)))
+		igual("criaturas: lacaio cai em 6 golpes com a Pontuação mínima (fase " .. i .. ")", golpes, 6)
+	end
+	igual("criaturas: dano cresce com a Pontuação", K.danoJogador(1000) > K.danoJogador(10), true)
+	igual("criaturas: Pontuação estranha não quebra", K.danoJogador(0 / 0), 5)
+	-- posições: dentro da ilha (largura 44, comprimento 150) e o chefe antes do Portão
+	local chefes = 0
+	for _, p in K.POSICOES do
+		igual("criaturas: posição dentro da ilha", math.abs(p.x) < M.largura / 2 - 4 and math.abs(p.y) < M.comprimento / 2 - 8, true)
+		if p.tipo == "chefe" then
+			chefes += 1
+			igual("criaturas: chefe guarda o fim da ilha", p.y > 40, true)
+		end
+	end
+	igual("criaturas: um chefe por fase", chefes, 1)
+	-- recompensas
+	local pts, frag = K.recompensa(3, "lacaio", 10, 0.01, 1)
+	igual("criaturas: lacaio dá segundos de Pontos", pts, 10 * K.LACAIO.pontos)
+	igual("criaturas: lacaio com sorte solta Fragmentos", frag, K.FASES[3].fragmentosLacaio)
+	local _, sem = K.recompensa(3, "lacaio", 10, 0.99, 1)
+	igual("criaturas: sem sorte, sem Fragmentos", sem, 0)
+	local pc, fc = K.recompensa(3, "chefe", 10, 0.01, 1)
+	igual("criaturas: chefe dá mais Pontos", pc > pts, true)
+	igual("criaturas: chefe não sorteia Fragmentos (o Portão dá)", fc, 0)
+	-- paraMundo coincide com o gerador (o centro fica no centro)
+	local f1 = M.fases[1]
+	local x, y, z = K.paraMundo(f1.centro, f1.giro, 0, 0)
+	igual("criaturas: origem da ilha é o centro", math.abs(x - f1.centro[1]) + math.abs(z - f1.centro[3]) < 1e-6 and y == f1.centro[2], true)
+end
+
+-- Equipamento (RPG)
+do
+	local E = req("Equipamento")
+	local V = req("EquipamentoVisual")
+	igual("equip: 6 conjuntos × 9 espaços", #E.ITENS, 54)
+	local pecaVisual = {
+		elmo = { "elmo" },
+		armadura = { "armadura" },
+		manoplas = { "manopla_d", "manopla_e" },
+		botas = { "bota_d", "bota_e" },
+		arma = { "arma" },
+		colar = { "colar" },
+		manto = { "manto", "manto_s1", "manto_s2", "manto_s3" },
+		bracelete = { "bracelete" },
+		aureola = { "aureola" },
+	}
+	local noGrupo = {}
+	for _, g in E.GRUPOS do
+		for _, espaco in g.espacos do
+			noGrupo[espaco] = (noGrupo[espaco] or 0) + 1
+		end
+	end
+	for _, espaco in E.ESPACOS do
+		igual("equip: " .. espaco .. " em um grupo do painel", noGrupo[espaco], 1)
+		igual("equip: " .. espaco .. " tem nome", E.NOMES_ESPACOS[espaco] ~= nil, true)
+	end
+	for _, item in E.ITENS do
+		for _, p in pecaVisual[item.espaco] do
+			igual("equip: visual de " .. item.id .. " (" .. p .. ")", V[item.conjunto] ~= nil and V[item.conjunto][p] ~= nil, true)
+		end
+		igual("equip: " .. item.id .. " tem atributo", E.texto(item.atributos) ~= "", true)
+	end
+	for i = 2, #E.CONJUNTOS do
+		local a, b = E.porId[E.CONJUNTOS[i].id .. "_arma"], E.porId[E.CONJUNTOS[i - 1].id .. "_arma"]
+		igual("equip: arma do mundo " .. i .. " mais forte", a.atributos.dano > b.atributos.dano, true)
+	end
+	local c = E.padrao()
+	local u1 = E.adicionar(c, "limiar_elmo", 0)
+	local u2 = E.adicionar(c, "limiar_armadura", 0)
+	local u3 = E.adicionar(c, "limiar_botas", 0)
+	local u4 = E.adicionar(c, "dunas_elmo", 0)
+	igual("equip: item inventado não entra", E.adicionar(c, "nada", 0), nil)
+	igual("equip: equipar", (E.equipar(c, u1, true)), true)
+	igual("equip: equipa no espaço certo", c.equipados.elmo, u1)
+	E.equipar(c, u4, true)
+	igual("equip: trocar no mesmo espaço substitui", c.equipados.elmo, u4)
+	E.equipar(c, u1, true)
+	E.equipar(c, u2, true)
+	E.equipar(c, u3, true)
+	igual("equip: uid inválido", (E.equipar(c, 7, true)), false)
+	local total = E.total(c)
+	-- elmo 4 sorte + armadura 15 vida e 4 ganho + botas 10 ganho + conjunto de 3 (5 sorte)
+	igual("equip: soma de sorte com bônus de 3 peças", total.sorte, 4 + 5)
+	igual("equip: soma de ganho", total.ganho, 14)
+	igual("equip: soma de vida", total.vida, 15)
+	igual("equip: multiplicador", math.abs(E.multiplicadores(c).sorte - 1.09) < 1e-9, true)
+	-- nível
+	local g = c.lista[u3]
+	local custo0 = E.custoAprimorar(g)
+	g.nivel = 5
+	igual("equip: aprimorar fica mais caro", E.custoAprimorar(g) > custo0, true)
+	igual("equip: nível sobe os atributos", E.atributos(g).ganho, math.floor(10 * (1 + 5 * E.POR_NIVEL) + 0.5))
+	g.nivel = E.NIVEL_MAXIMO
+	igual("equip: nível máximo sem custo", E.custoAprimorar(g), nil)
+	igual("equip: desmontar devolve mais em nível alto", E.valorDesmontar(g) > E.valorDesmontar({ item = "limiar_botas", nivel = 0, desde = 0 }), true)
+	-- ocultar e normalizar
+	igual("equip: ocultar espaço", (E.ocultar(c, "elmo", true)), true)
+	igual("equip: espaço inventado", (E.ocultar(c, "capa", true)), false)
+	local n = E.normalizar({ lista = { q1 = { item = "limiar_arma", nivel = 99 }, x = { item = "nada" } }, equipados = { arma = "q1", elmo = "q1" }, ocultos = { arma = true, nada = true } })
+	igual("equip: normalizar limita o nível", n.lista.q1.nivel, E.NIVEL_MAXIMO)
+	igual("equip: normalizar descarta item inventado", n.lista.x, nil)
+	igual("equip: normalizar confere o espaço", n.equipados.elmo, nil)
+	igual("equip: normalizar mantém o certo", n.equipados.arma, "q1")
+	igual("equip: normalizar ocultos", n.ocultos.arma, true)
+	-- drops
+	local seq, k = { 0.0, 0.99 }, 0
+	local drop = E.sortearDrop(2, "chefe", function()
+		k += 1
+		return seq[k]
+	end)
+	igual("equip: chefe com sorte dá peça do seu mundo", drop, "bosque_aureola")
+	k = 0
+	seq = { 0.0, 0.0 }
+	igual("equip: sorteio cobre o primeiro espaço", E.sortearDrop(2, "chefe", function()
+		k += 1
+		return seq[k]
+	end), "bosque_elmo")
+	igual("equip: lacaio sem sorte não dá", E.sortearDrop(2, "lacaio", function()
+		return 0.5
+	end), nil)
+	igual("equip: fase inexistente", E.sortearDrop(9, "chefe", function()
+		return 0
+	end), nil)
+	-- conjunto completo
+	local cheio = E.padrao()
+	for _, espaco in E.ESPACOS do
+		E.equipar(cheio, E.adicionar(cheio, "vazio_" .. espaco, 0), true)
+	end
+	local t5 = E.total(cheio)
+	igual("equip: conjunto completo soma os dois bônus", t5.ganho >= 60 + 150, true)
+	-- só acessórios também fecham conjunto
+	local leve = E.padrao()
+	for _, espaco in { "colar", "manto", "bracelete" } do
+		E.equipar(leve, E.adicionar(leve, "limiar_" .. espaco, 0), true)
+	end
+	local tl = E.total(leve)
+	-- colar 3 sorte + bracelete 2 sorte + conjunto de 3 (5 sorte)
+	igual("equip: acessórios contam para o conjunto", tl.sorte, 3 + 2 + 5)
+	igual("equip: manto dá ganho e vida", tl.vida, 8)
+	igual("equip: acessório não ocupa espaço de armadura", leve.equipados.armadura, nil)
 end
 
 print(string.format("%d testes, %d falhas", total, falhas))

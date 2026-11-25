@@ -10,23 +10,40 @@ MODULOS = {
     "LootIncursoes": "src/shared/Dados/LootIncursoes.luau",
     "Receitas": "src/shared/Dados/Receitas.luau",
     "Transcendencia": "src/shared/Dados/Transcendencia.luau",
+    "PontosAura": "src/shared/Dados/PontosAura.luau",
+    "Corredor": "src/shared/Dados/Corredor.luau",
+    "Pets": "src/shared/Dados/Pets.luau",
+    "Criaturas": "src/shared/Dados/Criaturas.luau",
+    "Equipamento": "src/shared/Dados/Equipamento.luau",
+    "EquipamentoVisual": "src/shared/Dados/EquipamentoVisual.luau",
+    "CriaturasVisual": "src/shared/Dados/CriaturasVisual.luau",
+    "PetsVisual": "src/shared/Dados/PetsVisual.luau",
+    "CorredorMapa": "src/shared/Dados/CorredorMapa.luau",
     "Artefatos": "src/shared/Dados/Artefatos.luau",
     "Itens": "src/shared/Dados/Itens.luau",
     "Perfil": "src/shared/Dados/Perfil.luau",
     "Probabilidades": "src/shared/Dados/Probabilidades.luau",
-    "Catalogo67Probabilidades": "src/shared/Dados/Catalogo67Probabilidades.luau",
     "Auras": "src/shared/Dados/Auras.luau",
     "Apresentacao": "src/shared/Dados/Apresentacao.luau",
     "Trilha": "src/shared/Dados/Trilha.luau",
     "Sessao": "src/server/Servicos/Sessao.luau",
     "PermissaoDev": "src/server/Servicos/PermissaoDev.luau",
     "Arena": "src/shared/Dados/Arena.luau",
+    "ArenaAnimacoes": "src/shared/Dados/ArenaAnimacoes.luau",
+    "SoberanoPecas": "src/shared/Dados/SoberanoPecas.luau",
     "Incursoes": "src/shared/Dados/Incursoes.luau",
+    "Gear5Movimento": "src/client/Mundo/Auras/Gear5Movimento.luau",
+    "AurasVfx": "src/shared/Dados/AurasVfx.luau",
+    "EfeitosOriginais": "src/shared/Dados/EfeitosOriginais.luau",
+    "AurasOriginaisV2": "src/shared/Dados/AurasOriginaisV2.luau",
     "Combate": "src/shared/Dados/Combate.luau",
     "Monetizacao": "src/shared/Dados/Monetizacao.luau",
+    "Icones": "src/shared/Dados/Icones.luau",
     "Cosmeticos": "src/shared/Dados/Cosmeticos.luau",
     "Temporada": "src/shared/Dados/Temporada.luau",
     "Conveniencia": "src/shared/Dados/Conveniencia.luau",
+    "IncursoesRun": "src/shared/Dados/IncursoesRun.luau",
+    "IncursoesDesafios": "src/shared/Dados/IncursoesDesafios.luau",
 }
 codigo = ["""
 -- Vector3 mínimo (o luau puro não tem): só para a geometria do combate nos testes
@@ -56,8 +73,6 @@ end
 for nome, caminho in MODULOS.items():
     fonte = (ROOT / caminho).read_text(encoding="utf-8").replace("export type", "type")
     fonte = re.sub(r'require\(script\.Parent\.(\w+)\)', r'req("\1")', fonte)
-    if nome in ("Auras", "Catalogo67Probabilidades"):
-        fonte = fonte.replace("require(script.Parent.Probabilidades)", 'req("Probabilidades")')
     codigo.append('MODULOS["' + nome + '"] = function()\n' + fonte + '\nend\n')
 codigo.append((ROOT / "testes/logica.luau").read_text(encoding="utf-8"))
 saida = ROOT / "dist" / "testes.luau"

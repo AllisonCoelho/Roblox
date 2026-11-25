@@ -12,7 +12,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
-local Remotos = require(Shared.Remotos)
 local Pecas = require(Shared.Dados.SoberanoPecas)
 local ArenaCena = require(Shared.Dados.ArenaCena)
 
@@ -22,18 +21,8 @@ PrimeiroSoberano.ESTADOS = {
 	NPC_OCUPANTE = "NPC_OCUPANTE",
 }
 
-local FALAS = {
-	"O trono não pertence a quem o deseja. Pertence a quem consegue defendê-lo.",
-	"Quando estiver pronto, venha me desafiar.",
-	"Os reis passam. A coroa permanece.",
-}
-
-local RAIO_PRESENCA = 30 -- studs: a partir daqui ele acompanha o visitante com a cabeça
-local DISTANCIA_CONVERSA = 16
-local FOLGA_CONVERSA = 6 -- tolerância do servidor sobre a distância do prompt
-local ESPERA_CONVERSA = 2.5 -- por jogador
-local ESPERA_REACAO = 8 -- compartilhada: uma reação por vez
-local ESPERA_ALERTA = 25 -- compartilhada
+local RAIO_PRESENCA = 30
+local ESPERA_REACAO = 8
 
 local COR_ARMADURA = Color3.fromHex("2A2738")
 
@@ -159,19 +148,11 @@ function PrimeiroSoberano.iniciar(pasta: Instance)
 	titulo.Parent = gui
 	gui.Parent = topo
 
-	-- Conversa: o servidor confere distância e espera, mesmo com o prompt do cliente
-	local ponto =
-		bloco(modelo, "Conversa", origem * CFrame.new(0, 4.5, -2.4), Vector3.one, false, false)
-	local prompt = Instance.new("ProximityPrompt")
-	prompt.ActionText = "Conversar"
-	prompt.ObjectText = "Primeiro Soberano"
-	prompt.MaxActivationDistance = DISTANCIA_CONVERSA
-	prompt.RequiresLineOfSight = false
-	prompt.Parent = ponto
+	-- O serviço da Arena monta o único prompt neste ponto.
+	bloco(modelo, "Conversa", origem * CFrame.new(0, 4.5, -2.4), Vector3.one, false, false)
 	raiz:GetAttributeChangedSignal("Estado"):Connect(function()
 		local sentado = raiz:GetAttribute("Estado") == PrimeiroSoberano.ESTADOS.NPC_OCUPANTE
 		gui.Enabled = sentado
-		prompt.Enabled = sentado
 		for _, parte in modelo:GetChildren() do
 			if parte:IsA("BasePart") and parte:GetAttribute("ReservaNPC") then
 				parte.Transparency = if sentado then 0 else 1
@@ -182,43 +163,6 @@ function PrimeiroSoberano.iniciar(pasta: Instance)
 				parte.Transparency = if sentado then 1 else 0
 			end
 		end
-	end)
-
-	local ultimaConversa: { [Player]: number } = {}
-	local proximaFala: { [Player]: number } = {}
-	local ultimoAlerta = -math.huge
-	prompt.Triggered:Connect(function(jogador: Player)
-		local agora = os.clock()
-		if agora - (ultimaConversa[jogador] or -math.huge) < ESPERA_CONVERSA then
-			return
-		end
-		local personagem = jogador.Character
-		local corpo = personagem and personagem:FindFirstChild("HumanoidRootPart")
-		if not corpo or not corpo:IsA("BasePart") then
-			return
-		end
-		if (corpo.Position - ponto.Position).Magnitude > DISTANCIA_CONVERSA + FOLGA_CONVERSA then
-			return
-		end
-		if raiz:GetAttribute("Estado") ~= PrimeiroSoberano.ESTADOS.NPC_OCUPANTE then
-			return
-		end
-		ultimaConversa[jogador] = agora
-		local i = proximaFala[jogador] or 1
-		proximaFala[jogador] = i % #FALAS + 1
-		Remotos.evento("Aviso"):FireClient(jogador, {
-			tipo = "npc",
-			texto = "“" .. FALAS[i] .. "”",
-		})
-		-- gesto compartilhado (mão no braço do trono), no máximo um a cada ESPERA_ALERTA
-		if agora - ultimoAlerta >= ESPERA_ALERTA then
-			ultimoAlerta = agora
-			raiz:SetAttribute("Alerta", Workspace:GetServerTimeNow())
-		end
-	end)
-	Players.PlayerRemoving:Connect(function(jogador)
-		ultimaConversa[jogador] = nil
-		proximaFala[jogador] = nil
 	end)
 
 	modelo.Parent = pasta

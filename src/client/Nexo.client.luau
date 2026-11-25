@@ -8,6 +8,7 @@ local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Auras = require(Shared.Dados.Auras)
+local PetsDados = require(Shared.Dados.Pets)
 local Remotos = require(Shared.Remotos)
 local UI = script.Parent:WaitForChild("UI")
 local Navegacao = require(UI:WaitForChild("Navegacao"))
@@ -18,6 +19,11 @@ local Estado = require(UI:WaitForChild("Estado"))
 local PrimeiroSoberano = require(
 	script.Parent:WaitForChild("Mundo"):WaitForChild("NPCs"):WaitForChild("PrimeiroSoberano")
 )
+local ArenaCorpo = require(script.Parent:WaitForChild("Mundo"):WaitForChild("ArenaCorpo"))
+local EcosMundo = require(script.Parent:WaitForChild("Mundo"):WaitForChild("Ecos"))
+local CriaturasMundo = require(script.Parent:WaitForChild("Mundo"):WaitForChild("Criaturas"))
+local EquipamentoMundo = require(script.Parent:WaitForChild("Mundo"):WaitForChild("Equipamento"))
+local EcosTela = require(UI:WaitForChild("Telas"):WaitForChild("Ecos"))
 
 local K_CIRCULO = 0.5523 -- fator de Bézier para 4 arcos formarem um círculo
 
@@ -92,6 +98,54 @@ local aneis = {
 local agitadoAte = 0
 local corAgitada = corBase
 
+-- Corredor dos Perdidos: as seis ilhas no céu (assets/corredor). A colisão é do servidor
+-- (workspace.Corredor); aqui só o visual. Se falhar, as caixas de reserva continuam visíveis.
+local corredor: Montagem.ResultadoCorredor? = nil
+local function montarCorredor()
+	local pastaServidor = workspace:WaitForChild("Corredor", 30)
+	if not pastaServidor then
+		return
+	end
+	local ok, resultado = pcall(Montagem.construirCorredor, workspace)
+	if not ok then
+		warn(
+			"[Corredor] kit 3D indisponível; mantendo as caixas de reserva: "
+				.. tostring(resultado)
+		)
+		return
+	end
+	corredor = resultado
+	for _, inst in pastaServidor:GetDescendants() do
+		if inst:IsA("BasePart") and inst:GetAttribute("Provisorio") then
+			inst.Transparency = 1
+		end
+	end
+end
+
+-- Véus dos portais respiram e as rochas soltas boiam devagar (só perto da câmera)
+RunService.Heartbeat:Connect(function()
+	local c = corredor
+	local camera = workspace.CurrentCamera
+	if not c or not camera then
+		return
+	end
+	local t = os.clock()
+	local olho = camera.CFrame.Position
+	for i, p in c.veus do
+		if (p.parte.Position - olho).Magnitude < 260 then
+			p.parte.Transparency = 0.3 + 0.12 * math.sin(t * 1.6 + i)
+		end
+	end
+	for i, p in c.deriva do
+		if (p.parte.Position - olho).Magnitude < 260 then
+			p.parte.CFrame = p.pivo
+				* CFrame.new(0, math.sin(t * 0.5 + i * 1.7) * 1.2, 0)
+				* CFrame.Angles(0, t * 0.05 + i, 0)
+				* CFrame.new(p.centro)
+		end
+	end
+end)
+
 -- Kit 3D da praça (modelado no Blender). Se o motor recusar criar as malhas, o cenário
 -- provisório do servidor continua visível: é o fallback temporário desta fase.
 local kit: Montagem.Resultado? = nil
@@ -116,6 +170,7 @@ task.spawn(function()
 		nexo:SetAttribute("EstadoKit3D", "Carregado")
 	end
 	PrimeiroSoberano.iniciar()
+	montarCorredor()
 end)
 
 local BRANCO = Color3.new(1, 1, 1)
@@ -222,11 +277,32 @@ RunService.Heartbeat:Connect(function()
 end)
 
 -- Primeiro Soberano: armadura 3D e repouso (o NPC em si é do servidor)
+-- ArenaCorpo: corpo dos jogadores em duelo (todos os clientes veem os mesmos golpes)
+ArenaCorpo.iniciar()
+EcosMundo.iniciar()
+CriaturasMundo.iniciar()
+EquipamentoMundo.iniciar()
 Estado.aoMudar(function(estado)
+	CriaturasMundo.definir({
+		qualidadeBaixa = estado.configuracoes.qualidadeBaixa == true,
+		movimentoReduzido = estado.configuracoes.movimentoReduzido == true,
+	})
+	EcosMundo.definir({
+		qualidadeBaixa = estado.configuracoes.qualidadeBaixa == true,
+		movimentoReduzido = estado.configuracoes.movimentoReduzido == true,
+	})
+	-- Núcleos acesos no Cristal: os que a pessoa já pode abrir
+	local corredor = (estado :: any).corredor
+	local liberados: { [number]: boolean } = {}
+	for i, nucleo in PetsDados.NUCLEOS do
+		liberados[i] = PetsDados.nucleoLiberado(nucleo, corredor)
+	end
+	EcosMundo.definirLiberados(liberados)
 	PrimeiroSoberano.definir({
 		qualidadeBaixa = estado.configuracoes.qualidadeBaixa == true,
 		movimentoReduzido = estado.configuracoes.movimentoReduzido == true,
 	})
+	ArenaCorpo.definir({ movimentoReduzido = estado.configuracoes.movimentoReduzido == true })
 end)
 
 -- Interações do mapa
@@ -241,6 +317,10 @@ ProximityPromptService.PromptTriggered:Connect(function(prompt, jogador)
 		Navegacao.abrir("Altar")
 	elseif acao == "incursoes" then
 		Navegacao.abrir("Incursoes")
+	elseif acao == "corredor" then
+		Navegacao.abrir("Corredor")
+	elseif acao == "nucleos" then
+		EcosTela.abrir("Nucleos")
 	elseif acao == "em_construcao" or acao == "eco" then
 		local texto = prompt:GetAttribute("Texto")
 		if type(texto) == "string" then

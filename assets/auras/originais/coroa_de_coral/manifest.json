@@ -1,0 +1,27 @@
+{
+  "auraId": "coroa_de_coral",
+  "runtimeTemplate": "ReplicatedStorage/AurasOriginais/coroa_de_coral",
+  "templateFile": "assets/roblox/auras_originais/coroa_de_coral.rbxm",
+  "status": "AWAITING_STUDIO_IMPORT",
+  "creatorId": null,
+  "revision": 1,
+  "axes": "sizes/centers in Roblox axes; FBX axis_forward=-Z, axis_up=Y, 1 unit = 1 stud",
+  "pieces": [
+    {
+      "name": "galho",
+      "triangles": 840,
+      "sizeStuds": [
+        1.4076,
+        1.6971,
+        0.3514
+      ],
+      "centerFromPivot": [
+        -0.0359,
+        0.8393,
+        0.0601
+      ],
+      "meshId": null
+    }
+  ],
+  "instancesInScene": 5
+}

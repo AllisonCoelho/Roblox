@@ -8,6 +8,7 @@ local Shared = ReplicatedStorage.Shared
 local Apresentacao = require(Shared.Dados.Apresentacao)
 local Auras = require(Shared.Dados.Auras)
 local AurasVfx = require(Shared.Dados.AurasVfx)
+local AurasOriginaisV2 = require(Shared.Dados.AurasOriginaisV2)
 local Formato = require(Shared.Formato)
 local Incursoes = require(Shared.Dados.Incursoes)
 local Tema = require(Shared.Tema)
@@ -34,6 +35,7 @@ local DESTINOS = {
 local NOMES_VFX = {
 	gear5 = "Gear 5",
 	monarca = "Monarca das Sombras",
+	senbonzakura = "Senbonzakura",
 	naruto_seis = "Modo Sábio dos Seis Caminhos",
 }
 
@@ -147,6 +149,10 @@ end
 
 local function nomeVfx(id: string): string
 	local caudas = string.match(id, "^naruto_(%d+)$")
+	local v2 = AurasOriginaisV2.porId[id]
+	if v2 then
+		return string.format("v2 %02d · %s", v2.numero, v2.nome)
+	end
 	return NOMES_VFX[id] or (if caudas then "Naruto · " .. caudas .. " caudas" else id)
 end
 
@@ -430,6 +436,15 @@ local function montar(paiHud: Frame, op: Opcoes)
 		end, i, "lilas")
 	end
 	ajustarUniversos()
+	local pontos = entrada(inc, "Pontos de Aura de teste")
+	botao(inc, "Definir Pontos de Aura", function()
+		local total = tonumber(pontos.Text)
+		if total then
+			pedir("pontosAura", total)
+		else
+			Avisos.toast("Digite a quantidade de Pontos de Aura")
+		end
+	end)
 	local saldo = entrada(inc, "Fragmentos de teste")
 	botao(inc, "Definir fragmentos", function()
 		local total = tonumber(saldo.Text)

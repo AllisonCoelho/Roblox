@@ -15,6 +15,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local NexoColisores = require(
 	ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Dados"):WaitForChild("NexoColisores")
 )
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 
 local Nexo = {}
 
@@ -275,6 +276,21 @@ local function construirNucleo(pasta: Instance)
 		1,
 		{ Name = "Base2", Color = COR.pedraClara, Material = Enum.Material.Marble }
 	)
+	-- Cristal do Nexo desperta os Núcleos dos Ecos (src/server/Servicos/Pets): o ponto de
+	-- interação fica na altura do jogador, ao redor do pedestal
+	local loja = peca(nucleo, {
+		Name = "CristalLoja",
+		Transparency = 1,
+		CanCollide = false,
+		CanQuery = false,
+		Size = Vector3.new(2, 2, 2),
+		Position = Vector3.new(0, 4, 0),
+	})
+	interacao(loja, "nucleos", "Despertar Ecos", "Cristal do Nexo")
+	local promptLoja = loja:FindFirstChildOfClass("ProximityPrompt")
+	if promptLoja then
+		promptLoja.MaxActivationDistance = 16
+	end
 	-- Coração de energia (o cliente anima: flutua, pulsa e ganha anéis orbitais)
 	local centro = Vector3.new(0, 15, 0)
 	local coracao = peca(
@@ -663,20 +679,15 @@ local function construirPortais(pasta: Instance)
 		})
 		luz(veu, cores[i], 22, 1.8)
 		if b == 0 then
-			interacao(
-				veu,
-				"em_construcao",
-				"Em construção",
-				"Portais Fragmentados",
-				"Os portais ainda não levam a lugar nenhum."
-			)
+			-- O portal do meio abre o Corredor dos Perdidos (src/server/Corredor)
+			interacao(veu, "corredor", "Entrar", "Corredor dos Perdidos")
 		end
 	end
 	placa(
 		pasta,
 		(olhar * CFrame.new(0, 25, 4)).Position,
-		"Portais Fragmentados",
-		"Em construção",
+		"Corredor dos Perdidos",
+		"Seis mundos fragmentados acima do Nexo",
 		COR.violeta
 	)
 end
@@ -782,7 +793,17 @@ local function construirBastiao(pasta: Instance)
 		Size = Vector3.new(2, 2, 2),
 		CFrame = olhar * CFrame.new(0, 3.2, -3),
 	})
-	interacao(mesa, "incursoes", "Planejar incursão", "Mesa dos Cartógrafos")
+	if Config.IncursoesAtivas then
+		interacao(mesa, "incursoes", "Planejar incursão", "Mesa dos Cartógrafos")
+	else
+		interacao(
+			mesa,
+			"em_construcao",
+			"Ver mapa",
+			"Mesa dos Cartógrafos",
+			"As Incursões estão fechadas por enquanto. O Corredor dos Perdidos chega em breve."
+		)
+	end
 	placa(
 		pasta,
 		(olhar * CFrame.new(0, 29, 11)).Position,
