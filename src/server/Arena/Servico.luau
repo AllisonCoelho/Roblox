@@ -1,4 +1,6 @@
--- Um duelo de cada vez no palco compartilhado. O cliente só informa a ação escolhida.
+-- Duelo contra o Primeiro Soberano (a prova do trono). Um duelo de cada vez no ringue, que é
+-- dividido com o 1x1 entre jogadores (Palco). Vencer o Soberano conta no perfil e, com o trono
+-- vazio, faz do jogador o Rei do Servidor (Trono). O cliente só informa a ação escolhida.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
@@ -14,6 +16,10 @@ local Acoes = require(Servicos.Acoes)
 local Dados = require(Servicos.Dados)
 local Cosmeticos = require(Servicos.Cosmeticos)
 local Incursoes = require(script.Parent.Parent.Incursoes.Servico)
+local Palco = require(script.Parent.Palco)
+local PvP = require(script.Parent.PvP)
+local Trono = require(script.Parent.Trono)
+local Rankeada = require(script.Parent.Rankeada)
 
 local Servico = {}
 local INTRODUCAO = Animacoes.INTRODUCAO
@@ -125,6 +131,7 @@ local function encerrar(d: Duelo)
 	animarJogador(d, nil, 0)
 	d.player:SetAttribute("EmDueloArena", nil)
 	enviar(d, "fechar")
+	Palco.liberar("monarca")
 end
 
 local function terminar(d: Duelo, resultado: string)
@@ -146,6 +153,9 @@ local function terminar(d: Duelo, resultado: string)
 		animarSoberano(d, "vitoria", agora)
 	end
 	enviar(d, "fim", { resultado = resultado, estado = d.estado })
+	if resultado == "vitoria" then
+		task.spawn(Trono.vencerMonarca, d.player)
+	end
 	task.delay(MOSTRAR_RESULTADO, encerrar, d)
 end
 
@@ -281,6 +291,9 @@ local function desistir(player: Player, id: any): (boolean, string?)
 end
 
 function Servico.iniciar()
+	PvP.iniciarServico()
+	Trono.iniciar()
+	Rankeada.iniciar()
 	Acoes.registrar("ArenaAgir", agir)
 	Acoes.registrar("ArenaSair", desistir)
 	Players.PlayerRemoving:Connect(function(player)
@@ -302,10 +315,29 @@ function Servico.montar(soberano: BasePart, ponto: BasePart)
 	prompt.RequiresLineOfSight = false
 	prompt.Parent = ponto
 
+	-- Painel da Arena (Trono do Servidor, Rankeada e ranking global): o cliente abre sozinho
+	local painel = Instance.new("ProximityPrompt")
+	painel.Name = "PainelArena"
+	painel.ActionText = "Trono e Rankeada"
+	painel.ObjectText = "Arena"
+	painel.KeyboardKeyCode = Enum.KeyCode.G
+	painel.GamepadKeyCode = Enum.KeyCode.ButtonX
+	painel.MaxActivationDistance = DISTANCIA
+	painel.RequiresLineOfSight = false
+	painel.UIOffset = Vector2.new(0, 72)
+	painel.Parent = ponto
+
 	local ultimoAlerta = -math.huge
 	prompt.Triggered:Connect(function(player)
 		local personagem = personagemPerto(player, ponto)
 		if atual or not prompt.Enabled or not personagem then
+			return
+		end
+		if Palco.ocupado() then
+			Remotos.evento("Aviso"):FireClient(player, {
+				tipo = "info",
+				texto = "O ringue está ocupado com um duelo. Aguarde um pouco.",
+			})
 			return
 		end
 		local agora = workspace:GetServerTimeNow()
@@ -364,12 +396,18 @@ function Servico.montar(soberano: BasePart, ponto: BasePart)
 			return true, nil
 		end
 
-		if atual or not prompt.Enabled then
-			return false, "O Soberano já está em duelo. Aguarde a Arena ficar livre."
+		if atual or not prompt.Enabled or Palco.ocupado() then
+			return false, "O ringue está ocupado. Aguarde a Arena ficar livre."
+		end
+		if player:GetAttribute("EmDueloArena") then
+			return false, "Termine o duelo atual primeiro."
 		end
 		local perfil = Dados.de(player)
 		if not perfil then
 			return false, "Aguarde seu perfil carregar para desafiar o Soberano."
+		end
+		if not Palco.reservar("monarca") then
+			return false, "O ringue está ocupado. Aguarde a Arena ficar livre."
 		end
 
 		local d: Duelo = {

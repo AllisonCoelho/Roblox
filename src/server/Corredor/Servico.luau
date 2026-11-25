@@ -438,6 +438,13 @@ local function pedirFase(player: Player, n: any): (boolean, string?)
 	return tentarEntrar(player, n)
 end
 
+-- Tira o jogador do Corredor sem teleportar (a Arena leva ele para o ringue)
+function Servico.liberar(player: Player)
+	presenca[player] = nil
+	CriaturasServico.limparCredito(player)
+	player:SetAttribute("CorredorFase", nil)
+end
+
 function Servico.iniciar()
 	construir()
 	CriaturasServico.definirFaseDe(function(player)

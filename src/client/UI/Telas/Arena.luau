@@ -23,6 +23,10 @@ local SAIDAS = {
 	tempo = { "Tempo esgotado", "O duelo terminou por inatividade." },
 }
 
+local function formatarMult(m: number?): string
+	return (string.format("×%.2f", m or 1):gsub("%.", ","))
+end
+
 local function quadro(pai: Instance, nome: string): Frame
 	return Kit.novo("Frame", {
 		Name = nome,
@@ -119,6 +123,9 @@ function Tela.montar(raiz: Frame, aoAviso: (string) -> (), aoMudar: (boolean) ->
 	local pendente = false
 	local menuTecnicas = false
 	local aura: string? = nil
+	-- 1x1 entre jogadores (Trono do Servidor ou Rankeada)
+	local pvp = false
+	local oponente = "Primeiro Soberano"
 	local cena: Cena.Controle? = nil
 	local token = 0
 	local botoes: { Botao } = {}
@@ -132,7 +139,7 @@ function Tela.montar(raiz: Frame, aoAviso: (string) -> (), aoMudar: (boolean) ->
 		aoClicar = function()
 			local pedido = id
 			task.spawn(function()
-				local ok, msg = Estado.pedir("ArenaSair", pedido)
+				local ok, msg = Estado.pedir(if pvp then "PvPSair" else "ArenaSair", pedido)
 				if not ok and camada.Visible and id == pedido and msg then
 					aoAviso(msg)
 				end
@@ -290,7 +297,14 @@ function Tela.montar(raiz: Frame, aoAviso: (string) -> (), aoMudar: (boolean) ->
 		pendente = true
 		atualizarBotoes()
 		task.spawn(function()
-			local ok, msg = Estado.pedir("ArenaAgir", pedidoId, pedidoRodada, acao)
+			local ok, msg =
+				Estado.pedir(if pvp then "PvPAgir" else "ArenaAgir", pedidoId, pedidoRodada, acao)
+			if ok and pvp and id == pedidoId and fase == "escolha" then
+				titulo.Text = "Aguardando " .. oponente
+				detalhe.Text = "Você escolheu "
+					.. Arena.Acoes[acao].nome
+					.. ". As duas ações acontecem juntas."
+			end
 			if
 				not ok
 				and camada.Visible
@@ -350,14 +364,22 @@ function Tela.montar(raiz: Frame, aoAviso: (string) -> (), aoMudar: (boolean) ->
 			id = pacote.id
 			estado = pacote.estado
 			aura = pacote.aura
+			pvp = pacote.pvp == true
+			oponente = if pvp then pacote.oponente or "Oponente" else "Primeiro Soberano"
+			soberano.nome.Text = oponente
 			fase = "entrada"
 			sair.rotulo.Text = "Sair"
 			sair.botao.Text = "Sair"
 			jogador.nome.Text = pacote.nome
 			prazo = 0
 			cronometro.Text = ""
-			titulo.Text = "Duelo pelo Trono"
-			detalhe.Text = "O Soberano aceita o desafio."
+			titulo.Text = if pvp then pacote.titulo or "Duelo" else "Duelo pelo Trono"
+			detalhe.Text = if pvp
+				then string.format(
+					"Você contra %s. Os dois escolhem ao mesmo tempo e o dano segue a Pontuação de Aura.",
+					oponente
+				)
+				else "O Soberano aceita o desafio."
 			comandos.Visible = false
 			aviso.quadro.Visible = true
 			impacto.quadro.Visible = false
@@ -369,6 +391,7 @@ function Tela.montar(raiz: Frame, aoAviso: (string) -> (), aoMudar: (boolean) ->
 				qualidadeBaixa = prefs.qualidadeBaixa == true,
 				cor = if pacote.cor then Color3.fromHex(pacote.cor) else Cores.Lilas,
 				estilo = pacote.estilo,
+				lado = if pvp then pacote.lado else nil,
 			})
 			camada.Visible = true
 			atualizarEstado()
@@ -383,7 +406,18 @@ function Tela.montar(raiz: Frame, aoAviso: (string) -> (), aoMudar: (boolean) ->
 			pendente = false
 			menuTecnicas = false
 			titulo.Text = "Seu turno"
-			detalhe.Text = Arena.intencao(estado.rodada).aviso
+			if pvp then
+				local e = estado :: any
+				detalhe.Text = string.format(
+					"%s também está escolhendo. Força: você %s · %s %s.",
+					oponente,
+					formatarMult(e.mult),
+					oponente,
+					formatarMult(e.multOponente)
+				)
+			else
+				detalhe.Text = Arena.intencao(estado.rodada).aviso
+			end
 			if estado.selado then
 				detalhe.Text ..= " Selo ativo."
 			end
@@ -417,6 +451,10 @@ function Tela.montar(raiz: Frame, aoAviso: (string) -> (), aoMudar: (boolean) ->
 					dano.Text = if golpe.dano > 0 then "−" .. golpe.dano .. " PV" else "Guarda"
 				end
 			end)
+		elseif pacote.tipo == "escolheu" then
+			if fase == "escolha" then
+				detalhe.Text ..= " " .. oponente .. " já escolheu."
+			end
 		elseif pacote.tipo == "fim" then
 			token += 1
 			fase = "fim"
@@ -427,6 +465,14 @@ function Tela.montar(raiz: Frame, aoAviso: (string) -> (), aoMudar: (boolean) ->
 			cronometro.Text = ""
 			local resultado = SAIDAS[pacote.resultado]
 			titulo.Text, detalhe.Text = resultado[1], resultado[2]
+			if pvp then
+				local base = if pacote.resultado == "vitoria"
+					then (if pacote.motivo == "desistencia"
+						then oponente .. " deixou o duelo."
+						else "Você venceu " .. oponente .. ".")
+					else oponente .. " venceu o duelo."
+				detalhe.Text = base .. (if pacote.detalhe then " " .. pacote.detalhe else "")
+			end
 			sair.rotulo.Text = "Voltar"
 			sair.botao.Text = "Voltar"
 			atualizarEstado()

@@ -17,6 +17,7 @@ local PermissaoDev = require(script.Parent.PermissaoDev)
 local Sorteio = require(script.Parent.Sorteio)
 local Nexo = require(script.Parent.Parent.Mundo.Nexo)
 local ServicoIncursoes = require(script.Parent.Parent.Incursoes.Servico)
+local Trono = require(script.Parent.Parent.Arena.Trono)
 
 local PainelDev = {}
 local studioTeste = RunService:IsStudio() and Config.ModoTeste
@@ -248,6 +249,20 @@ local comandos: { [string]: Comando } = {
 	renascer = renascer,
 	ciclo = function(_, fase)
 		return DropsMapa.irParaFase(fase)
+	end,
+	-- conta como vitória sobre o Soberano: com o trono vazio, vira o Rei
+	rei = function(player)
+		if not estadoDeTeste(player) then
+			return false, "Disponível só na sessão de teste (perfil temporário)"
+		end
+		if Trono.rei() == player then
+			return false, "Você já é o Rei do Servidor"
+		end
+		Trono.vencerMonarca(player)
+		return true,
+			if Trono.rei() == player
+				then "Você é o Rei do Servidor"
+				else "Prova do Soberano registrada: desafie o Rei no painel da Arena"
 	end,
 }
 
