@@ -1,7 +1,8 @@
--- Equipamento (RPG): elmo, armadura, manoplas, botas e arma. Cada peça dá bônus (Pontos de
+-- Equipamento (RPG): elmo, armadura, manoplas, botas e arma, mais os acessórios minimalistas
+-- (colar, manto, bracelete e auréola), para quem prefere um visual leve. Cada peça dá bônus (Pontos de
 -- Aura, Sorte, Dano, Vida ou Fragmentos), aparece no personagem e pode ser ocultada (o "olho":
 -- some o visual, os bônus continuam). Peças do mesmo conjunto somam um bônus extra com 3 e
--- com 5 peças. Elas caem das criaturas do Corredor dos Perdidos (cada mundo, um conjunto) e
+-- com 5 peças (acessórios contam: dá para fechar um conjunto só com peças leves). Elas caem das criaturas do Corredor dos Perdidos (cada mundo, um conjunto) e
 -- sobem de nível gastando Fragmentos. Só regras puras (sem Roblox): o servidor decide tudo com
 -- este módulo. Testado em testes/logica.luau. O visual vem de Dados/EquipamentoVisual.
 local Equipamento = {}
@@ -39,14 +40,38 @@ export type Colecao = {
 	contador: number,
 }
 
-Equipamento.ESPACOS = { "elmo", "armadura", "manoplas", "botas", "arma" }
+Equipamento.ESPACOS =
+	{ "elmo", "armadura", "manoplas", "botas", "arma", "colar", "manto", "bracelete", "aureola" }
 Equipamento.NOMES_ESPACOS = {
 	elmo = "Elmo",
 	armadura = "Armadura",
 	manoplas = "Manoplas",
 	botas = "Botas",
 	arma = "Arma",
+	colar = "Colar",
+	manto = "Manto",
+	bracelete = "Bracelete",
+	aureola = "Auréola",
 }
+-- Grupos do painel: armadura (peças grandes) e acessórios (minimalistas)
+Equipamento.GRUPOS = {
+	{
+		id = "armaduras",
+		nome = "Armaduras",
+		espacos = { "elmo", "armadura", "manoplas", "botas", "arma" },
+	},
+	{
+		id = "acessorios",
+		nome = "Acessórios",
+		espacos = { "colar", "manto", "bracelete", "aureola" },
+	},
+}
+Equipamento.GRUPO_DO_ESPACO = {} :: { [string]: string }
+for _, g in Equipamento.GRUPOS do
+	for _, espaco in g.espacos do
+		Equipamento.GRUPO_DO_ESPACO[espaco] = g.id
+	end
+end
 Equipamento.ATRIBUTOS = { "ganho", "sorte", "dano", "vida", "fragmentos" }
 Equipamento.NOMES_ATRIBUTOS = {
 	ganho = "Pontos de Aura",
@@ -77,6 +102,10 @@ local BASE: { [string]: Atributos } = {
 	manoplas = { dano = 8 },
 	botas = { ganho = 10 },
 	arma = { dano = 14 },
+	colar = { sorte = 3, ganho = 3 },
+	manto = { ganho = 8, vida = 8 },
+	bracelete = { dano = 6, sorte = 2 },
+	aureola = { fragmentos = 6, ganho = 3 },
 }
 local FORCA_MUNDO = { 1, 2, 3.5, 6, 10, 16 }
 
@@ -95,6 +124,10 @@ Equipamento.CONJUNTOS = {
 			manoplas = "Manoplas de Cristal",
 			botas = "Botas de Pedra Viva",
 			arma = "Espada de Cristal",
+			colar = "Colar de Lascas",
+			manto = "Manto do Limiar",
+			bracelete = "Bracelete de Ametista",
+			aureola = "Auréola Partida",
 		},
 	},
 	{
@@ -111,6 +144,10 @@ Equipamento.CONJUNTOS = {
 			manoplas = "Luvas de Galho",
 			botas = "Botas de Raiz",
 			arma = "Cajado do Bosque",
+			colar = "Colar de Folha de Vidro",
+			manto = "Manto de Musgo",
+			bracelete = "Bracelete de Raiz",
+			aureola = "Auréola de Galhos",
 		},
 	},
 	{
@@ -127,6 +164,10 @@ Equipamento.CONJUNTOS = {
 			manoplas = "Punhos de Magma",
 			botas = "Botas de Cinza",
 			arma = "Machado de Brasa",
+			colar = "Colar de Brasa",
+			manto = "Manto de Cinza",
+			bracelete = "Bracelete de Obsidiana",
+			aureola = "Auréola em Chamas",
 		},
 	},
 	{
@@ -143,6 +184,10 @@ Equipamento.CONJUNTOS = {
 			manoplas = "Manoplas da Maré",
 			botas = "Botas Abissais",
 			arma = "Tridente da Maré",
+			colar = "Colar de Pérola",
+			manto = "Manto da Maré",
+			bracelete = "Bracelete de Pérola",
+			aureola = "Auréola de Espuma",
 		},
 	},
 	{
@@ -159,6 +204,10 @@ Equipamento.CONJUNTOS = {
 			manoplas = "Manoplas de Ouro",
 			botas = "Botas de Mármore",
 			arma = "Martelo de Luz",
+			colar = "Medalha do Vitral",
+			manto = "Manto do Arcanjo",
+			bracelete = "Bracelete do Juramento",
+			aureola = "Auréola Dourada",
 		},
 	},
 	{
@@ -171,10 +220,14 @@ Equipamento.CONJUNTOS = {
 		bonus5 = { ganho = 150, sorte = 35, dano = 60 },
 		nomes = {
 			elmo = "Coroa Estelar",
-			armadura = "Manto do Devorador",
+			armadura = "Couraça do Devorador",
 			manoplas = "Garras do Vazio",
 			botas = "Passos do Vazio",
 			arma = "Foice Estelar",
+			colar = "Colar Estelar",
+			manto = "Manto do Vazio",
+			bracelete = "Bracelete do Eclipse",
+			aureola = "Auréola de Estrelas",
 		},
 	},
 } :: { Conjunto }

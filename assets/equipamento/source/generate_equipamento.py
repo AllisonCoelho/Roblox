@@ -272,7 +272,247 @@ def arma(t, i):
     return montar(base), montar(brilho)
 
 
-PECAS = [("elmo", elmo), ("armadura", armadura), ("manopla", manopla), ("bota", bota), ("arma", arma)]
+# ---------------------------------------------------------------- acessórios (minimalistas)
+#
+# Peças pequenas para quem prefere um visual leve, com ou sem armadura:
+#    colar     no UpperTorso: corrente de contas em volta do pescoço e um pingente do conjunto
+#    manto     no UpperTorso: fecho nos ombros (fixo) + três faixas articuladas (manto_s1..s3)
+#              que o jogo balança com o movimento. Cada faixa tem a origem na sua dobradiça
+#    bracelete no pulso esquerdo (a mão direita segura a arma): aro e a pedra para fora
+#    aureola   acima da cabeça: aro de luz com os enfeites do conjunto; o jogo faz girar devagar
+
+MANTO_TOPO = (0.0, -0.56, 0.78)  # dobradiça da primeira faixa (Blender, em relação ao torso)
+MANTO_FAIXAS = (0.9, 1.0, 1.1)  # comprimento de cada faixa
+MANTO_LARGURA = (1.75, 1.95, 2.1, 2.25)  # largura nas bordas de cada faixa (de cima para baixo)
+
+
+def contas(caminho, tam, cor, passo=0.085):
+    """Contas pequenas (cubos girados) ao longo de um caminho de pontos 3D."""
+    saida = []
+    pts = [Vector(q) for q in caminho]
+    resto = 0.0
+    for a, b in zip(pts, pts[1:]):
+        d = (b - a).length
+        k = resto
+        while k < d:
+            c = a + (b - a) * (k / d)
+            saida.append(bx(tuple(c), (tam, tam, tam), cor, 0.0, R(45, "Z") @ R(35, "X")))
+            k += passo
+        resto = k - d
+    return saida
+
+
+def pingente(t, i, c, escala=1.0):
+    """Pingente/joia do conjunto (vai na camada de brilho, menos a moldura)."""
+    base, brilho = [], []
+    x, y, z = c
+    d, b = t["detalhe"], t["brilho"]
+    if i == 0:  # lasca de cristal pendurada
+        brilho.append(cristal((x, y, z - 0.2 * escala), 0.035 * escala, b, 21, R(180, "Y")))
+    elif i == 1:  # folha de vidro
+        brilho.append(kit.chapa([(x, y, z), (x + 0.12 * escala, y, z - 0.12 * escala), (x, y, z - 0.32 * escala), (x - 0.12 * escala, y, z - 0.12 * escala)], b, 1.0, dupla=True))
+    elif i == 2:  # brasa em losango com moldura de ouro velho
+        base.append(bx((x, y - 0.01, z - 0.12 * escala), (0.2 * escala, 0.04, 0.2 * escala), d, 0.01, R(45, "Y")))
+        brilho.append(bx((x, y + 0.02, z - 0.12 * escala), (0.12 * escala, 0.05, 0.12 * escala), b, 0.01, R(45, "Y")))
+    elif i == 3:  # pérola
+        perola = kit.torno([(0.001, -0.08 * escala), (0.06 * escala, -0.06 * escala), (0.085 * escala, 0), (0.06 * escala, 0.06 * escala), (0.001, 0.08 * escala)], 10, (0.97, 0.95, 1.0), random.Random(7), tinta=1.0)
+        bmesh.ops.transform(perola, matrix=T((x, y + 0.03, z - 0.1 * escala)), verts=perola.verts[:])
+        base.append(perola)
+        brilho.append(bx((x, y + 0.02, z - 0.22 * escala), (0.05 * escala,) * 3, b, 0.0, R(45, "Y")))
+    elif i == 4:  # medalha de ouro com a pedra no meio
+        disco = cilindro((x, y, z - 0.15 * escala), 0.13 * escala, 0.04, d, 12, R(90, "X"))
+        base.append(disco)
+        brilho.append(bx((x, y + 0.03, z - 0.15 * escala), (0.09 * escala, 0.04, 0.09 * escala), b, 0.01, R(45, "Y")))
+    else:  # estrela de quatro pontas
+        for a in (0, 90, 180, 270):
+            r = math.radians(a)
+            brilho.append(ponta((x, y + 0.02, z - 0.14 * escala), (x + math.cos(r) * 0.16 * escala, y + 0.02, z - 0.14 * escala + math.sin(r) * 0.16 * escala), 0.06 * escala, b))
+        brilho.append(bx((x, y + 0.02, z - 0.14 * escala), (0.06 * escala, 0.05, 0.06 * escala), (1.0, 0.95, 1.0), 0.0, R(45, "Y")))
+    return base, brilho
+
+
+def colar(t, i):
+    """Corrente de contas por cima dos ombros e um pingente no peito."""
+    cor = kit.misturar(t["detalhe"], BRANCO, 0.15) if i != 5 else (0.75, 0.68, 0.95)
+    if i in (1, 2):
+        cor = t["metal"] if i == 1 else (0.88, 0.70, 0.36)
+    arco = [(math.sin(a) * 0.48, -math.cos(a) * 0.4 + 0.08, 0.83) for a in [math.radians(-120 + 12 * k) for k in range(21)]]
+    frente_d = (0.42, 0.53, 0.78)
+    frente_e = (-0.42, 0.53, 0.78)
+    fundo = (0.0, 0.56, 0.36)
+    caminho = [frente_e] + arco + [frente_d]
+    base = contas(caminho, 0.07, cor)
+    base += contas([frente_d, (0.18, 0.555, 0.5), fundo], 0.065, cor)
+    base += contas([frente_e, (-0.18, 0.555, 0.5), fundo], 0.065, cor)
+    b2, br2 = pingente(t, i, (0, 0.58, 0.36))
+    return montar(base + b2), montar(br2)
+
+
+def manto_fecho(t, i):
+    """Parte fixa do manto: faixa em cima dos ombros e dois fechos com a pedra do conjunto."""
+    m, e = t["metal"], t["escuro"]
+    tecido = kit.misturar(t["brilho"], e, 0.55)
+    base = [
+        bx((0, -0.52, 0.8), (1.8, 0.12, 0.12), tecido, 0.02),
+        bx((-0.72, -0.05, 0.84), (0.26, 1.0, 0.08), tecido, 0.02),
+        bx((0.72, -0.05, 0.84), (0.26, 1.0, 0.08), tecido, 0.02),
+        bx((-0.72, 0.53, 0.66), (0.24, 0.06, 0.3), tecido, 0.02),
+        bx((0.72, 0.53, 0.66), (0.24, 0.06, 0.3), tecido, 0.02),
+        bx((-0.72, 0.56, 0.62), (0.2, 0.05, 0.2), m, 0.02, R(45, "Y")),
+        bx((0.72, 0.56, 0.62), (0.2, 0.05, 0.2), m, 0.02, R(45, "Y")),
+    ]
+    brilho = [
+        bx((-0.72, 0.59, 0.62), (0.1, 0.04, 0.1), t["brilho"], 0.0, R(45, "Y")),
+        bx((0.72, 0.59, 0.62), (0.1, 0.04, 0.1), t["brilho"], 0.0, R(45, "Y")),
+    ]
+    return montar(base), montar(brilho)
+
+
+def manto_faixa(t, i, k):
+    """Faixa k (0, 1, 2) do manto, com a dobradiça na origem e caindo para -Z.
+
+    Tecido levemente curvo (o meio afasta das costas), avesso escuro e, na última faixa, a
+    barra com a cor de brilho do conjunto e o recorte característico."""
+    comp = MANTO_FAIXAS[k]
+    w0, w1 = MANTO_LARGURA[k], MANTO_LARGURA[k + 1]
+    tecido = kit.misturar(t["brilho"], t["escuro"], 0.55)
+    avesso = kit.misturar(tecido, PRETO, 0.45)
+    colunas = 6
+    bm = kit.novo_bm()
+    frente, tras = [], []
+    for linha, (z, w) in enumerate(((0.0, w0), (-comp, w1))):
+        f, tr = [], []
+        for c in range(colunas + 1):
+            u = c / colunas - 0.5
+            curva = -0.08 * (1 - (2 * u) ** 2)  # o meio do manto fica mais para trás
+            f.append(bm.verts.new((u * w, curva, z)))
+            tr.append(bm.verts.new((u * w, curva - 0.05, z)))
+        frente.append(f)
+        tras.append(tr)
+    for c in range(colunas):
+        bm.faces.new((frente[0][c], frente[1][c], frente[1][c + 1], frente[0][c + 1]))
+        bm.faces.new((tras[0][c], tras[0][c + 1], tras[1][c + 1], tras[1][c]))
+    for linha in (0, 1):
+        for c in range(colunas):
+            a, b = frente[linha][c], frente[linha][c + 1]
+            ta, tb = tras[linha][c], tras[linha][c + 1]
+            bm.faces.new((a, b, tb, ta) if linha == 0 else (b, a, ta, tb))
+    for c, d in ((0, 0), (colunas, colunas)):
+        if c == 0:
+            bm.faces.new((frente[0][c], tras[0][c], tras[1][c], frente[1][c]))
+        else:
+            bm.faces.new((frente[0][c], frente[1][c], tras[1][c], tras[0][c]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    kit.pintar(bm, avesso, 1.0, topo_claro=0.0)
+    # o lado de fora (Y negativo) leva a cor do tecido; o de dentro fica com o avesso
+    camada = bm.loops.layers.color["Col"]
+    for face in bm.faces:
+        cor = tecido if face.normal.y < -0.3 else avesso
+        for loop in face.loops:
+            loop[camada] = (*cor, 1.0)
+    base = [bm]
+    brilho = []
+    if k == 0:
+        # emblema do conjunto entre as omoplatas
+        b2, br2 = enfeite_topo(t, i, (0, 0.16, -0.5), 0.45)
+        for x in b2 + br2:
+            bmesh.ops.transform(x, matrix=R(180, "Z"), verts=x.verts[:])
+        base += b2
+        brilho += br2
+    if k == 2:
+        barra = []
+        for c in range(colunas + 1):
+            u = c / colunas - 0.5
+            curva = -0.08 * (1 - (2 * u) ** 2)
+            barra.append((u * w1 * 0.98, curva - 0.065, -comp + 0.1))
+        brilho.append(kit.fita3d(barra, 0.09, (0, -1, 0), t["brilho"]))
+        # recorte da barra: pontas (limiar/dunas/vazio), folhas (bosque), ondas (maré), franja dourada (catedral)
+        for c in range(5):
+            u = (c + 0.5) / 5 - 0.5
+            x = u * w1 * 0.9
+            curva = -0.08 * (1 - (2 * u) ** 2)
+            if i == 3:
+                base.append(bx((x, curva - 0.025, -comp - 0.04), (0.28, 0.04, 0.1), tecido, 0.03, R(25, "Y")))
+            elif i == 4:
+                base.append(bx((x, curva - 0.025, -comp - 0.08), (0.06, 0.04, 0.18), t["detalhe"], 0.0))
+            else:
+                base.append(ponta((x, curva - 0.025, -comp + 0.02), (x, curva - 0.025, -comp - 0.2), 0.18, tecido))
+    return montar(base), montar(brilho)
+
+
+def bracelete(t, i):
+    """Bracelete no pulso esquerdo (origem no centro do LowerArm, aro na altura do pulso) e a
+    pedra do conjunto virada para fora (-X)."""
+    m, d, b = t["metal"], t["detalhe"], t["brilho"]
+    aro = kit.misturar(d, BRANCO, 0.1) if i in (2, 4) else kit.misturar(m, BRANCO, 0.15)
+    z = -0.36
+    base = [
+        bx((0, 0.53, z), (1.12, 0.08, 0.16), aro, 0.01),
+        bx((0, -0.53, z), (1.12, 0.08, 0.16), aro, 0.01),
+        bx((0.53, 0, z), (0.08, 1.12, 0.16), aro, 0.01),
+        bx((-0.53, 0, z), (0.08, 1.12, 0.16), aro, 0.01),
+        bx((-0.58, 0, z), (0.06, 0.36, 0.26), kit.misturar(aro, PRETO, 0.2), 0.02),
+    ]
+    brilho = [bx((0, 0.575, z), (0.7, 0.02, 0.035), b, 0.0), bx((0, -0.575, z), (0.7, 0.02, 0.035), b, 0.0)]
+    if i == 0:
+        brilho.append(cristal((-0.62, 0, z - 0.07), 0.022, b, 31, R(90, "Y")))
+    elif i == 3:
+        perola = kit.torno([(0.001, -0.11), (0.09, -0.08), (0.11, 0), (0.09, 0.08), (0.001, 0.11)], 10, (0.97, 0.95, 1.0), random.Random(8), tinta=1.0)
+        bmesh.ops.transform(perola, matrix=T((-0.66, 0, z)) @ R(90, "Y"), verts=perola.verts[:])
+        base.append(perola)
+    elif i == 5:
+        for a in (0, 90, 180, 270):
+            r = math.radians(a)
+            brilho.append(ponta((-0.62, 0, z), (-0.62, math.cos(r) * 0.17, z + math.sin(r) * 0.17), 0.06, b))
+    else:
+        brilho.append(bx((-0.63, 0, z), (0.08, 0.18, 0.18), b, 0.01, R(45, "X")))
+    return montar(base), montar(brilho)
+
+
+def aureola(t, i):
+    """Aro de luz acima da cabeça (centro a 1,05 do centro da cabeça), levemente inclinado."""
+    b, d = t["brilho"], t["detalhe"]
+    raio, n = 0.48, 20
+    brilho, base = [], []
+    for k in range(n):
+        a = 2 * math.pi * (k + 0.5) / n
+        comp = 2 * math.pi * raio / n * 1.08
+        brilho.append(bx((math.cos(a) * raio, math.sin(a) * raio, 0), (0.07, comp, 0.06), b, 0.0, R(math.degrees(a), "Z")))
+    for k in range(6 if i != 4 else 12):
+        a = 2 * math.pi * k / (6 if i != 4 else 12)
+        x, y = math.cos(a) * raio, math.sin(a) * raio
+        if i == 0:
+            if k % 2 == 0:
+                base.append(cristal((x, y, 0.02), 0.022, d, 40 + k))
+        elif i == 1:
+            base.append(kit.chapa([(x, y, 0), (x * 1.25, y * 1.25, 0.12), (x * 1.05, y * 1.05, 0.2)], d, 1.0, dupla=True))
+        elif i == 2:
+            brilho.append(ponta((x, y, 0.02), (x * 1.05, y * 1.05, 0.22 + 0.06 * (k % 2)), 0.07, kit.misturar(b, (1.0, 0.9, 0.4), 0.4)))
+        elif i == 3:
+            base.append(bx((x * 1.0, y * 1.0, 0.06), (0.07, 0.07, 0.07), (0.97, 0.95, 1.0), 0.02))
+        elif i == 4:
+            brilho.append(ponta((x * 1.05, y * 1.05, 0), (x * 1.35, y * 1.35, 0), 0.05, kit.misturar(b, BRANCO, 0.3)))
+        else:
+            if k % 2 == 0:
+                brilho.append(bx((x * 1.3, y * 1.3, 0.08 * (k % 3)), (0.08, 0.08, 0.08), (1.0, 0.95, 1.0), 0.0, R(45, "Z") @ R(35, "X")))
+    tudo_b, tudo_l = montar(base), montar(brilho)
+    for bm in (tudo_b, tudo_l):
+        bmesh.ops.transform(bm, matrix=T((0, 0, 1.05)) @ R(-12, "X"), verts=bm.verts[:])
+    return tudo_b, tudo_l
+
+
+ACESSORIOS = [
+    ("colar", colar),
+    ("manto", manto_fecho),
+    ("manto_s1", lambda t, i: manto_faixa(t, i, 0)),
+    ("manto_s2", lambda t, i: manto_faixa(t, i, 1)),
+    ("manto_s3", lambda t, i: manto_faixa(t, i, 2)),
+    ("bracelete", bracelete),
+    ("aureola", aureola),
+]
+
+
+PECAS = [("elmo", elmo), ("armadura", armadura), ("manopla", manopla), ("bota", bota), ("arma", arma)] + ACESSORIOS
 
 
 # ---------------------------------------------------------------- escrita
@@ -329,13 +569,30 @@ BONECO = {
     "LeftFoot": ((-0.5, 0, 0.15), (1.0, 1.0, 0.3)),
 }
 # onde cada peça fica no boneco (mesma regra do jogo, com escala 1)
+def _manto_preview():
+    torso = T((0, 0, 3.2))
+    m = torso @ T(MANTO_TOPO)
+    saida = {}
+    for k, (comp, ang) in enumerate(zip(MANTO_FAIXAS, (6, 7, 9))):
+        m = m @ R(-ang, "X")
+        saida["manto_s%d" % (k + 1)] = [(m.copy(), "")]
+        m = m @ T((0, 0, -comp))
+    return saida
+
+
 ENCAIXE = {
-    "elmo": [((0, 0, 4.6), "")],
-    "armadura": [((0, 0, 3.2), "")],
-    "manopla": [((1.5, 0, 2.37), "_d"), ((-1.5, 0, 2.37), "_e")],
-    "bota": [((0.5, 0, 0.0), "_d"), ((-0.5, 0, 0.0), "_e")],
-    "arma": [((1.5, 0, 1.6), "")],
+    "elmo": [(T((0, 0, 4.6)), "")],
+    "armadura": [(T((0, 0, 3.2)), "")],
+    "manopla": [(T((1.5, 0, 2.37)), "_d"), (T((-1.5, 0, 2.37)), "_e")],
+    "bota": [(T((0.5, 0, 0.0)), "_d"), (T((-0.5, 0, 0.0)), "_e")],
+    "arma": [(T((1.5, 0, 1.6)), "")],
+    "colar": [(T((0, 0, 3.2)), "")],
+    "manto": [(T((0, 0, 3.2)), "")],
+    "bracelete": [(T((-1.5, 0, 2.37)), "")],
+    "aureola": [(T((0, 0, 4.6)), "")],
 }
+ENCAIXE.update(_manto_preview())
+GRUPO_ARMADURA = ("elmo", "armadura", "manopla", "bota", "arma")
 
 
 def main():
@@ -407,23 +664,27 @@ def renderizar(objetos):
     chao.data.materials.append(m)
     pele = kit.criar_material("Boneco")
     for i, t in enumerate(TEMAS):
-        col = bpy.data.collections.new("set_" + t["id"])
-        bpy.context.scene.collection.children.link(col)
+        grupos = {}
+        for g in ("boneco", "arm", "ace"):
+            col = bpy.data.collections.new("set_%s_%s" % (t["id"], g))
+            bpy.context.scene.collection.children.link(col)
+            grupos[g] = col
         dx = i * 8.0
         for nome, (c, s) in BONECO.items():
             cor = (0.95, 0.80, 0.62) if nome in ("Head",) or "Hand" in nome or "Arm" in nome else ((0.30, 0.35, 0.55) if "Leg" in nome or "Foot" in nome or "Lower" in nome else (0.85, 0.85, 0.9))
             o = kit.registrar("boneco_%d_%s" % (i, nome), bx(c, s, cor, 0.03), pele)
             o.location = (dx, 0, 0)
-            col.objects.link(o)
+            grupos["boneco"].objects.link(o)
         for peca, lugares in ENCAIXE.items():
-            for pos, sufixo in lugares:
+            grupo = grupos["arm" if peca in GRUPO_ARMADURA else "ace"]
+            for matriz, sufixo in lugares:
                 for camada in ("", "_brilho"):
                     fonte = objetos.get("equip_%s_%s%s%s" % (t["id"], peca, sufixo, camada))
                     if not fonte:
                         continue
                     inst = bpy.data.objects.new(fonte.name + "_inst", fonte.data)
-                    inst.location = (dx + pos[0], pos[1], pos[2])
-                    col.objects.link(inst)
+                    inst.matrix_world = T((dx, 0, 0)) @ matriz
+                    grupo.objects.link(inst)
     bpy.ops.object.light_add(type="AREA")
     luz = bpy.context.object
     luz.data.size = 10
@@ -435,22 +696,31 @@ def renderizar(objetos):
     cam = bpy.context.object
     cena.camera = cam
     cam.data.lens = 50
+    so = [a for a in sys.argv if a.startswith("--so=")]
+    passes = [
+        ("conjunto", ("boneco", "arm"), Vector((5.5, 10.5, 2.2))),
+        ("acessorios", ("boneco", "ace"), Vector((5.5, 10.5, 2.2))),
+        ("acessorios_costas", ("boneco", "ace"), Vector((-6.5, -9.5, 2.6))),
+    ]
     for i, t in enumerate(TEMAS):
-        for k, tt in enumerate(TEMAS):
-            bpy.data.collections["set_" + tt["id"]].hide_render = k != i
-        alvo = Vector((i * 8.0, 0, 2.7))
-        cam.location = alvo + Vector((5.5, 10.5, 2.2))
-        cam.rotation_euler = (alvo - cam.location).to_track_quat("-Z", "Y").to_euler()
-        luz.location = alvo + Vector((6, 8, 9))
-        luz.rotation_euler = (alvo - luz.location).to_track_quat("-Z", "Y").to_euler()
-        luz.data.energy = 3500
-        luz2.location = alvo + Vector((-9, -4, 5))
-        luz2.rotation_euler = (alvo - luz2.location).to_track_quat("-Z", "Y").to_euler()
-        luz2.data.energy = 1400
-        cena.render.filepath = os.path.join(DIR_PREV, "conjunto_%s.jpg" % t["id"])
-        bpy.ops.render.render(write_still=True)
-        print("prévia", t["id"])
-
+        if so and t["id"] not in so[0][5:].split(","):
+            continue
+        for nome_passe, visiveis, olhar in passes:
+            for tt in TEMAS:
+                for g in ("boneco", "arm", "ace"):
+                    bpy.data.collections["set_%s_%s" % (tt["id"], g)].hide_render = not (tt["id"] == t["id"] and g in visiveis)
+            alvo = Vector((i * 8.0, 0, 2.7))
+            cam.location = alvo + olhar
+            cam.rotation_euler = (alvo - cam.location).to_track_quat("-Z", "Y").to_euler()
+            luz.location = alvo + Vector((6 * math.copysign(1, olhar.x), 8 * math.copysign(1, olhar.y), 9))
+            luz.rotation_euler = (alvo - luz.location).to_track_quat("-Z", "Y").to_euler()
+            luz.data.energy = 3500
+            luz2.location = alvo + Vector((-9 * math.copysign(1, olhar.x), -4 * math.copysign(1, olhar.y), 5))
+            luz2.rotation_euler = (alvo - luz2.location).to_track_quat("-Z", "Y").to_euler()
+            luz2.data.energy = 1400
+            cena.render.filepath = os.path.join(DIR_PREV, "%s_%s.jpg" % (nome_passe, t["id"]))
+            bpy.ops.render.render(write_still=True)
+            print("prévia", nome_passe, t["id"])
 
 if __name__ == "__main__":
     main()

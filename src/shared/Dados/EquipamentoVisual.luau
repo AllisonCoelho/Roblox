@@ -31,6 +31,31 @@ return {
 			{ malha = "equip_limiar_arma", material = "Slate" },
 			{ malha = "equip_limiar_arma_brilho", material = "Neon" },
 		},
+		colar = {
+			{ malha = "equip_limiar_colar", material = "Slate" },
+			{ malha = "equip_limiar_colar_brilho", material = "Neon" },
+		},
+		manto = {
+			{ malha = "equip_limiar_manto", material = "Slate" },
+			{ malha = "equip_limiar_manto_brilho", material = "Neon" },
+		},
+		manto_s1 = {
+			{ malha = "equip_limiar_manto_s1", material = "Slate" },
+			{ malha = "equip_limiar_manto_s1_brilho", material = "Neon" },
+		},
+		manto_s2 = { { malha = "equip_limiar_manto_s2", material = "Slate" } },
+		manto_s3 = {
+			{ malha = "equip_limiar_manto_s3", material = "Slate" },
+			{ malha = "equip_limiar_manto_s3_brilho", material = "Neon" },
+		},
+		bracelete = {
+			{ malha = "equip_limiar_bracelete", material = "Slate" },
+			{ malha = "equip_limiar_bracelete_brilho", material = "Neon" },
+		},
+		aureola = {
+			{ malha = "equip_limiar_aureola", material = "Slate" },
+			{ malha = "equip_limiar_aureola_brilho", material = "Neon" },
+		},
 	},
 	bosque = {
 		elmo = {
@@ -60,6 +85,28 @@ return {
 		arma = {
 			{ malha = "equip_bosque_arma", material = "Wood" },
 			{ malha = "equip_bosque_arma_brilho", material = "Neon" },
+		},
+		colar = {
+			{ malha = "equip_bosque_colar", material = "Wood" },
+			{ malha = "equip_bosque_colar_brilho", material = "Neon" },
+		},
+		manto = {
+			{ malha = "equip_bosque_manto", material = "Wood" },
+			{ malha = "equip_bosque_manto_brilho", material = "Neon" },
+		},
+		manto_s1 = { { malha = "equip_bosque_manto_s1", material = "Wood" } },
+		manto_s2 = { { malha = "equip_bosque_manto_s2", material = "Wood" } },
+		manto_s3 = {
+			{ malha = "equip_bosque_manto_s3", material = "Wood" },
+			{ malha = "equip_bosque_manto_s3_brilho", material = "Neon" },
+		},
+		bracelete = {
+			{ malha = "equip_bosque_bracelete", material = "Wood" },
+			{ malha = "equip_bosque_bracelete_brilho", material = "Neon" },
+		},
+		aureola = {
+			{ malha = "equip_bosque_aureola", material = "Wood" },
+			{ malha = "equip_bosque_aureola_brilho", material = "Neon" },
 		},
 	},
 	dunas = {
@@ -91,6 +138,28 @@ return {
 			{ malha = "equip_dunas_arma", material = "SmoothPlastic" },
 			{ malha = "equip_dunas_arma_brilho", material = "Neon" },
 		},
+		colar = {
+			{ malha = "equip_dunas_colar", material = "SmoothPlastic" },
+			{ malha = "equip_dunas_colar_brilho", material = "Neon" },
+		},
+		manto = {
+			{ malha = "equip_dunas_manto", material = "SmoothPlastic" },
+			{ malha = "equip_dunas_manto_brilho", material = "Neon" },
+		},
+		manto_s1 = {
+			{ malha = "equip_dunas_manto_s1", material = "SmoothPlastic" },
+			{ malha = "equip_dunas_manto_s1_brilho", material = "Neon" },
+		},
+		manto_s2 = { { malha = "equip_dunas_manto_s2", material = "SmoothPlastic" } },
+		manto_s3 = {
+			{ malha = "equip_dunas_manto_s3", material = "SmoothPlastic" },
+			{ malha = "equip_dunas_manto_s3_brilho", material = "Neon" },
+		},
+		bracelete = {
+			{ malha = "equip_dunas_bracelete", material = "SmoothPlastic" },
+			{ malha = "equip_dunas_bracelete_brilho", material = "Neon" },
+		},
+		aureola = { { malha = "equip_dunas_aureola_brilho", material = "Neon" } },
 	},
 	mare = {
 		elmo = {
@@ -120,6 +189,31 @@ return {
 		arma = {
 			{ malha = "equip_mare_arma", material = "SmoothPlastic" },
 			{ malha = "equip_mare_arma_brilho", material = "Neon" },
+		},
+		colar = {
+			{ malha = "equip_mare_colar", material = "SmoothPlastic" },
+			{ malha = "equip_mare_colar_brilho", material = "Neon" },
+		},
+		manto = {
+			{ malha = "equip_mare_manto", material = "SmoothPlastic" },
+			{ malha = "equip_mare_manto_brilho", material = "Neon" },
+		},
+		manto_s1 = {
+			{ malha = "equip_mare_manto_s1", material = "SmoothPlastic" },
+			{ malha = "equip_mare_manto_s1_brilho", material = "Neon" },
+		},
+		manto_s2 = { { malha = "equip_mare_manto_s2", material = "SmoothPlastic" } },
+		manto_s3 = {
+			{ malha = "equip_mare_manto_s3", material = "SmoothPlastic" },
+			{ malha = "equip_mare_manto_s3_brilho", material = "Neon" },
+		},
+		bracelete = {
+			{ malha = "equip_mare_bracelete", material = "SmoothPlastic" },
+			{ malha = "equip_mare_bracelete_brilho", material = "Neon" },
+		},
+		aureola = {
+			{ malha = "equip_mare_aureola", material = "SmoothPlastic" },
+			{ malha = "equip_mare_aureola_brilho", material = "Neon" },
 		},
 	},
 	catedral = {
@@ -151,6 +245,28 @@ return {
 			{ malha = "equip_catedral_arma", material = "Marble" },
 			{ malha = "equip_catedral_arma_brilho", material = "Neon" },
 		},
+		colar = {
+			{ malha = "equip_catedral_colar", material = "Marble" },
+			{ malha = "equip_catedral_colar_brilho", material = "Neon" },
+		},
+		manto = {
+			{ malha = "equip_catedral_manto", material = "Marble" },
+			{ malha = "equip_catedral_manto_brilho", material = "Neon" },
+		},
+		manto_s1 = {
+			{ malha = "equip_catedral_manto_s1", material = "Marble" },
+			{ malha = "equip_catedral_manto_s1_brilho", material = "Neon" },
+		},
+		manto_s2 = { { malha = "equip_catedral_manto_s2", material = "Marble" } },
+		manto_s3 = {
+			{ malha = "equip_catedral_manto_s3", material = "Marble" },
+			{ malha = "equip_catedral_manto_s3_brilho", material = "Neon" },
+		},
+		bracelete = {
+			{ malha = "equip_catedral_bracelete", material = "Marble" },
+			{ malha = "equip_catedral_bracelete_brilho", material = "Neon" },
+		},
+		aureola = { { malha = "equip_catedral_aureola_brilho", material = "Neon" } },
 	},
 	vazio = {
 		elmo = {
@@ -181,5 +297,27 @@ return {
 			{ malha = "equip_vazio_arma", material = "SmoothPlastic" },
 			{ malha = "equip_vazio_arma_brilho", material = "Neon" },
 		},
+		colar = {
+			{ malha = "equip_vazio_colar", material = "SmoothPlastic" },
+			{ malha = "equip_vazio_colar_brilho", material = "Neon" },
+		},
+		manto = {
+			{ malha = "equip_vazio_manto", material = "SmoothPlastic" },
+			{ malha = "equip_vazio_manto_brilho", material = "Neon" },
+		},
+		manto_s1 = {
+			{ malha = "equip_vazio_manto_s1", material = "SmoothPlastic" },
+			{ malha = "equip_vazio_manto_s1_brilho", material = "Neon" },
+		},
+		manto_s2 = { { malha = "equip_vazio_manto_s2", material = "SmoothPlastic" } },
+		manto_s3 = {
+			{ malha = "equip_vazio_manto_s3", material = "SmoothPlastic" },
+			{ malha = "equip_vazio_manto_s3_brilho", material = "Neon" },
+		},
+		bracelete = {
+			{ malha = "equip_vazio_bracelete", material = "SmoothPlastic" },
+			{ malha = "equip_vazio_bracelete_brilho", material = "Neon" },
+		},
+		aureola = { { malha = "equip_vazio_aureola_brilho", material = "Neon" } },
 	},
 }

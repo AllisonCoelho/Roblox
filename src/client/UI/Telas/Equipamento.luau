@@ -1,7 +1,8 @@
--- Equipamento (RPG): a aba Personagem mostra os cinco espaços (elmo, armadura, manoplas, botas e
--- arma) com a peça em 3D, o "olho" de ocultar o visual (os bônus continuam), os bônus somados
--- e os de conjunto. As outras abas listam as peças de cada tipo para equipar, aprimorar com
--- Fragmentos ou desmontar (dois toques). O servidor confere tudo; aqui só mostra e pede.
+-- Equipamento (RPG): a aba Personagem mostra os espaços de armadura (elmo, armadura, manoplas,
+-- botas e arma) e de acessórios (colar, manto, bracelete e auréola) com a peça em 3D, o "olho" de
+-- ocultar o visual (os bônus continuam), os bônus somados e os de conjunto. As abas Armaduras e
+-- Acessórios listam as peças (com filtro por espaço) para equipar, aprimorar com Fragmentos ou
+-- desmontar (dois toques). O servidor confere tudo; aqui só mostra e pede.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -19,18 +20,29 @@ local Malha = require(script.Parent.Parent.Parent.Mundo.Nexo3D.Malha)
 local Tela = {}
 Tela.ICONE = 24 -- emblema do guardião
 
-local ICONE_ESPACO = { elmo = 33, armadura = 24, manoplas = 10, botas = 30, arma = 26 }
-local PECA_VITRINE = {
-	elmo = "elmo",
-	armadura = "armadura",
-	manoplas = "manopla_d",
-	botas = "bota_d",
-	arma = "arma",
+local ICONE_GRUPO = { armaduras = 24, acessorios = 21 }
+-- Peças do kit mostradas na vitrine de cada espaço (com a posição de cada uma)
+local VITRINE: { [string]: { { peca: string, cf: CFrame } } } = {
+	elmo = { { peca = "elmo", cf = CFrame.identity } },
+	armadura = { { peca = "armadura", cf = CFrame.identity } },
+	manoplas = { { peca = "manopla_d", cf = CFrame.identity } },
+	botas = { { peca = "bota_d", cf = CFrame.identity } },
+	arma = { { peca = "arma", cf = CFrame.identity } },
+	colar = { { peca = "colar", cf = CFrame.identity } },
+	manto = {
+		{ peca = "manto", cf = CFrame.identity },
+		{ peca = "manto_s1", cf = CFrame.new(0, 0.78, 0.56) * CFrame.Angles(-0.1, 0, 0) },
+		{ peca = "manto_s2", cf = CFrame.new(0, -0.11, 0.65) * CFrame.Angles(-0.22, 0, 0) },
+		{ peca = "manto_s3", cf = CFrame.new(0, -1.08, 0.87) * CFrame.Angles(-0.38, 0, 0) },
+	},
+	bracelete = { { peca = "bracelete", cf = CFrame.identity } },
+	aureola = { { peca = "aureola", cf = CFrame.identity } },
 }
 
 local estrutura: Cartoes.Estrutura
 local abas: { [string]: Cartoes.Aba } = {}
 local aba = "Personagem"
+local filtro: string? = nil -- espaço escolhido dentro de Armaduras/Acessórios (nil = todos)
 local aviso: (string) -> ()
 local pedindo = false
 local desmontando: string? = nil
@@ -59,17 +71,23 @@ local function vitrine(
 		Size = tamanho,
 		Parent = pai,
 	}) :: ViewportFrame
+	local pedacos = VITRINE[espaco]
+	if not pedacos then
+		return
+	end
 	local modelo = Instance.new("Model")
-	local camadas = ((Visual :: any)[conjunto] or {})[PECA_VITRINE[espaco]] or {}
 	local minimo, maximo = Vector3.one * 1e9, -Vector3.one * 1e9
-	for _, m in camadas do
-		local ok, parte, centro = pcall(Malha.criar, m.malha, prontas)
-		if ok then
-			parte.Material = (Enum.Material :: any)[m.material] or Enum.Material.SmoothPlastic
-			parte.CFrame = CFrame.new(centro)
-			parte.Parent = modelo
-			minimo = minimo:Min(centro - parte.Size / 2)
-			maximo = maximo:Max(centro + parte.Size / 2)
+	for _, pedaco in pedacos do
+		for _, m in ((Visual :: any)[conjunto] or {})[pedaco.peca] or {} do
+			local ok, parte, centro = pcall(Malha.criar, m.malha, prontas)
+			if ok then
+				parte.Material = (Enum.Material :: any)[m.material] or Enum.Material.SmoothPlastic
+				parte.CFrame = pedaco.cf * CFrame.new(centro)
+				parte.Parent = modelo
+				local p = parte.Position
+				minimo = minimo:Min(p - parte.Size / 2)
+				maximo = maximo:Max(p + parte.Size / 2)
+			end
 		end
 	end
 	if #modelo:GetChildren() == 0 then
@@ -157,89 +175,105 @@ local function abaPersonagem()
 			.. '<br/><font color="#C9C7D6">As peças caem das criaturas do Corredor dos Perdidos. O olho esconde o visual sem tirar os bônus.</font>',
 		altura = 118,
 	})
-	Cartoes.secao(estrutura.lista, 2, "Equipado", "Toque em Trocar para ver as peças do espaço")
-	local grade = Cartoes.grade(estrutura.lista, 3, Vector2.new(210, 330))
-	for i, espaco in Equip.ESPACOS do
-		local uid = c.equipados[espaco]
-		local g = uid and c.lista[uid]
-		local item = g and Equip.porId[g.item]
-		local cor = if item then corRaridade(item.raridade) else Cores.Borda
-		local p = Kit.placa({
-			tamanho = UDim2.fromScale(1, 1),
-			borda = cor,
-			corte = 12,
-			ordem = i,
-			pai = grade,
-		})
-		texto(p.conteudo, {
-			fonte = "titulo",
-			Text = string.upper(Equip.NOMES_ESPACOS[espaco]),
-			TextSize = 13,
-			TextColor3 = Cores.TextoSuave,
-			Position = UDim2.fromOffset(8, 6),
-			Size = UDim2.new(1, -16, 0, 16),
-		})
-		if item and g then
-			vitrine(
-				p.conteudo,
-				item.conjunto,
-				espaco,
-				UDim2.fromOffset(20, 24),
-				UDim2.new(1, -40, 0, 120)
-			)
+	local ordem = 2
+	for _, grupo in Equip.GRUPOS do
+		Cartoes.secao(
+			estrutura.lista,
+			ordem,
+			grupo.nome,
+			if grupo.id == "acessorios"
+				then "Peças leves: combinam com a armadura ou sozinhas, e contam para o conjunto"
+				else "Toque em Trocar para ver as peças do espaço"
+		)
+		local grade = Cartoes.grade(estrutura.lista, ordem + 1, Vector2.new(210, 330))
+		ordem += 2
+		for i, espaco in grupo.espacos do
+			local uid = c.equipados[espaco]
+			local g = uid and c.lista[uid]
+			local item = g and Equip.porId[g.item]
+			local cor = if item then corRaridade(item.raridade) else Cores.Borda
+			local p = Kit.placa({
+				tamanho = UDim2.fromScale(1, 1),
+				borda = cor,
+				corte = 12,
+				ordem = i,
+				pai = grade,
+			})
 			texto(p.conteudo, {
 				fonte = "titulo",
-				Text = item.nome .. (if g.nivel > 0 then "  +" .. g.nivel else ""),
-				TextSize = 17,
-				TextColor3 = Kit.corLegivel(cor),
-				TextWrapped = true,
-				Position = UDim2.fromOffset(6, 146),
-				Size = UDim2.new(1, -12, 0, 40),
-			})
-			texto(p.conteudo, {
-				Text = Equip.texto(Equip.atributos(g)),
+				Text = string.upper(Equip.NOMES_ESPACOS[espaco]),
 				TextSize = 13,
-				TextColor3 = Cores.Menta,
-				TextWrapped = true,
-				Position = UDim2.fromOffset(6, 188),
-				Size = UDim2.new(1, -12, 0, 34),
+				TextColor3 = Cores.TextoSuave,
+				Position = UDim2.fromOffset(8, 6),
+				Size = UDim2.new(1, -16, 0, 16),
 			})
-			local oculto = c.ocultos[espaco] == true
+			if item and g then
+				vitrine(
+					p.conteudo,
+					item.conjunto,
+					espaco,
+					UDim2.fromOffset(20, 24),
+					UDim2.new(1, -40, 0, 120)
+				)
+				texto(p.conteudo, {
+					fonte = "titulo",
+					Text = item.nome .. (if g.nivel > 0 then "  +" .. g.nivel else ""),
+					TextSize = 17,
+					TextColor3 = Kit.corLegivel(cor),
+					TextWrapped = true,
+					Position = UDim2.fromOffset(6, 146),
+					Size = UDim2.new(1, -12, 0, 40),
+				})
+				texto(p.conteudo, {
+					Text = Equip.texto(Equip.atributos(g)),
+					TextSize = 13,
+					TextColor3 = Cores.Menta,
+					TextWrapped = true,
+					Position = UDim2.fromOffset(6, 188),
+					Size = UDim2.new(1, -12, 0, 34),
+				})
+				local oculto = c.ocultos[espaco] == true
+				botao(
+					p.conteudo,
+					if oculto then "◌ Oculto" else "◉ Visível",
+					if oculto then "neutro" else "menta",
+					UDim2.new(0, 6, 1, -96),
+					UDim2.new(1, -12, 0, 40),
+					function()
+						pedir("OcultarEquipamento", espaco, not oculto)
+					end
+				)
+			else
+				texto(p.conteudo, {
+					Text = "Vazio",
+					TextSize = 16,
+					TextColor3 = Cores.TextoSuave,
+					Position = UDim2.fromOffset(6, 80),
+					Size = UDim2.new(1, -12, 0, 24),
+				})
+			end
 			botao(
 				p.conteudo,
-				if oculto then "◌ Oculto" else "◉ Visível",
-				if oculto then "neutro" else "menta",
-				UDim2.new(0, 6, 1, -96),
+				"Trocar",
+				"lilas",
+				UDim2.new(0, 6, 1, -50),
 				UDim2.new(1, -12, 0, 40),
 				function()
-					pedir("OcultarEquipamento", espaco, not oculto)
+					aba = espaco
+					estrutura.conteudo.CanvasPosition = Vector2.zero
+					Tela.desenhar()
 				end
 			)
-		else
-			texto(p.conteudo, {
-				Text = "Vazio",
-				TextSize = 16,
-				TextColor3 = Cores.TextoSuave,
-				Position = UDim2.fromOffset(6, 80),
-				Size = UDim2.new(1, -12, 0, 24),
-			})
 		end
-		botao(
-			p.conteudo,
-			"Trocar",
-			"lilas",
-			UDim2.new(0, 6, 1, -50),
-			UDim2.new(1, -12, 0, 40),
-			function()
-				aba = espaco
-				estrutura.conteudo.CanvasPosition = Vector2.zero
-				Tela.desenhar()
-			end
-		)
 	end
 	-- conjuntos com pelo menos uma peça equipada
-	Cartoes.secao(estrutura.lista, 4, "Conjuntos", "3 e 5 peças do mesmo mundo dão bônus extra")
-	local ordem = 5
+	Cartoes.secao(
+		estrutura.lista,
+		ordem,
+		"Conjuntos",
+		"3 e 5 peças do mesmo mundo (armadura ou acessório) dão bônus extra"
+	)
+	ordem += 1
 	local contagem = Equip.pecasPorConjunto(c)
 	for _, conjunto in Equip.CONJUNTOS do
 		local n = contagem[conjunto.id]
@@ -251,7 +285,7 @@ local function abaPersonagem()
 		Kit.texto({
 			RichText = true,
 			Text = string.format(
-				'<font color="#%s"><b>%s %d/5</b></font>   %s 3 peças: %s   %s 5 peças: %s',
+				'<font color="#%s"><b>%s · %d peças</b></font>   %s 3 peças: %s   %s 5 peças: %s',
 				conjunto.cor,
 				conjunto.nome,
 				n,
@@ -274,8 +308,7 @@ end
 
 -- ===================================================================== aba de um espaço
 
-local function abaEspaco(espaco: string)
-	local c, frag = colecao()
+local function listaEspaco(c: Equip.Colecao, frag: number, espaco: string, ordem: number)
 	local uids = {}
 	for uid, g in c.lista do
 		if Equip.porId[g.item].espaco == espaco then
@@ -298,7 +331,7 @@ local function abaEspaco(espaco: string)
 	end)
 	Cartoes.secao(
 		estrutura.lista,
-		1,
+		ordem,
 		Equip.NOMES_ESPACOS[espaco],
 		string.format("%d peças · ◆ %s Fragmentos", #uids, Formato.inteiro(frag))
 	)
@@ -311,12 +344,12 @@ local function abaEspaco(espaco: string)
 			TextXAlignment = Enum.TextXAlignment.Left,
 			AutomaticSize = Enum.AutomaticSize.Y,
 			Size = UDim2.new(1, 0, 0, 0),
-			LayoutOrder = 2,
+			LayoutOrder = ordem + 1,
 			Parent = estrutura.lista,
 		})
 		return
 	end
-	local grade = Cartoes.grade(estrutura.lista, 2, Vector2.new(210, 360))
+	local grade = Cartoes.grade(estrutura.lista, ordem + 1, Vector2.new(210, 360))
 	for i, uid in uids do
 		local g = c.lista[uid]
 		local item = Equip.porId[g.item]
@@ -411,6 +444,56 @@ local function abaEspaco(espaco: string)
 	end
 end
 
+-- Aba Armaduras ou Acessórios: filtro por espaço e as peças de cada espaço
+local function abaGrupo(id: string)
+	local grupo
+	for _, g in Equip.GRUPOS do
+		if g.id == id then
+			grupo = g
+		end
+	end
+	local c, frag = colecao()
+	local barra = Kit.novo("Frame", {
+		BackgroundTransparency = 1,
+		Size = UDim2.new(1, 0, 0, 40),
+		LayoutOrder = 1,
+		Parent = estrutura.lista,
+	})
+	Kit.novo("UIListLayout", {
+		FillDirection = Enum.FillDirection.Horizontal,
+		Padding = UDim.new(0, 8),
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		Parent = barra,
+	})
+	local opcoes: { string | false } = { false }
+	for _, espaco in grupo.espacos do
+		table.insert(opcoes, espaco)
+	end
+	for k, espaco in opcoes do
+		local ativo = (filtro or false) == espaco
+		Kit.botaoPlaca({
+			texto = if espaco then Equip.NOMES_ESPACOS[espaco] else "Todos",
+			tamanho = UDim2.fromOffset(if espaco then 118 else 90, 38),
+			tamanhoTexto = 14,
+			tom = if ativo then "lilas" else "neutro",
+			ordem = k,
+			pai = barra,
+			aoClicar = function()
+				filtro = if espaco then espaco else nil
+				desmontando = nil
+				Tela.desenhar()
+			end,
+		})
+	end
+	local ordem = 2
+	for _, espaco in grupo.espacos do
+		if filtro == nil or filtro == espaco then
+			listaEspaco(c, frag, espaco, ordem)
+			ordem += 2
+		end
+	end
+end
+
 function Tela.desenhar()
 	if Navegacao.aberto() ~= "Equipamento" or not Estado.atual then
 		return
@@ -427,7 +510,7 @@ function Tela.desenhar()
 	local ok, erro = pcall(if aba == "Personagem"
 		then abaPersonagem
 		else function()
-			abaEspaco(aba)
+			abaGrupo(aba)
 		end)
 	if not ok then
 		warn("[Equipamento] " .. tostring(erro))
@@ -450,15 +533,13 @@ function Tela.montar(aoAviso: (string) -> ())
 	)
 	estrutura = Cartoes.estrutura(painel.conteudo)
 	local lista = { { "Personagem", "Personagem", 9, Cores.Lilas } }
-	for _, espaco in Equip.ESPACOS do
-		table.insert(
-			lista,
-			{ espaco, Equip.NOMES_ESPACOS[espaco], ICONE_ESPACO[espaco], Color3.fromHex("FFC83D") }
-		)
+	for _, g in Equip.GRUPOS do
+		table.insert(lista, { g.id, g.nome, ICONE_GRUPO[g.id], Color3.fromHex("FFC83D") })
 	end
 	for i, d in lista do
 		abas[d[1]] = Cartoes.aba(estrutura.lateral, i, d[2], d[3], d[4], function()
 			aba = d[1]
+			filtro = nil
 			desmontando = nil
 			estrutura.conteudo.CanvasPosition = Vector2.zero
 			Tela.desenhar()

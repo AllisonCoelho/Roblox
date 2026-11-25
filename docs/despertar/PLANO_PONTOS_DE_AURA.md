@@ -10,7 +10,7 @@
 >
 > **Criaturas do Corredor:** um lacaio e um chefe por fase, personagens blocados do Blender (FBX para importar). Vencer o chefe abre o Portão. Detalhes em `CORREDOR.md`.
 >
-> **Equipamento (RPG):** elmo, armadura, manoplas, botas e arma em seis conjuntos, com bônus, visual no personagem e olho para ocultar. Detalhes em `EQUIPAMENTO.md`.
+> **Equipamento (RPG):** elmo, armadura, manoplas, botas e arma, mais os acessórios minimalistas (colar, manto, bracelete e auréola), em seis conjuntos, com bônus, visual no personagem e olho para ocultar. Detalhes em `EQUIPAMENTO.md`.
 
 ## A ideia em uma frase
 

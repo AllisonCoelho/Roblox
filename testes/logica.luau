@@ -1707,8 +1707,28 @@ end
 do
 	local E = req("Equipamento")
 	local V = req("EquipamentoVisual")
-	igual("equip: 6 conjuntos × 5 espaços", #E.ITENS, 30)
-	local pecaVisual = { elmo = { "elmo" }, armadura = { "armadura" }, manoplas = { "manopla_d", "manopla_e" }, botas = { "bota_d", "bota_e" }, arma = { "arma" } }
+	igual("equip: 6 conjuntos × 9 espaços", #E.ITENS, 54)
+	local pecaVisual = {
+		elmo = { "elmo" },
+		armadura = { "armadura" },
+		manoplas = { "manopla_d", "manopla_e" },
+		botas = { "bota_d", "bota_e" },
+		arma = { "arma" },
+		colar = { "colar" },
+		manto = { "manto", "manto_s1", "manto_s2", "manto_s3" },
+		bracelete = { "bracelete" },
+		aureola = { "aureola" },
+	}
+	local noGrupo = {}
+	for _, g in E.GRUPOS do
+		for _, espaco in g.espacos do
+			noGrupo[espaco] = (noGrupo[espaco] or 0) + 1
+		end
+	end
+	for _, espaco in E.ESPACOS do
+		igual("equip: " .. espaco .. " em um grupo do painel", noGrupo[espaco], 1)
+		igual("equip: " .. espaco .. " tem nome", E.NOMES_ESPACOS[espaco] ~= nil, true)
+	end
 	for _, item in E.ITENS do
 		for _, p in pecaVisual[item.espaco] do
 			igual("equip: visual de " .. item.id .. " (" .. p .. ")", V[item.conjunto] ~= nil and V[item.conjunto][p] ~= nil, true)
@@ -1763,7 +1783,13 @@ do
 		k += 1
 		return seq[k]
 	end)
-	igual("equip: chefe com sorte dá peça do seu mundo", drop, "bosque_arma")
+	igual("equip: chefe com sorte dá peça do seu mundo", drop, "bosque_aureola")
+	k = 0
+	seq = { 0.0, 0.0 }
+	igual("equip: sorteio cobre o primeiro espaço", E.sortearDrop(2, "chefe", function()
+		k += 1
+		return seq[k]
+	end), "bosque_elmo")
 	igual("equip: lacaio sem sorte não dá", E.sortearDrop(2, "lacaio", function()
 		return 0.5
 	end), nil)
@@ -1777,6 +1803,16 @@ do
 	end
 	local t5 = E.total(cheio)
 	igual("equip: conjunto completo soma os dois bônus", t5.ganho >= 60 + 150, true)
+	-- só acessórios também fecham conjunto
+	local leve = E.padrao()
+	for _, espaco in { "colar", "manto", "bracelete" } do
+		E.equipar(leve, E.adicionar(leve, "limiar_" .. espaco, 0), true)
+	end
+	local tl = E.total(leve)
+	-- colar 3 sorte + bracelete 2 sorte + conjunto de 3 (5 sorte)
+	igual("equip: acessórios contam para o conjunto", tl.sorte, 3 + 2 + 5)
+	igual("equip: manto dá ganho e vida", tl.vida, 8)
+	igual("equip: acessório não ocupa espaço de armadura", leve.equipados.armadura, nil)
 end
 
 print(string.format("%d testes, %d falhas", total, falhas))

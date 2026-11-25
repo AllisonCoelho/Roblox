@@ -5,6 +5,10 @@
 -- As peças foram modeladas no tamanho de um R15 blocado de referência e são escaladas pela
 -- largura da parte do corpo de cada um: funciona em R15 de qualquer escala e em R6. As peças
 -- ficam ancoradas e seguem o corpo a cada quadro (sem física nem Weld no personagem alheio).
+--
+-- Acessórios: o manto tem três faixas articuladas que abrem com a corrida e a queda e ondulam;
+-- a auréola gira devagar e flutua. Colar, manto e bracelete crescem um pouco quando a armadura
+-- ou as manoplas estão à mostra, para ficar por cima delas em vez de atravessar.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -25,9 +29,17 @@ type Encaixe = {
 	largura: number,
 	apoioR15: Vector3,
 	apoioR6: Vector3,
-	deslocar: Vector3?, -- em studs da referência, depois de escalar
 	giro: CFrame?,
+	-- espaço visível -> escala extra (x, y, z) para ficar por cima daquela peça
+	sobre: { [string]: Vector3 }?,
+	faixa: number?, -- faixa do manto (1..3), articulada
+	gira: boolean?, -- auréola
 }
+local SOBRE_ARMADURA = { armadura = Vector3.new(1.1, 1.05, 1.3) }
+-- Manto: dobradiça da primeira faixa (no UpperTorso de referência) e o comprimento das faixas
+local MANTO_TOPO = Vector3.new(0, 0.78, 0.56)
+local MANTO_TOPO_ARMADURA = Vector3.new(0, 0.8, 0.7)
+local MANTO_FAIXAS = { 0.9, 1.0, 1.1 }
 local ENCAIXES: { [string]: Encaixe } = {
 	elmo = {
 		r15 = "Head",
@@ -79,7 +91,50 @@ local ENCAIXES: { [string]: Encaixe } = {
 		apoioR6 = Vector3.new(0, -0.45, 0),
 		giro = CFrame.Angles(math.rad(35), 0, 0),
 	},
+	colar = {
+		r15 = "UpperTorso",
+		r6 = "Torso",
+		largura = 2,
+		apoioR15 = Vector3.zero,
+		apoioR6 = Vector3.new(0, 0.1, 0),
+		sobre = SOBRE_ARMADURA,
+	},
+	manto = {
+		r15 = "UpperTorso",
+		r6 = "Torso",
+		largura = 2,
+		apoioR15 = Vector3.zero,
+		apoioR6 = Vector3.new(0, 0.1, 0),
+		sobre = SOBRE_ARMADURA,
+	},
+	bracelete = {
+		r15 = "LeftLowerArm",
+		r6 = "Left Arm",
+		largura = 1,
+		apoioR15 = Vector3.zero,
+		apoioR6 = Vector3.new(0, -0.22, 0),
+		sobre = { manoplas = Vector3.new(1.18, 1, 1.18) },
+	},
+	aureola = {
+		r15 = "Head",
+		r6 = "Head",
+		largura = 1.2,
+		apoioR15 = Vector3.zero,
+		apoioR6 = Vector3.zero,
+		gira = true,
+	},
 }
+for k = 1, 3 do
+	ENCAIXES["manto_s" .. k] = {
+		r15 = "UpperTorso",
+		r6 = "Torso",
+		largura = 2,
+		apoioR15 = Vector3.zero,
+		apoioR6 = Vector3.new(0, 0.1, 0),
+		sobre = { armadura = Vector3.new(1.1, 1, 1) },
+		faixa = k,
+	}
+end
 -- espaço do jogo -> peças do kit
 local PECAS = {
 	elmo = { "elmo" },
@@ -87,10 +142,19 @@ local PECAS = {
 	manoplas = { "manopla_d", "manopla_e" },
 	botas = { "bota_d", "bota_e" },
 	arma = { "arma" },
+	colar = { "colar" },
+	manto = { "manto", "manto_s1", "manto_s2", "manto_s3" },
+	bracelete = { "bracelete" },
+	aureola = { "aureola" },
 }
 
 type Camada = { parte: MeshPart, centro: Vector3, encaixe: Encaixe }
-type Vestido = { texto: string, camadas: { Camada }, personagem: Model? }
+type Vestido = {
+	texto: string,
+	camadas: { Camada },
+	visiveis: { [string]: boolean },
+	abertura: number, -- quanto o manto está aberto (0 parado, ~1 correndo)
+}
 
 local prontas: Malha.Cache = {}
 local vestidos: { [Player]: Vestido } = {}
@@ -118,7 +182,7 @@ local function montar(jogador: Player)
 		return
 	end
 	limpar(jogador)
-	local v: Vestido = { texto = texto, camadas = {}, personagem = nil }
+	local v: Vestido = { texto = texto, camadas = {}, visiveis = {}, abertura = 0 }
 	vestidos[jogador] = v
 	for item in string.gmatch(texto, "[^;]+") do
 		local espaco, id = string.match(item, "^(%a+):([%w_]+):%d+$")
@@ -126,6 +190,7 @@ local function montar(jogador: Player)
 		if not espaco or not dados or not PECAS[espaco] then
 			continue
 		end
+		v.visiveis[espaco] = true
 		local conjunto = (Visual :: any)[dados.conjunto]
 		for _, peca in PECAS[espaco] do
 			for _, m in (conjunto and conjunto[peca] or {}) do
@@ -149,15 +214,30 @@ local function montar(jogador: Player)
 	end
 end
 
--- (tamanhoOriginal guarda o tamanho de cada malha antes de escalar)
+-- Ângulo (para trás) de cada faixa do manto: um pouco aberto parado, abre com a corrida e a
+-- queda e ondula mais rápido quanto mais aberto
+local function angulosManto(v: Vestido, raiz: BasePart, torso: BasePart, dt: number, t: number)
+	local vel = torso.CFrame:VectorToObjectSpace(raiz.AssemblyLinearVelocity)
+	local alvo = math.clamp(math.max(-vel.Z, 0) / 16 + math.max(-vel.Y, 0) / 45, 0, 1.15)
+	v.abertura += (alvo - v.abertura) * math.min(1, dt * 5)
+	local a = v.abertura
+	local onda = math.rad(1.2 + 4 * a)
+	local ritmo = 2 + 6 * a
+	return {
+		math.rad(4 + 32 * a) + math.sin(t * ritmo) * onda * 0.4,
+		math.rad(3 + 16 * a) + math.sin(t * ritmo - 0.9) * onda,
+		math.rad(4 + 14 * a) + math.sin(t * ritmo - 1.8) * onda * 1.3,
+	}
+end
 
-local function posicionar(jogador: Player, v: Vestido, olho: Vector3)
+local function posicionar(jogador: Player, v: Vestido, olho: Vector3, dt: number, t: number)
 	local personagem = jogador.Character
 	local raiz = personagem and personagem:FindFirstChild("HumanoidRootPart")
 	local longe = not raiz
 		or not raiz:IsA("BasePart")
 		or (raiz.Position - olho).Magnitude > DISTANCIA
 	local r15 = personagem ~= nil and personagem:FindFirstChild("UpperTorso") ~= nil
+	local manto: { CFrame }? = nil
 	for _, c in v.camadas do
 		local nome = if r15 then c.encaixe.r15 else c.encaixe.r6
 		local corpo = personagem and personagem:FindFirstChild(nome)
@@ -169,19 +249,48 @@ local function posicionar(jogador: Player, v: Vestido, olho: Vector3)
 		-- R6: a cabeça é uma caixa 2×1×1, mas a cabeça visível tem ~1,25 de largura
 		local largura = if not r15 and nome == "Head" then corpo.Size.Y * 1.2 else corpo.Size.X
 		local escala = largura / c.encaixe.largura
+		local extra = Vector3.one
+		if c.encaixe.sobre then
+			for espaco, fator in c.encaixe.sobre do
+				if v.visiveis[espaco] then
+					extra = fator
+				end
+			end
+		end
 		local original = tamanhoOriginal[c.parte]
 		if not original then
 			original = c.parte.Size
 			tamanhoOriginal[c.parte] = original
 		end
-		local tamanho = original * escala
+		local tamanho = original * escala * extra
 		if c.parte.Size ~= tamanho then
 			c.parte.Size = tamanho
 		end
 		local base = corpo.CFrame
 			* CFrame.new(corpo.Size * apoio)
 			* (c.encaixe.giro or CFrame.identity)
-		c.parte.CFrame = base * CFrame.new(c.centro * escala)
+		local faixa = c.encaixe.faixa
+		if faixa then
+			-- dobradiças em cadeia: cada faixa gira na ponta de baixo da anterior
+			if not manto then
+				local angulos = angulosManto(v, raiz :: BasePart, corpo, dt, t)
+				local topo = if v.visiveis.armadura then MANTO_TOPO_ARMADURA else MANTO_TOPO
+				local cadeia = {}
+				local m = base * CFrame.new(topo * escala)
+				for k = 1, 3 do
+					m *= CFrame.Angles(-angulos[k], 0, 0)
+					cadeia[k] = m
+					m *= CFrame.new(0, -MANTO_FAIXAS[k] * escala, 0)
+				end
+				manto = cadeia
+			end
+			c.parte.CFrame = (manto :: { CFrame })[faixa] * CFrame.new(c.centro * escala * extra)
+		elseif c.encaixe.gira then
+			local centro = c.centro * escala + Vector3.new(0, math.sin(t * 1.6) * 0.05 * escala, 0)
+			c.parte.CFrame = base * CFrame.new(centro) * CFrame.Angles(0, t * 0.8, 0)
+		else
+			c.parte.CFrame = base * CFrame.new(c.centro * escala * extra)
+		end
 		c.parte.LocalTransparencyModifier = corpo.LocalTransparencyModifier
 	end
 end
@@ -206,11 +315,12 @@ function Equipamento.iniciar()
 	RunService:BindToRenderStep(
 		"EquipamentoVisivel",
 		Enum.RenderPriority.Character.Value + 2,
-		function()
+		function(dt: number)
 			local camera = Workspace.CurrentCamera
 			local olho = if camera then camera.CFrame.Position else Vector3.zero
+			local t = os.clock()
 			for jogador, v in vestidos do
-				posicionar(jogador, v, olho)
+				posicionar(jogador, v, olho, dt, t)
 			end
 		end
 	)
