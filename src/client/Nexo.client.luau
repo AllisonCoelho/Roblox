@@ -8,6 +8,7 @@ local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Auras = require(Shared.Dados.Auras)
+local PetsDados = require(Shared.Dados.Pets)
 local Remotos = require(Shared.Remotos)
 local UI = script.Parent:WaitForChild("UI")
 local Navegacao = require(UI:WaitForChild("Navegacao"))
@@ -285,10 +286,8 @@ Estado.aoMudar(function(estado)
 	-- Núcleos acesos no Cristal: os que a pessoa já pode abrir
 	local corredor = (estado :: any).corredor
 	local liberados: { [number]: boolean } = {}
-	for i = 1, 6 do
-		liberados[i] = type(corredor) == "table"
-			and type(corredor.concluidas) == "table"
-			and (tonumber(corredor.concluidas[tostring(i)]) or 0) > 0
+	for i, nucleo in PetsDados.NUCLEOS do
+		liberados[i] = PetsDados.nucleoLiberado(nucleo, corredor)
 	end
 	EcosMundo.definirLiberados(liberados)
 	PrimeiroSoberano.definir({

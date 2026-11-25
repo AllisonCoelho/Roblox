@@ -258,11 +258,18 @@ end
 
 local function atualizarNucleos(t: number)
 	for i, m in nucleos do
-		local a = t * 0.12 + (i - 1) * math.pi / 3
+		-- os seis do Corredor num anel; os exclusivos (7 em diante) num anel menor, mais alto,
+		-- girando ao contrário
+		local exclusivo = i > 6
+		local a = if exclusivo
+			then -t * 0.18 + (i - 7) * math.pi * 2 / 3
+			else t * 0.12 + (i - 1) * math.pi / 3
+		local raio = if exclusivo then NUCLEO_RAIO * 0.62 else NUCLEO_RAIO
+		local altura = if exclusivo then NUCLEO_ALTURA + 4.5 else NUCLEO_ALTURA
 		local pos = Vector3.new(
-			math.cos(a) * NUCLEO_RAIO,
-			NUCLEO_ALTURA + math.sin(t * 0.8 + i) * 0.4,
-			math.sin(a) * NUCLEO_RAIO
+			math.cos(a) * raio,
+			altura + math.sin(t * 0.8 + i) * 0.4,
+			math.sin(a) * raio
 		)
 		local base = CFrame.new(pos) * CFrame.Angles(0, t * 0.6 + i, 0) * CFrame.new(0, -1.3, 0)
 		Ecos.posar(m, base, 0)

@@ -1558,8 +1558,8 @@ do
 	local P = req("Pets")
 	local V = req("PetsVisual")
 	local C = req("Corredor")
-	igual("ecos: 18 Ecos", #P.ECOS, 18)
-	igual("ecos: 6 Núcleos", #P.NUCLEOS, 6)
+	igual("ecos: 27 Ecos (18 + 9 exclusivos)", #P.ECOS, 27)
+	igual("ecos: 9 Núcleos (6 + 3 exclusivos)", #P.NUCLEOS, 9)
 	for _, e in P.ECOS do
 		igual("ecos: visual de " .. e.id, V.ecos[e.id] ~= nil, true)
 		igual("ecos: raridade de " .. e.id, P.RARIDADES[e.raridade] ~= nil, true)
@@ -1572,8 +1572,15 @@ do
 		end
 		igual("ecos: chances do Núcleo " .. i .. " somam 100%", math.abs(soma - 1) < 1e-9, true)
 		igual("ecos: visual do Núcleo " .. i, V.nucleos[i] ~= nil, true)
-		if i > 1 then
+		if i > 1 and n.exclusivo == P.NUCLEOS[i - 1].exclusivo then
 			igual("ecos: Núcleo " .. i .. " mais caro", n.preco > P.NUCLEOS[i - 1].preco, true)
+		end
+		if n.exclusivo then
+			igual("ecos: exclusivo " .. i .. " tem série", type(n.serie), "string")
+			for _, ch in P.chances(n) do
+				igual("ecos: exclusivo " .. ch.id .. " é Épico ou mais", P.porId[ch.id].raridade >= 4, true)
+				igual("ecos: exclusivo " .. ch.id .. " da mesma série", P.porId[ch.id].serie, n.serie)
+			end
 		end
 	end
 	-- sorteio: o extremo baixo dá o primeiro, o alto dá o último; prisma só com o 2º número baixo

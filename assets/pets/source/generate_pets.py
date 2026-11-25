@@ -570,6 +570,263 @@ def dragao_estelar():
     }, {"voa": True, "junta_e": (-0.3, 0.3, 1.8), "junta_d": (0.3, 0.3, 1.8), "bater": 16}
 
 
+
+# ---------------------------------------------------------------- Ecos exclusivos (versão anime)
+# Releituras chibi próprias, inspiradas em Naruto, One Piece e Solo Leveling (nomes autorizados
+# pelo dono como referência). Nada de arte, frame ou modelo dos animes: só a ideia do companheiro.
+
+LARANJA = (1.0, 0.50, 0.12)
+SOMBRA = (0.16, 0.12, 0.24)
+VIOLETA_SOMBRA = (0.62, 0.35, 1.0)
+
+
+def sapo_invocado():
+    pele = (0.98, 0.60, 0.22)
+    barriga = (1.0, 0.88, 0.62)
+    corpo = montar([
+        esfera((0, 0, 0.72), 0.78, 0.72, 0.58, pele, lados=12, aneis=7),
+        esfera((0, 0.22, 0.55), 0.6, 0.5, 0.38, barriga, lados=10, aneis=5),
+        esfera((0.62, -0.2, 0.32), 0.32, 0.45, 0.3, pele),
+        esfera((-0.62, -0.2, 0.32), 0.32, 0.45, 0.3, pele),
+        esfera((0.38, 0.55, 0.15), 0.18, 0.24, 0.15, pele),
+        esfera((-0.38, 0.55, 0.15), 0.18, 0.24, 0.15, pele),
+        esfera((0.32, 0.3, 1.22), 0.24, 0.22, 0.24, (1.0, 0.92, 0.45)),
+        esfera((-0.32, 0.3, 1.22), 0.24, 0.22, 0.24, (1.0, 0.92, 0.45)),
+        esfera((0.32, 0.5, 1.22), 0.15, 0.04, 0.05, PRETO, lados=6, aneis=3),
+        esfera((-0.32, 0.5, 1.22), 0.15, 0.04, 0.05, PRETO, lados=6, aneis=3),
+        kit.fita3d([(-0.4, 0.66, 0.86), (0, 0.72, 0.8), (0.4, 0.66, 0.86)], 0.05, (0, 1, 0), (0.4, 0.15, 0.08)),
+        esfera((0.35, -0.1, 1.05), 0.12, 0.12, 0.08, (0.85, 0.42, 0.15)),
+        esfera((-0.2, -0.3, 1.1), 0.1, 0.1, 0.07, (0.85, 0.42, 0.15)),
+    ])
+    rolo = kit.torno([(0.18, -0.55), (0.2, -0.5), (0.2, 0.5), (0.18, 0.55)], 10, (0.95, 0.9, 0.78), random.Random(3))
+    bmesh.ops.transform(rolo, matrix=T((0, -0.55, 1.22)) @ R(90, "Y"), verts=rolo.verts[:])
+    pontas = montar([esfera((0.58, -0.55, 1.22), 0.07, 0.24, 0.24, (0.75, 0.15, 0.15)), esfera((-0.58, -0.55, 1.22), 0.07, 0.24, 0.24, (0.75, 0.15, 0.15))])
+    return {"corpo": (montar([corpo, rolo, pontas]), "SmoothPlastic", 0)}, {"voa": False}
+
+
+def cao_ninja():
+    pelo = (0.86, 0.72, 0.50)
+    escuro = (0.40, 0.28, 0.20)
+    azul = (0.22, 0.32, 0.58)
+    corpo = montar([
+        casca([(0.35, -0.5, 0.42), (-0.35, -0.5, 0.42), (0.38, 0.3, 0.42), (-0.38, 0.3, 0.42), (0.3, -0.45, 0.9), (-0.3, -0.45, 0.9), (0.33, 0.3, 0.95), (-0.33, 0.3, 0.95)], azul),
+        esfera((0, 0.45, 1.25), 0.52, 0.46, 0.46, pelo, lados=12, aneis=7),
+        esfera((0, 0.82, 1.12), 0.28, 0.18, 0.2, escuro),
+        esfera((0, 0.98, 1.18), 0.09, 0.05, 0.07, PRETO, lados=6, aneis=3),
+        olho((0.2, 0.82, 1.38), 0.08),
+        olho((-0.2, 0.82, 1.38), 0.08),
+        lamina([(0.38, 0.45, 1.55), (0.68, 0.35, 1.05), (0.45, 0.5, 1.2)], escuro),
+        lamina([(-0.38, 0.45, 1.55), (-0.68, 0.35, 1.05), (-0.45, 0.5, 1.2)], escuro),
+        perna((0.22, 0.2, 0), (0.22, 0.2, 0.5), 0.1, pelo),
+        perna((-0.22, 0.2, 0), (-0.22, 0.2, 0.5), 0.1, pelo),
+        perna((0.22, -0.4, 0), (0.22, -0.4, 0.5), 0.1, pelo),
+        perna((-0.22, -0.4, 0), (-0.22, -0.4, 0.5), 0.1, pelo),
+        anel((0, 0.45, 1.5), 0.47, 0.05, azul, lados=16),
+        kit.espinho((0, -0.5, 0.75), (0, -0.85, 1.05), 0.12, pelo),
+    ])
+    placa = kit.bloco(0.42, 0.06, 0.2, random.Random(4), (0.78, 0.8, 0.86), chanfro=0.02)
+    bmesh.ops.translate(placa, vec=Vector((0, 0.9, 1.52)), verts=placa.verts[:])
+    return {"corpo": (corpo, "SmoothPlastic", 0), "brilho": (placa, "Metal", 0)}, {"voa": False}
+
+
+def kurama_chibi():
+    rng = random.Random(9)
+    creme = (1.0, 0.88, 0.70)
+    corpo = [
+        esfera((0, 0, 0.62), 0.5, 0.55, 0.5, LARANJA, lados=10, aneis=6),
+        esfera((0, 0.3, 1.32), 0.6, 0.52, 0.52, LARANJA, lados=12, aneis=7),
+        casca([(0.18, 0.7, 1.15), (-0.18, 0.7, 1.15), (0, 0.98, 1.12), (0, 0.78, 1.32), (0, 0.75, 1.0)], creme),
+        esfera((0, 0.99, 1.13), 0.07, 0.05, 0.06, PRETO, lados=6, aneis=3),
+        kit.espinho((0.3, 0.25, 1.7), (0.5, 0.15, 2.35), 0.32, LARANJA),
+        kit.espinho((-0.3, 0.25, 1.7), (-0.5, 0.15, 2.35), 0.32, LARANJA),
+        kit.espinho((0.31, 0.3, 1.75), (0.47, 0.22, 2.2), 0.14, PRETO),
+        kit.espinho((-0.31, 0.3, 1.75), (-0.47, 0.22, 2.2), 0.14, PRETO),
+        esfera((0.22, 0.79, 1.42), 0.03, 0.03, 0.08, PRETO, lados=6, aneis=3),
+        esfera((-0.22, 0.79, 1.42), 0.03, 0.03, 0.08, PRETO, lados=6, aneis=3),
+        kit.fita3d([(0.32, 0.72, 1.58), (0.45, 0.62, 1.52)], 0.05, (0, 1, 0), PRETO),
+        kit.fita3d([(-0.32, 0.72, 1.58), (-0.45, 0.62, 1.52)], 0.05, (0, 1, 0), PRETO),
+        perna((0.22, 0.3, 0), (0.22, 0.25, 0.45), 0.1, PRETO),
+        perna((-0.22, 0.3, 0), (-0.22, 0.25, 0.45), 0.1, PRETO),
+    ]
+    caudas = []
+    for k in range(9):
+        a = math.radians(-75 + 150 * k / 8)
+        base = Vector((0, -0.4, 0.65))
+        dirv = Vector((math.sin(a) * 0.85, -0.6, 0.6 + 0.4 * math.cos(a))).normalized()
+        for passo, raio in ((0.35, 0.2), (0.7, 0.26), (1.05, 0.24)):
+            c = base + dirv * passo
+            caudas.append(esfera(tuple(c), raio, raio, raio, LARANJA, lados=8, aneis=5))
+        caudas.append(esfera(tuple(base + dirv * 1.35), 0.17, 0.17, 0.17, creme, lados=8, aneis=5))
+    chakra = [
+        esfera((0.22, 0.75, 1.42), 0.12, 0.05, 0.1, (1.0, 0.25, 0.15), lados=8, aneis=4),
+        esfera((-0.22, 0.75, 1.42), 0.12, 0.05, 0.1, (1.0, 0.25, 0.15), lados=8, aneis=4),
+    ]
+    return {"corpo": (montar(corpo + caudas), "SmoothPlastic", 0), "brilho": (montar(chakra), "Neon", 0)}, {"voa": False}
+
+
+def den_den_mushi():
+    pele = (0.93, 0.78, 0.60)
+    concha = (0.55, 0.78, 1.0)
+    corpo = [
+        esfera((0, 0.15, 0.32), 0.42, 0.9, 0.3, pele, lados=10, aneis=5),
+        esfera((0, 0.75, 0.62), 0.32, 0.3, 0.34, pele),
+        kit.fita3d([(0.1, 0.85, 0.85), (0.15, 0.95, 1.25)], 0.08, (1, 0, 0), pele),
+        kit.fita3d([(-0.1, 0.85, 0.85), (-0.15, 0.95, 1.25)], 0.08, (-1, 0, 0), pele),
+        esfera((0.15, 0.95, 1.3), 0.12, 0.12, 0.12, BRANCO),
+        esfera((-0.15, 0.95, 1.3), 0.12, 0.12, 0.12, BRANCO),
+        esfera((0.15, 1.05, 1.3), 0.06, 0.04, 0.06, PRETO, lados=6, aneis=3),
+        esfera((-0.15, 1.05, 1.3), 0.06, 0.04, 0.06, PRETO, lados=6, aneis=3),
+        kit.fita3d([(-0.14, 1.04, 0.55), (0, 1.06, 0.5), (0.14, 1.04, 0.55)], 0.04, (0, 1, 0), (0.4, 0.2, 0.15)),
+    ]
+    # concha em espiral: bolas cada vez menores subindo
+    for k in range(10):
+        a = k * 0.75
+        r = 0.55 * (1 - k / 13)
+        corpo.append(esfera((math.cos(a) * 0.3 * (1 - k / 12), -0.15 + math.sin(a) * 0.3 * (1 - k / 12), 0.85 + k * 0.05), r, r, r * 0.9, kit.misturar(concha, BRANCO, k / 14), lados=10, aneis=5))
+    # fone em cima da concha e o disco de discar na lateral
+    fone = montar([
+        esfera((0.38, -0.15, 1.58), 0.14, 0.18, 0.11, BRANCO),
+        esfera((-0.38, -0.15, 1.58), 0.14, 0.18, 0.11, BRANCO),
+        casca([(0.38, -0.22, 1.65), (-0.38, -0.22, 1.65), (0.38, -0.08, 1.65), (-0.38, -0.08, 1.65), (0, -0.15, 1.78)], BRANCO),
+        anel((0.56, -0.15, 0.95), 0.22, 0.04, (0.95, 0.95, 0.9), lados=12, inclinar=90, eixo="Y"),
+    ])
+    return {"corpo": (montar(corpo), "SmoothPlastic", 0), "brilho": (fone, "SmoothPlastic", 0)}, {"voa": False}
+
+
+def rena_doutora():
+    marrom = (0.62, 0.40, 0.24)
+    rosa = (1.0, 0.55, 0.72)
+    corpo = montar([
+        casca([(0.3, -0.35, 0.35), (-0.3, -0.35, 0.35), (0.3, 0.25, 0.35), (-0.3, 0.25, 0.35), (0.25, -0.3, 0.85), (-0.25, -0.3, 0.85), (0.25, 0.25, 0.85), (-0.25, 0.25, 0.85)], marrom),
+        esfera((0, 0.15, 1.2), 0.5, 0.45, 0.45, marrom, lados=12, aneis=7),
+        esfera((0, 0.55, 1.1), 0.2, 0.14, 0.15, (0.85, 0.7, 0.55)),
+        esfera((0, 0.68, 1.14), 0.09, 0.07, 0.08, (0.25, 0.5, 1.0)),
+        olho((0.18, 0.52, 1.32), 0.08),
+        olho((-0.18, 0.52, 1.32), 0.08),
+        perna((0.18, 0.1, 0), (0.18, 0.1, 0.4), 0.09, (0.4, 0.25, 0.15)),
+        perna((-0.18, 0.1, 0), (-0.18, 0.1, 0.4), 0.09, (0.4, 0.25, 0.15)),
+        perna((0.18, -0.25, 0), (0.18, -0.25, 0.4), 0.09, (0.4, 0.25, 0.15)),
+        perna((-0.18, -0.25, 0), (-0.18, -0.25, 0.4), 0.09, (0.4, 0.25, 0.15)),
+        kit.espinho((0.35, 0.05, 1.5), (0.75, -0.05, 1.9), 0.08, (0.45, 0.3, 0.2)),
+        kit.espinho((-0.35, 0.05, 1.5), (-0.75, -0.05, 1.9), 0.08, (0.45, 0.3, 0.2)),
+        kit.espinho((0.55, 0.0, 1.7), (0.6, 0.15, 2.05), 0.06, (0.45, 0.3, 0.2)),
+        kit.espinho((-0.55, 0.0, 1.7), (-0.6, 0.15, 2.05), 0.06, (0.45, 0.3, 0.2)),
+    ])
+    chapeu = kit.torno([(0.02, 1.55), (0.62, 1.52), (0.62, 1.6), (0.42, 1.62), (0.44, 2.15), (0.36, 2.28), (0.02, 2.3)], 14, rosa, random.Random(8))
+    faixa = anel((0, 0, 1.68), 0.43, 0.05, (0.95, 0.95, 1.0), lados=16)
+    return {"corpo": (montar([corpo, chapeu, faixa]), "SmoothPlastic", 0)}, {"voa": False}
+
+
+def nika_chibi():
+    branco = (0.98, 0.98, 1.0)
+    nuvem = [esfera((0, 0, 1.0), 0.62, 0.55, 0.58, branco, lados=12, aneis=7)]
+    rng = random.Random(10)
+    for _ in range(7):
+        a = rng.uniform(0, 6.28)
+        nuvem.append(esfera((math.cos(a) * 0.55, math.sin(a) * 0.4 - 0.1, 0.7 + rng.uniform(-0.1, 0.3)), 0.3, 0.3, 0.26, branco, lados=8, aneis=5))
+    rosto = [
+        anel((0.22, 0.55, 1.15), 0.11, 0.03, PRETO, lados=12, inclinar=90, eixo="X"),
+        anel((-0.22, 0.55, 1.15), 0.11, 0.03, PRETO, lados=12, inclinar=90, eixo="X"),
+        esfera((0, 0.5, 0.86), 0.32, 0.12, 0.14, PRETO, lados=10, aneis=4),
+        esfera((0, 0.58, 0.92), 0.27, 0.06, 0.06, BRANCO, lados=10, aneis=3),
+    ]
+    chapeu = kit.torno([(0.02, 1.48), (0.78, 1.46), (0.8, 1.52), (0.42, 1.55), (0.42, 1.82), (0.3, 1.9), (0.02, 1.92)], 16, (0.98, 0.84, 0.40), random.Random(11))
+    bmesh.ops.transform(chapeu, matrix=T((0, -0.05, 0)) @ R(-10, "X"), verts=chapeu.verts[:])
+    faixa = anel((0, -0.03, 1.6), 0.43, 0.05, (0.85, 0.15, 0.15), lados=16, inclinar=-10, eixo="X")
+    chamas = [kit.espinho((x, -0.3, 1.25), (x * 1.4, -0.7, 1.75 + rng.uniform(0, 0.3)), 0.2, (1.0, 1.0, 0.96)) for x in (-0.4, -0.15, 0.15, 0.4)]
+    return {
+        "corpo": (montar(nuvem + rosto + [chapeu, faixa]), "SmoothPlastic", 0),
+        "brilho": (montar(chamas), "Neon", 0.2),
+    }, {"voa": True}
+
+
+def soldado_sombrio():
+    armadura = (0.24, 0.20, 0.34)
+    corpo = montar([
+        casca([(0.35, -0.25, 0.3), (-0.35, -0.25, 0.3), (0.38, 0.25, 0.3), (-0.38, 0.25, 0.3), (0.42, -0.22, 1.0), (-0.42, -0.22, 1.0), (0.45, 0.25, 1.0), (-0.45, 0.25, 1.0)], armadura),
+        casca([(0.36, -0.3, 1.0), (-0.36, -0.3, 1.0), (0.36, 0.35, 1.0), (-0.36, 0.35, 1.0), (0.3, -0.25, 1.7), (-0.3, -0.25, 1.7), (0.3, 0.3, 1.7), (-0.3, 0.3, 1.7), (0, 0.05, 1.85)], (0.30, 0.26, 0.42)),
+        casca([(0.42, 0, 1.0), (0.72, 0, 1.05), (0.55, 0.25, 0.85), (0.55, -0.25, 0.85), (0.6, 0, 1.2)], armadura),
+        casca([(-0.42, 0, 1.0), (-0.72, 0, 1.05), (-0.55, 0.25, 0.85), (-0.55, -0.25, 0.85), (-0.6, 0, 1.2)], armadura),
+        kit.bloco(0.1, 0.1, 1.1, random.Random(12), (0.35, 0.32, 0.42), chanfro=0.0),
+    ])
+    rng = random.Random(13)
+    fumaca = [kit.espinho((x, y, 0.35), (x * 1.5, y * 1.5, -0.05 + rng.uniform(0, 0.1)), 0.3, (0.18, 0.08, 0.3)) for x, y in ((0.3, 0.2), (-0.3, 0.2), (0.3, -0.2), (-0.3, -0.2), (0, 0.32))]
+    olhos = montar([esfera((0.13, 0.33, 1.42), 0.07, 0.03, 0.04, VIOLETA_SOMBRA), esfera((-0.13, 0.33, 1.42), 0.07, 0.03, 0.04, VIOLETA_SOMBRA)])
+    bmesh.ops.translate(fumaca[0], vec=Vector((0, 0, 0)), verts=[])
+    espada = kit.espinho((0.72, 0.35, 0.65), (0.72, 0.4, 1.6), 0.12, (0.55, 0.4, 0.9))
+    chamas = [kit.espinho((x, -0.05, 1.05), (x * 1.3, -0.25, 1.65 + rng.uniform(0, 0.25)), 0.18, VIOLETA_SOMBRA) for x in (-0.55, 0.55)]
+    chamas += [kit.espinho((0, -0.2, 1.75), (0, -0.35, 2.3), 0.2, VIOLETA_SOMBRA)]
+    return {"corpo": (montar([corpo] + fumaca), "SmoothPlastic", 0), "brilho": (montar([olhos, espada] + chamas), "Neon", 0.15)}, {"voa": False}
+
+
+def beru_chibi():
+    casca_cor = (0.22, 0.16, 0.32)
+    corpo = montar([
+        esfera((0, -0.55, 1.15), 0.42, 0.55, 0.42, casca_cor, lados=10, aneis=6),
+        esfera((0, 0.05, 1.3), 0.32, 0.32, 0.38, (0.28, 0.2, 0.4), lados=10, aneis=6),
+        casca([(0.3, 0.3, 1.5), (-0.3, 0.3, 1.5), (0.25, 0.75, 1.55), (-0.25, 0.75, 1.55), (0.22, 0.4, 1.9), (-0.22, 0.4, 1.9), (0, 0.85, 1.65)], (0.26, 0.19, 0.38)),
+        kit.espinho((0.15, 0.78, 1.45), (0.05, 1.12, 1.28), 0.12, (0.3, 0.25, 0.38)),
+        kit.espinho((-0.15, 0.78, 1.45), (-0.05, 1.12, 1.28), 0.12, (0.3, 0.25, 0.38)),
+        kit.espinho((0.12, 0.5, 1.88), (0.4, 0.95, 2.35), 0.04, casca_cor),
+        kit.espinho((-0.12, 0.5, 1.88), (-0.4, 0.95, 2.35), 0.04, casca_cor),
+        perna((0.3, 0.15, 0.0), (0.22, 0.05, 1.15), 0.07, casca_cor),
+        perna((-0.3, 0.15, 0.0), (-0.22, 0.05, 1.15), 0.07, casca_cor),
+        perna((0.38, -0.25, 0.25), (0.25, 0.1, 1.2), 0.06, casca_cor),
+        perna((-0.38, -0.25, 0.25), (-0.25, 0.1, 1.2), 0.06, casca_cor),
+    ])
+    brilho = montar([
+        esfera((0.17, 0.66, 1.68), 0.08, 0.05, 0.06, VIOLETA_SOMBRA),
+        esfera((-0.17, 0.66, 1.68), 0.08, 0.05, 0.06, VIOLETA_SOMBRA),
+        kit.fita3d([(0, -0.15, 1.6), (0, -0.55, 1.58), (0, -0.95, 1.3)], 0.06, (0, 0, 1), VIOLETA_SOMBRA),
+    ])
+    asa_e = lamina([(-0.15, 0.0, 1.55), (-1.1, -0.4, 2.1), (-0.95, -0.85, 1.65), (-0.3, -0.35, 1.45)], (0.45, 0.25, 0.75))
+    asa_d = lamina([(0.15, 0.0, 1.55), (1.1, -0.4, 2.1), (0.95, -0.85, 1.65), (0.3, -0.35, 1.45)], (0.45, 0.25, 0.75))
+    return {
+        "corpo": (corpo, "SmoothPlastic", 0),
+        "brilho": (brilho, "Neon", 0),
+        "asa_e": (asa_e, "Glass", 0.3),
+        "asa_d": (asa_d, "Glass", 0.3),
+    }, {"voa": True, "junta_e": (-0.15, 0.0, 1.55), "junta_d": (0.15, 0.0, 1.55), "bater": 30}
+
+
+def igris_chibi():
+    armadura = (0.30, 0.22, 0.28)
+    escura = (0.18, 0.13, 0.17)
+    vermelho = (0.85, 0.12, 0.16)
+    ouro = (0.85, 0.68, 0.32)
+    corpo = [
+        # pernas e saia de placas
+        casca([(0.3, -0.2, 0.0), (-0.3, -0.2, 0.0), (0.3, 0.2, 0.0), (-0.3, 0.2, 0.0), (0.38, -0.22, 0.7), (-0.38, -0.22, 0.7), (0.38, 0.24, 0.7), (-0.38, 0.24, 0.7)], escura),
+        # peitoral
+        casca([(0.42, -0.25, 0.7), (-0.42, -0.25, 0.7), (0.44, 0.28, 0.7), (-0.44, 0.28, 0.7), (0.48, -0.22, 1.15), (-0.48, -0.22, 1.15), (0.5, 0.3, 1.15), (-0.5, 0.3, 1.15), (0, 0.42, 0.95)], armadura),
+        kit.fita3d([(-0.35, 0.36, 0.98), (0, 0.44, 0.9), (0.35, 0.36, 0.98)], 0.06, (0, 1, 0), ouro),
+        # ombreiras
+        casca([(0.45, 0, 1.12), (0.85, 0, 1.15), (0.68, 0.3, 0.92), (0.68, -0.3, 0.92), (0.72, 0, 1.35)], armadura),
+        casca([(-0.45, 0, 1.12), (-0.85, 0, 1.15), (-0.68, 0.3, 0.92), (-0.68, -0.3, 0.92), (-0.72, 0, 1.35)], armadura),
+        # elmo grande (chibi) com fenda e chifres curtos
+        casca([(0.38, -0.32, 1.15), (-0.38, -0.32, 1.15), (0.38, 0.4, 1.15), (-0.38, 0.4, 1.15), (0.34, -0.3, 1.85), (-0.34, -0.3, 1.85), (0.32, 0.38, 1.8), (-0.32, 0.38, 1.8), (0, 0.52, 1.45)], armadura),
+        kit.espinho((0.3, 0.1, 1.75), (0.55, 0.0, 2.05), 0.12, escura),
+        kit.espinho((-0.3, 0.1, 1.75), (-0.55, 0.0, 2.05), 0.12, escura),
+        # capa
+        lamina([(0.48, -0.3, 1.12), (-0.48, -0.3, 1.12), (-0.62, -0.65, 0.08), (0.62, -0.65, 0.08)], vermelho),
+    ]
+    # penacho vermelho: tufos do alto do elmo até as costas
+    for k, (y, z, r) in enumerate(((0.0, 1.95, 0.2), (-0.25, 2.12, 0.22), (-0.55, 2.12, 0.21), (-0.82, 1.95, 0.18), (-0.98, 1.68, 0.15), (-1.05, 1.4, 0.12))):
+        corpo.append(esfera((0, y, z), r * 0.75, r, r, kit.misturar(vermelho, (1.0, 0.4, 0.35), 0.1 * (k % 2)), lados=8, aneis=5))
+    espada = montar([
+        kit.bloco(0.14, 0.08, 1.7, random.Random(14), (0.78, 0.78, 0.86), chanfro=0.0),
+        (kit.bloco(0.5, 0.12, 0.1, random.Random(15), ouro, chanfro=0.0), T((0, 0, -0.75))),
+        (kit.bloco(0.1, 0.1, 0.35, random.Random(16), escura, chanfro=0.0), T((0, 0, -0.98))),
+    ])
+    bmesh.ops.translate(espada, vec=Vector((0.88, 0.35, 1.1)), verts=espada.verts[:])
+    brilho = montar([
+        kit.fita3d([(0.06, 0.41, 1.45), (0.22, 0.39, 1.5)], 0.06, (0, 1, 0), VIOLETA_SOMBRA),
+        kit.fita3d([(-0.06, 0.41, 1.45), (-0.22, 0.39, 1.5)], 0.06, (0, 1, 0), VIOLETA_SOMBRA),
+        kit.fita3d([(0.88, 0.44, 0.45), (0.88, 0.44, 1.92)], 0.04, (0, 1, 0), VIOLETA_SOMBRA),
+    ])
+    return {"corpo": (montar(corpo + [espada]), "SmoothPlastic", 0), "brilho": (brilho, "Neon", 0)}, {"voa": False}
+
+
 ECOS = [
     ("lasquinho", lasquinho),
     ("mariposa_vitral", mariposa_vitral),
@@ -589,6 +846,15 @@ ECOS = [
     ("olho_errante", olho_errante),
     ("gato_constelacao", gato_constelacao),
     ("dragao_estelar", dragao_estelar),
+    ("sapo_invocado", sapo_invocado),
+    ("cao_ninja", cao_ninja),
+    ("kurama_chibi", kurama_chibi),
+    ("den_den_mushi", den_den_mushi),
+    ("rena_doutora", rena_doutora),
+    ("nika_chibi", nika_chibi),
+    ("soldado_sombrio", soldado_sombrio),
+    ("beru_chibi", beru_chibi),
+    ("igris_chibi", igris_chibi),
 ]
 
 # Núcleos: uma semente de cristal por mundo, com a cor da fase e um miolo aceso
@@ -599,10 +865,14 @@ NUCLEOS = [
     ((0.40, 0.85, 1.0), (0.85, 0.97, 1.0)),
     ((1.0, 0.80, 0.32), (1.0, 0.95, 0.75)),
     ((0.90, 0.35, 1.0), (1.0, 0.8, 1.0)),
+    # exclusivos: Folha (Naruto), Grand Line (One Piece), Sombras (Solo Leveling)
+    ((1.0, 0.55, 0.15), (1.0, 0.85, 0.45), (0.9, 0.3, 0.1)),
+    ((0.35, 0.65, 1.0), (0.95, 0.95, 1.0), (0.98, 0.84, 0.40)),
+    ((0.25, 0.12, 0.45), (0.75, 0.5, 1.0), (0.05, 0.03, 0.08)),
 ]
 
 
-def nucleo(i, cor, miolo):
+def nucleo(i, cor, miolo, aro_cor=None):
     rng = random.Random(700 + i)
     pts = []
     for k in range(12):
@@ -612,7 +882,10 @@ def nucleo(i, cor, miolo):
         pts.append((r * math.cos(a), r * math.sin(a), z * 1.25 + 1.3))
     pts += [(0, 0, 2.75), (0, 0, -0.05)]
     casco_ = casca(pts, cor, gradiente=(0, 2.75, kit.misturar(cor, (0, 0, 0), 0.5), kit.misturar(cor, BRANCO, 0.4)))
-    aro = anel((0, 0, 1.3), 1.05, 0.06, (0.2, 0.18, 0.25), lados=20, inclinar=14, eixo="X")
+    aro = anel((0, 0, 1.3), 1.05, 0.06, aro_cor or (0.2, 0.18, 0.25), lados=20, inclinar=14, eixo="X")
+    if aro_cor:
+        # exclusivos: um segundo aro cruzado e uma coroa de pontas
+        aro = montar([aro, anel((0, 0, 1.3), 1.12, 0.05, aro_cor, lados=20, inclinar=-60, eixo="Y")] + [kit.espinho((0.55 * math.cos(a), 0.55 * math.sin(a), 2.35), (0.75 * math.cos(a), 0.75 * math.sin(a), 2.85), 0.12, aro_cor) for a in (0, 2.09, 4.19)])
     brilho = esfera((0, 0, 1.3), 0.42, 0.42, 0.55, miolo, lados=10, aneis=6)
     return {"vidro": (casco_, "Glass", 0.35), "corpo": (aro, "Metal", 0), "brilho": (brilho, "Neon", 0)}
 
@@ -703,8 +976,8 @@ def main():
         registro["largura"] = max(caixa_max[0] - caixa_min[0], caixa_max[1] - caixa_min[1])
         visuais.append(registro)
     nucleos = []
-    for i, (cor, miolo) in enumerate(NUCLEOS):
-        partes = nucleo(i, cor, miolo)
+    for i, dados in enumerate(NUCLEOS):
+        partes = nucleo(i, dados[0], dados[1], dados[2] if len(dados) > 2 else None)
         lista = []
         for parte in ("corpo", "vidro", "brilho"):
             bm, material, transp = partes[parte]
@@ -758,7 +1031,7 @@ def main():
             if obj:
                 obj.location = ((k % 3) * 3.6 - 3.6, -(k // 3) * 4.2, 0)
                 bpy.context.scene.collection.objects.link(obj)
-    for i in range(6):
+    for i in range(len(NUCLEOS)):
         for parte in ("corpo", "vidro", "brilho"):
             obj = objetos["nucleo_%d_%s" % (i + 1, parte)]
             obj.location = (8 + (i % 3) * 3, -(i // 3) * 4.2, 0)
@@ -806,7 +1079,9 @@ def renderizar(objetos):
     for o in bpy.context.scene.collection.objects:
         if o.type == "MESH" and o is not chao:
             o.hide_render = True
-    grupos = [("pet_%s" % n, n) for n, _ in ECOS] + [("nucleo_%d" % (i + 1), "nucleo_%d" % (i + 1)) for i in range(6)]
+    grupos = [("pet_%s" % n, n) for n, _ in ECOS] + [("nucleo_%d" % (i + 1), "nucleo_%d" % (i + 1)) for i in range(len(NUCLEOS))]
+    if os.environ.get("SO_ANIME"):
+        grupos = grupos[18:21] + grupos[21:27] + grupos[-3:]
     for prefixo, nome in grupos:
         visiveis = [o for k, o in objetos.items() if k.startswith(prefixo + "_")]
         base = None
@@ -817,7 +1092,7 @@ def renderizar(objetos):
         alvo = base + Vector((0, 0, topo * 0.48))
         dist = max(4.2, topo * 2.3)
         cam.location = alvo + Vector((dist * 0.55, dist * 0.8, dist * 0.32))
-        luz.location = alvo + Vector((3, 6, 8))
+        luz.location = alvo + Vector((4, 7, 6))
         luz2.location = alvo + Vector((-6, -3, 4))
         cam.rotation_euler = (alvo - cam.location).to_track_quat("-Z", "Y").to_euler()
         cena.render.filepath = os.path.join(DIR_BASE, "previews", nome + ".jpg")

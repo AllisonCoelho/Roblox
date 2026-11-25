@@ -298,6 +298,13 @@ local function abaNucleos()
 	})
 	Cartoes.secao(estrutura.lista, 2, "Núcleos", "Chances exibidas · pagos só com Fragmentos")
 	local grade = Cartoes.grade(estrutura.lista, 3, Vector2.new(250, 420))
+	Cartoes.secao(
+		estrutura.lista,
+		4,
+		"Exclusivos · versão anime",
+		"Naruto · One Piece · Solo Leveling — só Épicos para cima"
+	)
+	local gradeExclusivos = Cartoes.grade(estrutura.lista, 5, Vector2.new(250, 420))
 	for i, nucleo in Pets.NUCLEOS do
 		local liberado = Pets.nucleoLiberado(nucleo, corredor)
 		local cor = Color3.fromHex(nucleo.cor)
@@ -306,7 +313,7 @@ local function abaNucleos()
 			borda = if liberado then cor else Cores.Borda,
 			corte = 14,
 			ordem = i,
-			pai = grade,
+			pai = if nucleo.exclusivo then gradeExclusivos else grade,
 		})
 		vitrine(
 			p.conteudo,
@@ -314,6 +321,25 @@ local function abaNucleos()
 			UDim2.fromOffset(40, 6),
 			UDim2.new(1, -80, 0, 130)
 		)
+		if nucleo.exclusivo then
+			local selo = Kit.placa({
+				tamanho = UDim2.fromOffset(150, 22),
+				posicao = UDim2.fromOffset(8, 8),
+				fundo = cor,
+				borda = cor,
+				corte = 5,
+				z = 4,
+				pai = p.conteudo,
+			})
+			Kit.texto({
+				fonte = "titulo",
+				Text = "EXCLUSIVO · " .. string.upper(nucleo.serie or ""),
+				TextSize = 12,
+				TextColor3 = Cores.Fundo,
+				Size = UDim2.fromScale(1, 1),
+				Parent = selo.conteudo,
+			})
+		end
 		Kit.texto({
 			fonte = "titulo",
 			Text = nucleo.nome,
@@ -501,7 +527,8 @@ local function abaMeus()
 		})
 		Kit.texto({
 			Text = (if g.prisma then "Prismático · " else "")
-				.. Pets.RARIDADES[eco.raridade].nome,
+				.. Pets.RARIDADES[eco.raridade].nome
+				.. (if eco.serie then " · " .. eco.serie else ""),
 			TextSize = 13,
 			TextColor3 = if g.prisma then Color3.fromHex("FFE27A") else Cores.TextoSuave,
 			Position = UDim2.fromOffset(6, 150),

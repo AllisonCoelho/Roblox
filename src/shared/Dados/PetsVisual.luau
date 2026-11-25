@@ -453,6 +453,181 @@ return {
 				},
 			},
 		},
+		sapo_invocado = {
+			voa = false,
+			altura = 1.460,
+			largura = 1.880,
+			partes = {
+				{
+					nome = "corpo",
+					malha = "pet_sapo_invocado_corpo",
+					material = "SmoothPlastic",
+					transparencia = 0.00,
+				},
+			},
+		},
+		cao_ninja = {
+			voa = false,
+			altura = 1.710,
+			largura = 1.868,
+			partes = {
+				{
+					nome = "corpo",
+					malha = "pet_cao_ninja_corpo",
+					material = "SmoothPlastic",
+					transparencia = 0.00,
+				},
+				{
+					nome = "brilho",
+					malha = "pet_cao_ninja_brilho",
+					material = "Metal",
+					transparencia = 0.00,
+				},
+			},
+		},
+		kurama_chibi = {
+			voa = false,
+			altura = 2.350,
+			largura = 2.284,
+			partes = {
+				{
+					nome = "corpo",
+					malha = "pet_kurama_chibi_corpo",
+					material = "SmoothPlastic",
+					transparencia = 0.00,
+				},
+				{
+					nome = "brilho",
+					malha = "pet_kurama_chibi_brilho",
+					material = "Neon",
+					transparencia = 0.00,
+				},
+			},
+		},
+		den_den_mushi = {
+			voa = false,
+			altura = 1.780,
+			largura = 1.744,
+			partes = {
+				{
+					nome = "corpo",
+					malha = "pet_den_den_mushi_corpo",
+					material = "SmoothPlastic",
+					transparencia = 0.00,
+				},
+				{
+					nome = "brilho",
+					malha = "pet_den_den_mushi_brilho",
+					material = "SmoothPlastic",
+					transparencia = 0.00,
+				},
+			},
+		},
+		rena_doutora = {
+			voa = false,
+			altura = 2.300,
+			largura = 1.500,
+			partes = {
+				{
+					nome = "corpo",
+					malha = "pet_rena_doutora_corpo",
+					material = "SmoothPlastic",
+					transparencia = 0.00,
+				},
+			},
+		},
+		nika_chibi = {
+			voa = true,
+			altura = 2.008,
+			largura = 1.756,
+			partes = {
+				{
+					nome = "corpo",
+					malha = "pet_nika_chibi_corpo",
+					material = "SmoothPlastic",
+					transparencia = 0.00,
+				},
+				{
+					nome = "brilho",
+					malha = "pet_nika_chibi_brilho",
+					material = "Neon",
+					transparencia = 0.20,
+				},
+			},
+		},
+		soldado_sombrio = {
+			voa = false,
+			altura = 2.300,
+			largura = 1.525,
+			partes = {
+				{
+					nome = "corpo",
+					malha = "pet_soldado_sombrio_corpo",
+					material = "SmoothPlastic",
+					transparencia = 0.00,
+				},
+				{
+					nome = "brilho",
+					malha = "pet_soldado_sombrio_brilho",
+					material = "Neon",
+					transparencia = 0.15,
+				},
+			},
+		},
+		beru_chibi = {
+			voa = true,
+			altura = 2.350,
+			largura = 2.200,
+			partes = {
+				{
+					nome = "corpo",
+					malha = "pet_beru_chibi_corpo",
+					material = "SmoothPlastic",
+					transparencia = 0.00,
+				},
+				{
+					nome = "brilho",
+					malha = "pet_beru_chibi_brilho",
+					material = "Neon",
+					transparencia = 0.00,
+				},
+				{
+					nome = "asa_e",
+					malha = "pet_beru_chibi_asa_e",
+					material = "Glass",
+					transparencia = 0.30,
+					junta = { -0.15, 1.55, -0 },
+					bater = 30,
+				},
+				{
+					nome = "asa_d",
+					malha = "pet_beru_chibi_asa_d",
+					material = "Glass",
+					transparencia = 0.30,
+					junta = { 0.15, 1.55, -0 },
+					bater = 30,
+				},
+			},
+		},
+		igris_chibi = {
+			voa = false,
+			altura = 2.340,
+			largura = 1.998,
+			partes = {
+				{
+					nome = "corpo",
+					malha = "pet_igris_chibi_corpo",
+					material = "SmoothPlastic",
+					transparencia = 0.00,
+				},
+				{
+					nome = "brilho",
+					malha = "pet_igris_chibi_brilho",
+					material = "Neon",
+					transparencia = 0.00,
+				},
+			},
+		},
 	},
 	nucleos = {
 		{
@@ -484,6 +659,21 @@ return {
 			{ nome = "corpo", malha = "nucleo_6_corpo", material = "Metal", transparencia = 0.00 },
 			{ nome = "vidro", malha = "nucleo_6_vidro", material = "Glass", transparencia = 0.35 },
 			{ nome = "brilho", malha = "nucleo_6_brilho", material = "Neon", transparencia = 0.00 },
+		},
+		{
+			{ nome = "corpo", malha = "nucleo_7_corpo", material = "Metal", transparencia = 0.00 },
+			{ nome = "vidro", malha = "nucleo_7_vidro", material = "Glass", transparencia = 0.35 },
+			{ nome = "brilho", malha = "nucleo_7_brilho", material = "Neon", transparencia = 0.00 },
+		},
+		{
+			{ nome = "corpo", malha = "nucleo_8_corpo", material = "Metal", transparencia = 0.00 },
+			{ nome = "vidro", malha = "nucleo_8_vidro", material = "Glass", transparencia = 0.35 },
+			{ nome = "brilho", malha = "nucleo_8_brilho", material = "Neon", transparencia = 0.00 },
+		},
+		{
+			{ nome = "corpo", malha = "nucleo_9_corpo", material = "Metal", transparencia = 0.00 },
+			{ nome = "vidro", malha = "nucleo_9_vidro", material = "Glass", transparencia = 0.35 },
+			{ nome = "brilho", malha = "nucleo_9_brilho", material = "Neon", transparencia = 0.00 },
 		},
 	},
 }
