@@ -22,6 +22,7 @@ local AuraVisual = require(Servicos:WaitForChild("AuraVisual"))
 local PainelDev = require(Servicos:WaitForChild("PainelDev"))
 local Incursoes = require(script.Parent:WaitForChild("Incursoes"):WaitForChild("Servico"))
 local Arena = require(script.Parent:WaitForChild("Arena"):WaitForChild("Servico"))
+local Corredor = require(script.Parent:WaitForChild("Corredor"):WaitForChild("Servico"))
 
 Acoes.iniciar()
 -- Os serviços registram seus ganchos antes de Dados começar a carregar jogadores
@@ -32,6 +33,7 @@ Temporada.iniciar()
 Forja.iniciar()
 Artefatos.iniciar()
 PontosAura.iniciar()
+Corredor.iniciar()
 Ranking.iniciar()
 AuraVisual.iniciar()
 if Config.IncursoesAtivas then

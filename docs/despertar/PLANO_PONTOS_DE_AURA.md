@@ -3,6 +3,8 @@
 > Plano aprovado pelo dono (nov/2026), com as decisões no fim. Substitui as propostas de mundo aberto e dos Guardiões (`GUARDIOES.md`).
 >
 > **Já implementado:** Etapa 1 e o painel Evoluir da Etapa 2. A sorte já entra no giro. As Incursões estão desligadas. Detalhes em `PONTOS_DE_AURA.md`.
+>
+> **Corredor dos Perdidos (Etapa 4):** seis fases no céu do Nexo, sem as criaturas por enquanto. Detalhes em `CORREDOR.md`.
 
 ## A ideia em uma frase
 

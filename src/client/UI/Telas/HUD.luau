@@ -331,7 +331,13 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 			base = tonumber(eu:GetAttribute("PontosAura")) or 0
 			baseEm = os.clock()
 			local g = tonumber(eu:GetAttribute("GanhoAura")) or 0
-			ganhoPontos.Text = "+" .. (string.format("%.1f", g):gsub("%.", ",")) .. "/s"
+			local bonus = (tonumber(eu:GetAttribute("BonusAuraAte")) or 0)
+				> workspace:GetServerTimeNow()
+			ganhoPontos.Text = "+"
+				.. (string.format("%.1f", g):gsub("%.", ","))
+				.. "/s"
+				.. (if bonus then "  ×2 COMBATE" else "")
+			ganhoPontos.TextColor3 = if bonus then Color3.fromHex("FFC83D") else Cores.Menta
 			valorPontuacao.Text = grande(tonumber(eu:GetAttribute("Pontuacao")) or 0)
 			valorSorte.Text = "Sorte "
 				.. (string
@@ -339,7 +345,7 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 					:gsub("%.", ","))
 				.. "x"
 		end
-		for _, nome in { "PontosAura", "GanhoAura", "Pontuacao", "SorteTotal" } do
+		for _, nome in { "PontosAura", "GanhoAura", "Pontuacao", "SorteTotal", "BonusAuraAte" } do
 			eu:GetAttributeChangedSignal(nome):Connect(ler)
 		end
 		ler()
@@ -824,9 +830,9 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 			giros.Text = if estado.giros < 1000000
 				then Formato.inteiro(estado.giros)
 				else Formato.curto(estado.giros)
-			local frag = if type(estado.incursoes) == "table"
-				then estado.incursoes.fragmentos or 0
-				else 0
+			-- Fragmentos do Corredor dos Perdidos (compram pets); os das Incursões ficam guardados
+			local corredor = (estado :: any).corredor
+			local frag = if type(corredor) == "table" then corredor.fragmentos or 0 else 0
 			fragmentos.Text = if frag < 1000000 then Formato.inteiro(frag) else Formato.curto(frag)
 			textoTrans.Text = "T" .. estado.transcendencia.nivel
 

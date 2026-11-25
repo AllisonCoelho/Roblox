@@ -664,20 +664,15 @@ local function construirPortais(pasta: Instance)
 		})
 		luz(veu, cores[i], 22, 1.8)
 		if b == 0 then
-			interacao(
-				veu,
-				"em_construcao",
-				"Em construção",
-				"Portais Fragmentados",
-				"Os portais ainda não levam a lugar nenhum."
-			)
+			-- O portal do meio abre o Corredor dos Perdidos (src/server/Corredor)
+			interacao(veu, "corredor", "Entrar", "Corredor dos Perdidos")
 		end
 	end
 	placa(
 		pasta,
 		(olhar * CFrame.new(0, 25, 4)).Position,
-		"Portais Fragmentados",
-		"Em construção",
+		"Corredor dos Perdidos",
+		"Seis mundos fragmentados acima do Nexo",
 		COR.violeta
 	)
 end

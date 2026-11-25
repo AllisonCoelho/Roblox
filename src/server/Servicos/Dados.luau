@@ -14,6 +14,7 @@ local Perfil = require(Shared.Dados.Perfil)
 local Itens = require(Shared.Dados.Itens)
 local Transcendencia = require(Shared.Dados.Transcendencia)
 local PontosAura = require(Shared.Dados.PontosAura)
+local Corredor = require(Shared.Dados.Corredor)
 local Remotos = require(Shared.Remotos)
 local Sessao = require(script.Parent.Sessao)
 
@@ -197,6 +198,7 @@ function Dados.carregar(player: Player)
 	estado.inventario = Itens.normalizarInventario(estado.inventario)
 	estado.transcendencia = Transcendencia.normalizar(estado.transcendencia)
 	estado.poder = PontosAura.normalizar(estado.poder)
+	estado.corredor = Corredor.normalizar(estado.corredor)
 	estados[player] = estado
 	for _, fn in aoCarregar do
 		local ok, erro = pcall(fn, player, estado)
