@@ -18,6 +18,7 @@ local Acoes = require(Servicos.Acoes)
 local Dados = require(Servicos.Dados)
 local PontosAura = require(Servicos.PontosAura)
 local PetsServico = require(Servicos.Pets)
+local EquipamentoServico = require(Servicos.Equipamento)
 local CriaturasServico = require(script.Parent.Criaturas)
 local CriaturasDados = require(Shared.Dados.Criaturas)
 
@@ -171,7 +172,8 @@ local function concluir(player: Player, n: number)
 	estar.concluiu = true
 	local ganho, primeira = 0, false
 	local ok = Dados.alterar(player, function(estado)
-		local _, _, fragmentos = PetsServico.multiplicadores(player)
+		local _, _, fragmentosPets = PetsServico.multiplicadores(player)
+		local fragmentos = fragmentosPets * EquipamentoServico.multiplicadores(player).fragmentos
 		ganho, primeira = Corredor.concluir((estado :: any).corredor, n, os.time(), fragmentos)
 		return true
 	end)

@@ -14,6 +14,8 @@ MODULOS = {
     "Corredor": "src/shared/Dados/Corredor.luau",
     "Pets": "src/shared/Dados/Pets.luau",
     "Criaturas": "src/shared/Dados/Criaturas.luau",
+    "Equipamento": "src/shared/Dados/Equipamento.luau",
+    "EquipamentoVisual": "src/shared/Dados/EquipamentoVisual.luau",
     "CriaturasVisual": "src/shared/Dados/CriaturasVisual.luau",
     "PetsVisual": "src/shared/Dados/PetsVisual.luau",
     "CorredorMapa": "src/shared/Dados/CorredorMapa.luau",

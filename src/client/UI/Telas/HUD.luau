@@ -58,6 +58,7 @@ type Opcoes = {
 	aoAbrirAjustes: () -> (),
 	aoAbrirEvoluir: (() -> ())?,
 	aoAbrirEcos: (() -> ())?,
+	aoAbrirEquipamento: (() -> ())?,
 }
 
 local function corTier(aura: Auras.Aura): Color3
@@ -427,7 +428,8 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 	end
 	atalho(1, "Loja", Icones.MENU.Loja, DESTAQUE.Loja, op.aoAbrirLoja)
 	atalho(2, "Bolsa", Icones.MENU.Bolsa, DESTAQUE.Bolsa, op.aoAbrirInventario)
-	atalho(3, "Índice", Icones.MENU.Indice, DESTAQUE.Indice, op.aoAbrirIndice)
+	-- o Índice continua no espaço 3 da barra de baixo; o menu ganha o Equipamento
+	atalho(3, "Equipar", 24, Color3.fromHex("FFC83D"), op.aoAbrirEquipamento or op.aoAbrirIndice)
 	-- o Passe continua no cartão do jogador; o menu ganha Evoluir (o centro do jogo agora)
 	atalho(4, "Evoluir", ICONE_PONTOS, DESTAQUE.Evoluir, op.aoAbrirEvoluir or op.aoAbrirIndice)
 	atalho(5, "Ecos", 28, Color3.fromHex("FF9AD5"), op.aoAbrirEcos or op.aoAbrirIndice)
