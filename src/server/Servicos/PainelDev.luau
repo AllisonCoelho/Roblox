@@ -12,6 +12,7 @@ local Perfil = require(Shared.Dados.Perfil)
 local Acoes = require(script.Parent.Acoes)
 local AuraVisual = require(script.Parent.AuraVisual)
 local Dados = require(script.Parent.Dados)
+local DropsMapa = require(script.Parent.DropsMapa)
 local PermissaoDev = require(script.Parent.PermissaoDev)
 local Sorteio = require(script.Parent.Sorteio)
 local Nexo = require(script.Parent.Parent.Mundo.Nexo)
@@ -245,6 +246,9 @@ local comandos: { [string]: Comando } = {
 	end,
 	ir = ir,
 	renascer = renascer,
+	ciclo = function(_, fase)
+		return DropsMapa.irParaFase(fase)
+	end,
 }
 
 local function executar(player: Player, nome: any, ...: any): (boolean, string?, { [string]: any }?)

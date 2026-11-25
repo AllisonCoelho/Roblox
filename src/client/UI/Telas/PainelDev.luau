@@ -10,6 +10,7 @@ local Auras = require(Shared.Dados.Auras)
 local AurasVfx = require(Shared.Dados.AurasVfx)
 local AurasOriginaisV2 = require(Shared.Dados.AurasOriginaisV2)
 local Formato = require(Shared.Formato)
+local Ciclo = require(Shared.Dados.Ciclo)
 local Incursoes = require(Shared.Dados.Incursoes)
 local Tema = require(Shared.Tema)
 local Cores = Tema.Orbita
@@ -454,6 +455,18 @@ local function montar(paiHud: Frame, op: Opcoes)
 			Avisos.toast("Digite a quantidade de fragmentos")
 		end
 	end)
+
+	texto(
+		inc,
+		"Ciclo de dia e noite: pular para o começo de uma fase (vale para o servidor todo)."
+	)
+	local fases, ajustarFases = grade(inc, 4)
+	for i, fase in Ciclo.FASES do
+		botao(fases, fase.nome, function()
+			pedir("ciclo", fase.id)
+		end, i, "lilas")
+	end
+	ajustarFases()
 
 	UserInputService.InputBegan:Connect(function(input, processado)
 		if not processado and input.KeyCode == Enum.KeyCode.F8 then

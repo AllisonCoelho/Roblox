@@ -11,6 +11,8 @@
 > **Criaturas do Corredor:** um lacaio e um chefe por fase, personagens blocados do Blender (FBX para importar). Vencer o chefe abre o Portão. Detalhes em `CORREDOR.md`.
 >
 > **Equipamento (RPG):** elmo, armadura, manoplas, botas e arma, mais os acessórios minimalistas (colar, manto, bracelete e auréola), em seis conjuntos, com bônus, visual no personagem e olho para ocultar. Detalhes em `EQUIPAMENTO.md`.
+>
+> **Ciclo de dia e noite e drops pelo mapa:** volta de 20 min sincronizada em todos os servidores. Orbes, lascas e, à noite, Estrelas Cadentes espalhados pelo Nexo. Detalhes em `CICLO_E_DROPS.md`.
 
 ## A ideia em uma frase
 

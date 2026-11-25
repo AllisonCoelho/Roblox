@@ -1861,4 +1861,84 @@ do
 	igual("equip: acessório não ocupa espaço de armadura", leve.equipados.armadura, nil)
 end
 
+-- Ciclo de dia e noite
+do
+	local C = req("Ciclo")
+	local soma = 0
+	for _, f in C.FASES do
+		soma += f.fracao
+	end
+	igual("ciclo: frações somam uma volta", math.abs(soma - 1) < 1e-9, true)
+	igual("ciclo: começa na aurora", C.estado(0).fase, "aurora")
+	igual("ciclo: 5 h no início da aurora", C.estado(0).relogio, 5)
+	igual("ciclo: dia depois de 2 min", C.estado(2 * 60 + 1).fase, "dia")
+	igual("ciclo: crepúsculo aos 10 min", C.estado(10 * 60 + 1).fase, "crepusculo")
+	igual("ciclo: noite aos 12 min", C.estado(12 * 60 + 1).fase, "noite")
+	igual("ciclo: volta para a aurora", C.estado(C.DURACAO + 1).fase, "aurora")
+	igual("ciclo: noite atravessa a meia-noite", C.estado(16 * 60).relogio < 5, true)
+	igual("ciclo: relógio sempre de 0 a 24", (function()
+		for s = 0, C.DURACAO, 7 do
+			local r = C.estado(s).relogio
+			if r < 0 or r >= 24 then
+				return false
+			end
+		end
+		return true
+	end)(), true)
+	igual("ciclo: restante até a noite acabar", math.floor(C.estado(12 * 60).restante + 0.5), 8 * 60)
+	for _, f in C.FASES do
+		igual("ciclo: início da " .. f.id, C.estado(C.inicioDa(f.id) + 0.5).fase, f.id)
+	end
+	igual("ciclo: noite é a luz original", C.luz(0).brilho, 2.4)
+	igual("ciclo: dia mais claro que a noite", C.luz(12).brilho > C.luz(0).brilho, true)
+	igual("ciclo: sem estrelas ao meio-dia", C.luz(12).estrelas, 0)
+	igual("ciclo: luz mistura entre quadros", C.luz(7.5).brilho > C.luz(6).brilho - 1e-9, true)
+	igual("ciclo: tempo formatado", C.tempo(192), "3:12")
+end
+
+-- Drops do mapa
+do
+	local D = req("DropsMapa")
+	igual("drops: estrela não aparece de dia", (function()
+		for k = 0, 99 do
+			if D.sortear(false, function()
+				return k / 100
+			end) == "estrela" then
+				return false
+			end
+		end
+		return true
+	end)(), true)
+	igual("drops: estrela aparece à noite", D.sortear(true, function()
+		return 0.99
+	end), "estrela")
+	igual("drops: orbe é o mais comum", D.sortear(false, function()
+		return 0
+	end), "orbe")
+	igual("drops: noite mais rápida", D.intervalo(true) < D.intervalo(false), true)
+	igual("drops: máximo cresce com jogadores", D.maximo(5) > D.maximo(1), true)
+	igual("drops: máximo tem teto", D.maximo(100), 40)
+	igual("drops: orbe vale 15 s de ganho", D.premio("orbe", 10, 0).pontos, 150)
+	igual("drops: orbe tem mínimo", D.premio("orbe", 0, 0).pontos, D.MINIMO_PONTOS)
+	igual("drops: lasca sem Corredor", D.premio("lasca", 10, 0).fragmentos, 1)
+	igual("drops: lasca cresce com o Corredor", D.premio("lasca", 10, 4).fragmentos, 5)
+	igual("drops: lasca com bônus de Fragmentos", D.premio("lasca", 10, 4, 1.5).fragmentos, 8)
+	igual("drops: estrela dá bênção", D.premio("estrela", 10, 0).bencao, true)
+	igual("drops: estrela vale mais que o orbe", D.premio("estrela", 10, 0).pontos > D.premio("orbe", 10, 0).pontos, true)
+	igual("drops: tipo inventado não dá nada", D.premio("nada", 10, 6).pontos, 0)
+	igual("drops: fase máxima", D.faseMaxima({ ["1"] = 3, ["4"] = 1, ["5"] = 0 }), 4)
+	igual("drops: fase máxima sem dados", D.faseMaxima(nil), 0)
+	igual("drops: ponto dentro do anel", (function()
+		for k = 0, 50 do
+			local x, z = D.pontoNoAnel(k / 50, (k * 7 % 50) / 50)
+			local r = math.sqrt(x * x + z * z)
+			if r < D.RAIO_MIN - 1e-6 or r > D.RAIO_MAX + 1e-6 then
+				return false
+			end
+		end
+		return true
+	end)(), true)
+	igual("drops: texto do prêmio", D.texto("lasca", { pontos = 0, fragmentos = 3, bencao = false }), "Lasca de Fragmento! +3 Fragmentos")
+end
+
 print(string.format("%d testes, %d falhas", total, falhas))

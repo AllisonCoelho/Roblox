@@ -15,6 +15,7 @@ local Itens = require(Shared.Dados.Itens)
 local Perfil = require(Shared.Dados.Perfil)
 local Temporada = require(Shared.Dados.Temporada)
 local PontosAura = require(Shared.Dados.PontosAura)
+local Ciclo = require(Shared.Dados.Ciclo)
 local Cores = require(Shared.Tema).Orbita
 local Escala = require(script.Parent.Parent.Escala)
 local Kit = require(script.Parent.Parent.Kit)
@@ -361,6 +362,60 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 			end
 		end)
 	end
+
+	-- ================================================================ ciclo de dia e noite
+	-- Logo abaixo dos Pontos: a fase, quanto falta para a próxima e a Bênção Estelar
+	local chipCiclo = Kit.placa({
+		nome = "Ciclo",
+		tamanho = UDim2.fromOffset(320, 26),
+		ancora = Vector2.new(0.5, 0),
+		posicao = UDim2.new(0.5, 0, 0, 82),
+		corte = 8,
+		pai = hud,
+	})
+	local textoCiclo = texto(chipCiclo.conteudo, {
+		RichText = true,
+		Text = "",
+		TextSize = 13,
+		Position = UDim2.fromOffset(8, 0),
+		Size = UDim2.new(1, -16, 1, 0),
+	})
+	local ICONE_FASE = { aurora = "◐", dia = "☀", crepusculo = "◑", noite = "☾" }
+	local COR_FASE = {
+		aurora = "FFB8C8",
+		dia = "FFE27A",
+		crepusculo = "FF9A6A",
+		noite = "C0ADFF",
+	}
+	task.spawn(function()
+		local eu = Players.LocalPlayer
+		while hud.Parent do
+			local agora = workspace:GetServerTimeNow()
+			local e =
+				Ciclo.estado(agora + (tonumber(workspace:GetAttribute("CicloDeslocamento")) or 0))
+			local partes = {
+				string.format(
+					'<font color="#%s"><b>%s %s</b></font> · %s',
+					COR_FASE[e.fase],
+					ICONE_FASE[e.fase],
+					Ciclo.NOMES[e.fase],
+					Ciclo.tempo(e.restante)
+				),
+			}
+			if e.fase == "noite" then
+				table.insert(partes, '<font color="#FFE27A">drops ×2 · estrelas</font>')
+			end
+			local bencao = (tonumber(eu:GetAttribute("BencaoEstelarAte")) or 0) - agora
+			if bencao > 0 then
+				table.insert(
+					partes,
+					string.format('<font color="#FFE27A">★ +25%% %s</font>', Ciclo.tempo(bencao))
+				)
+			end
+			textoCiclo.Text = table.concat(partes, "   ")
+			task.wait(0.5)
+		end
+	end)
 
 	-- ================================================================ menu lateral
 	local menu = Kit.novo("Frame", {
