@@ -57,6 +57,7 @@ type Opcoes = {
 	aoAbrirTemporada: (() -> ())?,
 	aoAbrirAjustes: () -> (),
 	aoAbrirEvoluir: (() -> ())?,
+	aoAbrirEcos: (() -> ())?,
 }
 
 local function corTier(aura: Auras.Aura): Color3
@@ -429,8 +430,9 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 	atalho(3, "Índice", Icones.MENU.Indice, DESTAQUE.Indice, op.aoAbrirIndice)
 	-- o Passe continua no cartão do jogador; o menu ganha Evoluir (o centro do jogo agora)
 	atalho(4, "Evoluir", ICONE_PONTOS, DESTAQUE.Evoluir, op.aoAbrirEvoluir or op.aoAbrirIndice)
+	atalho(5, "Ecos", 28, Color3.fromHex("FF9AD5"), op.aoAbrirEcos or op.aoAbrirIndice)
 	local ajustesBotao =
-		atalho(5, "Ajustes", Icones.MENU.Ajustes, DESTAQUE.Ajustes, op.aoAbrirAjustes)
+		atalho(6, "Ajustes", Icones.MENU.Ajustes, DESTAQUE.Ajustes, op.aoAbrirAjustes)
 
 	-- ================================================================ últimos despertares
 	local feed = Kit.placa({
@@ -726,7 +728,7 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 		barraAcoes.Position =
 			UDim2.new(0.5, if Escala.toque and not estreito then -60 else 0, 1, -margem)
 		local lado = if horizontal
-			then math.min(56, math.floor((tela.X - 44) / 5))
+			then math.min(56, math.floor((tela.X - 44) / #placasMenu))
 			elseif compacto then 60
 			else 78
 		local folga = if horizontal or compacto then 5 else 8

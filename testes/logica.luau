@@ -1553,4 +1553,90 @@ do
 	end
 end
 
+-- Ecos (pets) e Núcleos
+do
+	local P = req("Pets")
+	local V = req("PetsVisual")
+	local C = req("Corredor")
+	igual("ecos: 18 Ecos", #P.ECOS, 18)
+	igual("ecos: 6 Núcleos", #P.NUCLEOS, 6)
+	for _, e in P.ECOS do
+		igual("ecos: visual de " .. e.id, V.ecos[e.id] ~= nil, true)
+		igual("ecos: raridade de " .. e.id, P.RARIDADES[e.raridade] ~= nil, true)
+	end
+	for i, n in P.NUCLEOS do
+		local soma = 0
+		for _, ch in P.chances(n) do
+			soma += ch.chance
+			igual("ecos: Núcleo " .. i .. " tem só Ecos do seu mundo", P.porId[ch.id].nucleo, i)
+		end
+		igual("ecos: chances do Núcleo " .. i .. " somam 100%", math.abs(soma - 1) < 1e-9, true)
+		igual("ecos: visual do Núcleo " .. i, V.nucleos[i] ~= nil, true)
+		if i > 1 then
+			igual("ecos: Núcleo " .. i .. " mais caro", n.preco > P.NUCLEOS[i - 1].preco, true)
+		end
+	end
+	-- sorteio: o extremo baixo dá o primeiro, o alto dá o último; prisma só com o 2º número baixo
+	local seq = { 0, 0.99 }
+	local k = 0
+	local eco, prisma = P.sortear(P.NUCLEOS[1], function()
+		k += 1
+		return seq[k]
+	end)
+	igual("ecos: sorteio baixo dá o comum", eco, "lasquinho")
+	igual("ecos: sem prisma", prisma, false)
+	seq, k = { 0.999, 0 }, 0
+	eco, prisma = P.sortear(P.NUCLEOS[1], function()
+		k += 1
+		return seq[k]
+	end)
+	igual("ecos: sorteio alto dá o raro", eco, "lanterneiro")
+	igual("ecos: prisma com número baixo", prisma, true)
+	-- coleção: adicionar, equipar com limite, melhores, libertar e multiplicadores
+	local c = P.padrao()
+	local corredor = C.padrao()
+	igual("ecos: 3 espaços no começo", P.slots(corredor), 3)
+	corredor.concluidas["3"] = 1
+	corredor.concluidas["6"] = 1
+	igual("ecos: fases 3 e 6 dão mais 2 espaços", P.slots(corredor), 5)
+	igual("ecos: Núcleo 1 trancado sem a fase 1", P.nucleoLiberado(P.NUCLEOS[1], C.padrao()), false)
+	local u1 = P.adicionar(c, "lasquinho", false, 0)
+	local u2 = P.adicionar(c, "lanterneiro", true, 0)
+	local u3 = P.adicionar(c, "mariposa_vitral", false, 0)
+	local u4 = P.adicionar(c, "raposa_prisma", false, 0)
+	igual("ecos: id inventado não entra", P.adicionar(c, "nada", false, 0), nil)
+	igual("ecos: quatro na coleção", P.quantidade(c), 4)
+	igual("ecos: equipa", (P.equipar(c, u1, true, 2)), true)
+	igual("ecos: equipa o segundo", (P.equipar(c, u2, true, 2)), true)
+	igual("ecos: respeita os espaços", (P.equipar(c, u3, true, 2)), false)
+	igual("ecos: uid inválido", (P.equipar(c, 5, true, 2)), false)
+	local ganho, sorte, frag = P.multiplicadores(c)
+	igual("ecos: ganho soma (prisma em dobro)", math.abs(ganho - (1 + (15 + 45 * 2) / 100)) < 1e-9, true)
+	igual("ecos: sem sorte equipada", sorte, 1)
+	igual("ecos: sem fragmentos equipados", frag, 1)
+	igual("ecos: não liberta equipado", (P.libertar(c, u1)), nil)
+	P.equiparMelhores(c, 2)
+	igual("ecos: melhores começa pelo prismático", c.equipados[1], u2)
+	local volta = P.libertar(c, u3)
+	igual("ecos: libertar devolve parte do Núcleo", volta, math.floor(P.NUCLEOS[1].preco * P.DEVOLUCAO))
+	igual("ecos: some da coleção", c.lista[u3], nil)
+	igual("ecos: índice lembra quem já foi visto", c.vistos.mariposa_vitral, true)
+	igual("ecos: u4 ainda existe", c.lista[u4] ~= nil, true)
+	local n = P.normalizar({ lista = { x = { eco = "nada" }, e9 = { eco = "fagulha", prisma = true } }, equipados = { "e9", "e9", "zz" }, contador = -2 })
+	igual("ecos: normalizar descarta Eco inventado", n.lista.x, nil)
+	igual("ecos: normalizar mantém válido", n.lista.e9.prisma, true)
+	igual("ecos: normalizar remove repetidos e órfãos", #n.equipados, 1)
+	igual("ecos: normalizar contador", n.contador, 0)
+	-- capacidade
+	local cheia = P.padrao()
+	for _ = 1, P.CAPACIDADE do
+		P.adicionar(cheia, "lasquinho", false, 0)
+	end
+	igual("ecos: coleção cheia recusa", P.adicionar(cheia, "lasquinho", false, 0), nil)
+	-- fragmentos multiplicados na conclusão do Corredor
+	local pc = C.padrao()
+	local g = C.concluir(pc, 1, 0, 1.5)
+	igual("corredor: bônus de Fragmentos dos Ecos", g, math.floor(C.FASES[1].primeira * 1.5 + 0.5))
+end
+
 print(string.format("%d testes, %d falhas", total, falhas))

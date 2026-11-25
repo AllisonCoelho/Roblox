@@ -1,0 +1,11 @@
+-- GERADO por assets/pets/source/generate_pets.py. Não editar à mão.
+-- Peça de um Eco ou Núcleo (mesmo formato do kit do Nexo).
+return {
+	vertices = 72,
+	triangulos = 24,
+	minimo = { -0.8727, -0.0500, -0.8327 },
+	tamanho = { 1.7503, 2.8000, 1.7719 },
+	dados = {
+		"3urzk6y6EbWIrl7tbX4Hif//EbWIrl7to3///054bX4Hif//o3///054ikyPhLHsbX4Hif//ikyPhLHso38AAE54bX4Hif//o38AAE54//8qUQuFbX4Hif////8qUQuF3urzk6y6bX4Hif//o3///054EbWIrl7t3urzk6y6//8qUQuFY+Umi/Iv3urzk6y6Y+Umi/Ivo3///0543urzk6y6Y+Umi/IvjMZBqkEgo3///054jMZBqkEgnDNnXqEPo3///054nDNnXqEPwBFhY3U+o3///054wBFhY3U+AACjgmWso3///054AACjgmWsikyPhLHso3///054AACjgmWsWwcfQ6J0ikyPhLHsWwcfQ6J0o38AAE54ikyPhLHsWwcfQ6J0nDNnXqEPo38AAE54nDNnXqEPK4zuVwAAo38AAE54K4zuVwAA//8qUQuFo38AAE54K4zuVwAAY+Umi/Iv//8qUQuFK4zuVwAAjMZBqkEgY+Umi/IvK4zuVwAAnDNnXqEPjMZBqkEgWwcfQ6J0wBFhY3U+nDNnXqEPWwcfQ6J0AACjgmWswBFhY3U+bliWd2GgalWSjXO+r5TifWStrpPie2KrfWStU0NzLyBNVUR1LyBNRTVkVUR1VkJ9bliWalWSsJXljnTAg2qzXUeGc1yedl+hfGSrrJLfgGevfGSriXC5rJLfhm61aFCUqY/baFGValOXqY/balOXd1+lqY/bemGpe2KqrpPhU0JzQTFgU0NzQTFgLyBNU0NzQTFgSThoLyBNSThoRzdmLyBNRzdmRTVkLyBNRzdmVUR1RTVkWUSAdmCfa1aTYUuMZE2PgWmuQTFgSjppSThoUj54aFORXUmFAAABAAIAAwAEAAUABgAHAAgACQAKAAsADAANAA4ADwAQABEAEgATABQAFQAWABcAGAAZABoAGwAcAB0AHgAfACAAIQAiACMAJAAlACYAJwAoACkAKgArACwALQAuAC8AMAAxADIAMwA0ADUANgA3ADgAOQA6ADsAPAA9AD4APwBAAEEAQgBDAEQARQBGAEcA",
+	},
+}

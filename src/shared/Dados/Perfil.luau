@@ -20,6 +20,8 @@ export type Estado = {
 	poder: { pontos: number, total: number, nivel: number, fluxo: number, sorte: number },
 	-- Corredor dos Perdidos (Dados/Corredor.luau): Fragmentos, fases concluídas e o bônus
 	corredor: { [string]: any },
+	-- Ecos (Dados/Pets.luau): coleção, equipados e o índice dos já vistos
+	pets: { [string]: any },
 }
 
 Perfil.VERSAO = 1
@@ -66,6 +68,7 @@ function Perfil.padrao(): Estado
 		},
 		poder = { pontos = 0, total = 0, nivel = 0, fluxo = 0, sorte = 0 },
 		corredor = { fragmentos = 0, concluidas = {}, ultima = {}, bonusAte = 0 },
+		pets = { lista = {}, equipados = {}, contador = 0, vistos = {} },
 	}
 end
 

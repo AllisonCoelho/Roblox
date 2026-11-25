@@ -145,8 +145,14 @@ function Corredor.acesso(p: Progresso, pontuacao: number): number
 end
 
 -- Registra a conclusão. Devolve os Fragmentos ganhos (0 se ainda está na espera) e se foi a
--- primeira vez. Toda conclusão renova a Ressonância de Combate.
-function Corredor.concluir(p: Progresso, fase: number, agora: number): (number, boolean)
+-- primeira vez. Toda conclusão renova a Ressonância de Combate. `multiplicador` = bônus de
+-- Fragmentos dos Ecos equipados (1 = sem bônus).
+function Corredor.concluir(
+	p: Progresso,
+	fase: number,
+	agora: number,
+	multiplicador: number?
+): (number, boolean)
 	local f = Corredor.FASES[fase]
 	if not f then
 		return 0, false
@@ -160,6 +166,10 @@ function Corredor.concluir(p: Progresso, fase: number, agora: number): (number, 
 		ganho = f.repetir
 	end
 	if ganho > 0 then
+		local m = multiplicador or 1
+		if type(m) == "number" and m > 1 and m < 100 then
+			ganho = math.floor(ganho * m + 0.5)
+		end
 		p.ultima[k] = agora
 		p.fragmentos += ganho
 	end

@@ -276,6 +276,21 @@ local function construirNucleo(pasta: Instance)
 		1,
 		{ Name = "Base2", Color = COR.pedraClara, Material = Enum.Material.Marble }
 	)
+	-- Cristal do Nexo desperta os Núcleos dos Ecos (src/server/Servicos/Pets): o ponto de
+	-- interação fica na altura do jogador, ao redor do pedestal
+	local loja = peca(nucleo, {
+		Name = "CristalLoja",
+		Transparency = 1,
+		CanCollide = false,
+		CanQuery = false,
+		Size = Vector3.new(2, 2, 2),
+		Position = Vector3.new(0, 4, 0),
+	})
+	interacao(loja, "nucleos", "Despertar Ecos", "Cristal do Nexo")
+	local promptLoja = loja:FindFirstChildOfClass("ProximityPrompt")
+	if promptLoja then
+		promptLoja.MaxActivationDistance = 16
+	end
 	-- Coração de energia (o cliente anima: flutua, pulsa e ganha anéis orbitais)
 	local centro = Vector3.new(0, 15, 0)
 	local coracao = peca(
