@@ -2,7 +2,7 @@
 
 Segunda etapa do [plano dos Pontos de Aura](PLANO_PONTOS_DE_AURA.md).
 
-**Status:** implementado e testado fora do Studio (testes de lógica, análise de tipos, `rojo build`). **Falta playtest no Studio.** As criaturas ainda não entraram: por enquanto, concluir uma fase é atravessar a ilha até o Portão.
+**Status:** implementado e testado fora do Studio (testes de lógica, análise de tipos, `rojo build`). **Falta playtest no Studio.** Desde a etapa das criaturas, cada fase tem seis lacaios e um chefe, e **vencer o chefe** é o que abre o Portão.
 
 ## O que é
 
@@ -43,6 +43,37 @@ Cada fase é uma ilha comprida partida em três pedaços, ligados por lajes. Tem
 - Ficam em `corredor.fragmentos` e vão comprar pets na próxima etapa.
 - O HUD (FRAGM.) passou a mostrar estes Fragmentos.
 - Os Fragmentos antigos das Incursões continuam guardados no perfil.
+
+## Criaturas
+
+Cada fase tem 6 lacaios espalhados pelos três pedaços da ilha e um **chefe** guardando o Portão. São personagens blocados no estilo do Roblox, feitos no Blender (`assets/corredor/criaturas`):
+
+| Fase | Lacaio | Chefe |
+|---|---|---|
+| 1 | Lasca Errante (golem com cristais nos ombros) | Sentinela do Limiar (escudo, espada e coroa de lascas) |
+| 2 | Broto de Vidro (copa de cubos de vidro) | Ancião do Bosque (ent de casca com coroa de cristal) |
+| 3 | Cinzento (capuz, óculos acesos, lâmina curva) | Senhor das Brasas (obsidiana, lava e chifres) |
+| 4 | Marujo Afogado (bandana, coral e arpão) | Capitão Abissal (chapéu, barba de tentáculos, âncora) |
+| 5 | Estátua Viva (mármore, auréola e lança) | Arcanjo Partido (asas de penas em bloco, espada de luz) |
+| 6 | Eco do Vazio (um olho, estrelas no corpo) | Devorador de Estrelas (três olhos, coroa de cubos, constelação) |
+
+**Combate** (`Dados/Criaturas`, `server/Corredor/Criaturas`, `client/Mundo/Criaturas`)
+- **Mirar:** toque numa criatura para escolher o alvo. Sem alvo, a aura ataca a mais próxima (até 14 studs).
+- **A aura ataca sozinha** a cada 0,8 s, até 30 studs.
+- **Dano:** 5 + metade da sua **Pontuação de Aura**. Com a Pontuação mínima da fase, o lacaio cai em ~6 golpes e o chefe em ~40. Quem é mais forte, ou joga junto, vai mais rápido.
+- **Elas reagem:** ficam no lugar, viram para quem chega e batem em quem fica perto.
+
+  | | Dano | A cada | Volta depois de |
+  |---|---|---|---|
+  | Lacaio | 7 | 1,6 s | 20 s |
+  | Chefe | 18 | 2,4 s | 40 s |
+
+- **Recompensas para todos que ajudaram:**
+  - **Lacaio:** 12 s de Pontos de Aura, com 25% de chance de Fragmentos (com o bônus dos Ecos).
+  - **Chefe:** 90 s de Pontos de Aura e o **Portão aberto** nesta travessia.
+- **Visual:** cada criatura tem barra de vida e o golpe da aura sai do jogador com o número do dano.
+- **Animação:** respirar, atacar, levar golpe, cair e voltar.
+- **Modelo:** se existir `ReplicatedStorage.CorredorModelos.<id>` (FBX importado), o jogo usa o modelo importado; senão, o do kit. Guia em `assets/corredor/criaturas/IMPORTAR_NO_STUDIO.md`.
 
 ## Segurança (servidor)
 - Toda troca de fase é um **teleporte do servidor**. O cliente só pede (`CorredorIr`, `CorredorSair`) ou encosta num portal.

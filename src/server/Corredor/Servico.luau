@@ -18,6 +18,8 @@ local Acoes = require(Servicos.Acoes)
 local Dados = require(Servicos.Dados)
 local PontosAura = require(Servicos.PontosAura)
 local PetsServico = require(Servicos.Pets)
+local CriaturasServico = require(script.Parent.Criaturas)
+local CriaturasDados = require(Shared.Dados.Criaturas)
 
 local Servico = {}
 
@@ -25,6 +27,7 @@ type Fase = { [string]: any }
 type Presenca = { fase: number, desde: number, concluiu: boolean }
 
 local presenca: { [Player]: Presenca } = {}
+local avisoChefe: { [Player]: number } = {}
 local esperaToque: { [Player]: number } = {}
 
 -- Entrada no Nexo: os Portais Fragmentados (mesmos valores de Mundo/Nexo e do gerador do Nexo)
@@ -109,6 +112,7 @@ end
 
 local function voltarAoNexo(player: Player)
 	presenca[player] = nil
+	CriaturasServico.limparCredito(player)
 	player:SetAttribute("CorredorFase", nil)
 	local centro = entradaNexo()
 	-- na frente dos Portais, olhando para eles
@@ -123,6 +127,8 @@ local function entrar(player: Player, n: number)
 	local alvo = v3(f.pontos.portao) + Vector3.new(0, 4, 0)
 	presenca[player] = { fase = n, desde = os.clock(), concluiu = false }
 	player:SetAttribute("CorredorFase", n)
+	-- cada travessia pede vencer o chefe de novo
+	CriaturasServico.limparCredito(player)
 	teleportar(player, CFrame.lookAt(inicio, alvo))
 end
 
@@ -148,6 +154,18 @@ local function concluir(player: Player, n: number)
 		return
 	end
 	if os.clock() - estar.desde < Corredor.TEMPO_MINIMO then
+		return
+	end
+	-- o chefe da fase guarda o Portão: só conclui quem ajudou a derrubá-lo nesta travessia
+	if not CriaturasServico.venceuChefe(player, n) then
+		local agora = os.clock()
+		if agora - (avisoChefe[player] or 0) > 4 then
+			avisoChefe[player] = agora
+			avisar(
+				player,
+				string.format("Derrote %s para abrir o Portão.", CriaturasDados.FASES[n].nomeChefe)
+			)
+		end
 		return
 	end
 	estar.concluiu = true
@@ -190,6 +208,13 @@ local function passarPortao(player: Player, n: number)
 	end
 	if not estar.concluiu then
 		concluir(player, n)
+	end
+	if not estar.concluiu then
+		-- sem vencer o chefe o Portão não abre: devolve para antes dele
+		local f = fase(n)
+		local fim = v3(f.pontos.fim) + Vector3.new(0, 4, 0)
+		teleportar(player, CFrame.lookAt(fim, v3(f.pontos.portao) + Vector3.new(0, 4, 0)))
+		return
 	end
 	if n >= Corredor.TOTAL then
 		avisar(player, "Você atravessou todo o Corredor dos Perdidos!")
@@ -413,6 +438,11 @@ end
 
 function Servico.iniciar()
 	construir()
+	CriaturasServico.definirFaseDe(function(player)
+		local estar = presenca[player]
+		return if estar then estar.fase else nil
+	end)
+	CriaturasServico.iniciar()
 	Acoes.registrar("CorredorIr", pedirFase)
 	Acoes.registrar("CorredorSair", function(player)
 		if not presenca[player] then
@@ -438,6 +468,7 @@ function Servico.iniciar()
 	end)
 	Dados.quandoSair(function(player)
 		presenca[player] = nil
+		avisoChefe[player] = nil
 		esperaToque[player] = nil
 	end)
 	task.spawn(function()

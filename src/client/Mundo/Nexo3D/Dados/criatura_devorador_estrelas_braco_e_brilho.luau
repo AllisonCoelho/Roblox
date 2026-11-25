@@ -1,0 +1,11 @@
+-- GERADO por assets/corredor/criaturas/generate_criaturas.py. Não editar à mão.
+-- Peça de uma criatura do Corredor (mesmo formato do kit do Nexo).
+return {
+	vertices = 54,
+	triangulos = 18,
+	minimo = { -5.0880, 1.2000, -1.4400 },
+	tamanho = { 1.9200, 2.0269, 1.1728 },
+	dados = {
+		"AAAAAAAAeD/i77jN2iAB5dn/eD/i77jNJh///0Cj2iAB5dn/Jh///0CjhwAe9WHV2iAB5dn/hwAe9WHVAAAAAAAA2iAB5dn/hwAe9WHVJh///0CjAAAAAAAAJh///0CjeD/i77jNAAAAAAAA/38AAAAAoJ8/8/jOw4Ea5d3/oJ8/8/jOPH7m/zyjw4Ea5d3/PH7m/zyjX2DB8SHUw4Ea5d3/X2DB8SHU/38AAAAAw4Ea5d3/X2DB8SHUPH7m/zyj/38AAAAAPH7m/zyjoJ8/8/jO/38AAAAA//8AAAAAY/+B9pDQaeJZ5f//Y/+B9pDQld2n/xqjnMB/7orSY/+B9pDQnMB/7orSaeJZ5f//nMB/7orS//8AAAAAaeJZ5f//nMB/7orSld2n/xqj//8AAAAAld2n/xqjY/+B9pDQ//8AAAAAjTaZjTaZjTaZ5Ff45Ff45Ff45Ff45Ff45Ff4jTaZjTaZjTaZwkrTwkrTwkrTu0fLu0fLu0fLjTaZjTaZjTaZ5Ff45Ff45Ff45Ff45Ff45Ff4jTaZjTaZjTaZvUjOvUjOvUjOv0nQv0nQv0nQsEO/sEO/sEO/5Ff45Ff45Ff45Ff45Ff45Ff4jTaZjTaZjTaZuUbJuUbJuUbJxErVxErVxErVAAABAAIAAwAEAAUABgAHAAgACQAKAAsADAANAA4ADwAQABEAEgATABQAFQAWABcAGAAZABoAGwAcAB0AHgAfACAAIQAiACMAJAAlACYAJwAoACkAKgArACwALQAuAC8AMAAxADIAMwA0ADUA",
+	},
+}
