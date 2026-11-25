@@ -1,9 +1,10 @@
 -- Duelo 1x1 entre jogadores no ringue da Arena (regras em Shared/Dados/ArenaPvP). Serve ao Trono
 -- do Servidor e à Rankeada: quem chama decide o que acontece no fim (aoFim).
 --
--- Os dois escolhem ao mesmo tempo; quem não escolher no prazo faz Guarda. O servidor encena os dois
--- golpes com as mesmas animações do duelo contra o Soberano (atributos ArenaAnim/ArenaAnimEm de cada
--- Player) e manda a cada um a tela do seu ponto de vista pelo evento "Arena" (pvp = true).
+-- O combate é o reativo (Dados/Duelo e Motor), o mesmo do duelo contra o Soberano: vez a vez,
+-- golpe no tempo certo, Esquivar e Aparar. O dano segue a Pontuação de Aura (ArenaPvP). Quem não
+-- escolher no prazo Concentra. As animações vêm dos atributos ArenaAnim/ArenaAnimEm de cada
+-- Player e cada um recebe a tela do seu ponto de vista pelo evento "Arena" (pvp = true).
 -- Sair, morrer, trocar de personagem ou sair do jogo conta como desistência.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -12,6 +13,7 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local ArenaPvP = require(Shared.Dados.ArenaPvP)
+local Duelo = require(Shared.Dados.Duelo)
 local Animacoes = require(Shared.Dados.ArenaAnimacoes)
 local Cena = require(Shared.Dados.ArenaCena)
 local Auras = require(Shared.Dados.Auras)
@@ -23,6 +25,7 @@ local PontosAura = require(Servicos.PontosAura)
 local Incursoes = require(script.Parent.Parent.Incursoes.Servico)
 local Corredor = require(script.Parent.Parent.Corredor.Servico)
 local Palco = require(script.Parent.Palco)
+local Motor = require(script.Parent.Motor)
 
 local PvP = {}
 
@@ -43,20 +46,18 @@ type Lutador = {
 }
 export type Fim = (vencedor: Player?, perdedor: Player?, motivo: string) -> { [Player]: string }?
 export type Opcoes = { modo: string, titulo: string, aoFim: Fim }
-type Duelo = {
+type Sessao = {
 	id: number,
 	a: Lutador,
 	b: Lutador,
-	estado: ArenaPvP.Estado,
-	fase: string,
-	prazo: number?,
-	escolhas: { [string]: string },
+	estado: Duelo.Estado,
+	motor: Motor.Duelo?,
 	op: Opcoes,
 	conexoes: { RBXScriptConnection },
 	terminado: boolean,
 }
 
-local atual: Duelo? = nil
+local atual: Sessao? = nil
 local contador = 0
 
 function PvP.emDuelo(player: Player): boolean
@@ -127,11 +128,11 @@ local function lutador(player: Player, lado: string): Lutador?
 	}
 end
 
-local function outro(d: Duelo, l: Lutador): Lutador
+local function outro(d: Sessao, l: Lutador): Lutador
 	return if l == d.a then d.b else d.a
 end
 
-local function enviar(d: Duelo, l: Lutador, tipo: string, dados: { [string]: any }?)
+local function enviar(d: Sessao, l: Lutador, tipo: string, dados: { [string]: any }?)
 	if l.player.Parent ~= Players then
 		return
 	end
@@ -172,11 +173,14 @@ local function devolver(l: Lutador)
 	l.player:SetAttribute("EmDueloArena", nil)
 end
 
-local function encerrar(d: Duelo)
+local function encerrar(d: Sessao)
 	if atual ~= d then
 		return
 	end
 	atual = nil
+	if d.motor then
+		Motor.parar(d.motor)
+	end
 	for _, c in d.conexoes do
 		c:Disconnect()
 	end
@@ -187,13 +191,14 @@ local function encerrar(d: Duelo)
 	Palco.liberar(NOME_PALCO)
 end
 
-local function terminar(d: Duelo, vencedor: Lutador?, motivo: string)
+local function terminar(d: Sessao, vencedor: Lutador?, motivo: string)
 	if atual ~= d or d.terminado then
 		return
 	end
 	d.terminado = true
-	d.fase = "fim"
-	d.prazo = nil
+	if d.motor then
+		Motor.parar(d.motor)
+	end
 	local perdedor = if vencedor then outro(d, vencedor) else nil
 	local agora = Workspace:GetServerTimeNow()
 	if vencedor and perdedor then
@@ -215,147 +220,42 @@ local function terminar(d: Duelo, vencedor: Lutador?, motivo: string)
 			resultado = if vencedor == l then "vitoria" elseif vencedor then "derrota" else "tempo",
 			motivo = motivo,
 			detalhe = if detalhes then (detalhes :: any)[l.player] else nil,
-			estado = ArenaPvP.visao(d.estado, l.lado),
+			estado = Duelo.visao(d.estado, l.lado),
 			oponente = outro(d, l).player.DisplayName,
 		})
 	end
 	task.delay(MOSTRAR_RESULTADO, encerrar, d)
 end
 
-local resolver: (Duelo) -> ()
-
-local function abrirTurno(d: Duelo)
-	if atual ~= d or d.terminado then
-		return
-	end
-	d.fase = "escolha"
-	d.escolhas = {}
-	local prazo = Workspace:GetServerTimeNow() + ArenaPvP.ESPERA_TURNO
-	d.prazo = prazo
-	for _, l in { d.a, d.b } do
-		enviar(d, l, "turno", { estado = ArenaPvP.visao(d.estado, l.lado), prazo = prazo })
-	end
-	task.delay(ArenaPvP.ESPERA_TURNO, function()
-		if atual == d and d.fase == "escolha" and d.prazo == prazo then
-			resolver(d)
-		end
-	end)
-end
-
-local function encenar(d: Duelo, r: ArenaPvP.Resolucao, acoes: { [string]: string })
-	for _, golpe in r.golpes do
+-- Corre até o oponente e volta: chega no 1º acerto e volta antes do fim do golpe
+local function correr(d: Sessao, l: Lutador, avanco: number, ida: number, volta: number)
+	local agora = Workspace:GetServerTimeNow()
+	local function tween(alvo: CFrame, duracao: number, estilo: Enum.EasingStyle)
 		if atual ~= d or d.terminado then
 			return
 		end
-		local atacante = if golpe.lado == "a" then d.a else d.b
-		local defensor = outro(d, atacante)
-		local tempo = Animacoes.tempo(golpe.id)
-		local preparacao, retorno = tempo.preparo, tempo.retorno
-		local quando = Workspace:GetServerTimeNow()
-		local impacto = quando + preparacao
-		animar(atacante, golpe.id, quando)
-		local vidaDefensor = if defensor.lado == "a"
-			then golpe.estado.a.vida
-			else golpe.estado.b.vida
-		if golpe.id ~= "guarda" and vidaDefensor > 0 then
-			local reacao = Animacoes.reacaoJogador(acoes[defensor.lado] == "guarda", golpe.dano)
-			if reacao then
-				animar(defensor, reacao, impacto)
-			end
-		end
-		for _, l in { d.a, d.b } do
-			enviar(d, l, "golpe", {
-				golpe = {
-					id = golpe.id,
-					nome = golpe.nome,
-					ator = if l == atacante then "jogador" else "soberano",
-					lado = golpe.lado,
-					dano = golpe.dano,
-					especial = golpe.especial,
-					estado = ArenaPvP.visao(golpe.estado, l.lado),
-				},
-				impacto = impacto,
-				fim = impacto + retorno,
-			})
-		end
-		local avanco = Animacoes.AVANCO[golpe.id]
-		if avanco then
-			mover(
-				atacante,
-				atacante.posto * CFrame.new(0, 0, -avanco),
-				preparacao * 0.92,
-				Enum.EasingStyle.Sine
-			)
-		end
-		task.wait(preparacao)
-		if atual ~= d or d.terminado then
-			return
-		end
-		if avanco then
-			task.wait(retorno * 0.3)
-			mover(atacante, atacante.posto, retorno * 0.55, Enum.EasingStyle.Quad)
-			task.wait(retorno * 0.7)
-		else
-			task.wait(retorno)
-		end
+		mover(l, alvo, duracao, estilo)
 	end
-	if atual ~= d or d.terminado then
-		return
-	end
-	d.estado = r.estado
-	if r.vencedor then
-		terminar(d, if r.vencedor == "a" then d.a else d.b, "nocaute")
-	else
-		abrirTurno(d)
-	end
-end
-
-resolver = function(d: Duelo)
-	if atual ~= d or d.fase ~= "escolha" then
-		return
-	end
-	d.fase = "resolvendo"
-	d.prazo = nil
-	local acoes = {
-		a = ArenaPvP.ouGuarda(d.estado, "a", d.escolhas.a),
-		b = ArenaPvP.ouGuarda(d.estado, "b", d.escolhas.b),
-	}
-	local r = ArenaPvP.resolver(d.estado, acoes.a, acoes.b)
-	task.spawn(function()
-		local ok, erro = pcall(encenar, d, r, acoes)
-		if not ok then
-			warn("[ArenaPvP] " .. tostring(erro))
-			encerrar(d)
-		end
+	tween(
+		l.posto * CFrame.new(0, 0, -avanco),
+		math.max(0.1, (ida - agora) * 0.92),
+		Enum.EasingStyle.Sine
+	)
+	task.delay(math.max(0, volta - agora - 0.35), function()
+		tween(l.posto, 0.35, Enum.EasingStyle.Quad)
 	end)
 end
 
-local function ladoDe(d: Duelo, player: Player): Lutador?
+local function ladoDe(d: Sessao, player: Player): Lutador?
 	return if d.a.player == player then d.a elseif d.b.player == player then d.b else nil
 end
 
-local function agir(player: Player, id: any, rodada: any, acao: any): (boolean, string?)
+local function agir(player: Player, id: any, vez: any, acao: any): (boolean, string?)
 	local d = atual
-	local l = if d then ladoDe(d, player) else nil
-	if not d or not l or d.id ~= id then
+	if not d or not ladoDe(d, player) or d.id ~= id or not d.motor then
 		return false, "Você não está neste duelo."
 	end
-	if d.fase ~= "escolha" or d.estado.rodada ~= rodada then
-		return false, "Aguarde o próximo turno."
-	end
-	if d.escolhas[l.lado] then
-		return false, "Você já escolheu nesta rodada."
-	end
-	local problema = ArenaPvP.validar(d.estado, l.lado, acao)
-	if problema then
-		return false, problema
-	end
-	d.escolhas[l.lado] = acao
-	enviar(d, outro(d, l), "escolheu", { rodada = rodada })
-	if d.escolhas.a and d.escolhas.b then
-		resolver(d)
-	end
-	return true, nil
+	return Motor.escolher(player, id, vez, acao)
 end
 
 local function desistir(player: Player, id: any): (boolean, string?)
@@ -370,6 +270,39 @@ local function desistir(player: Player, id: any): (boolean, string?)
 		terminar(d, outro(d, l), "desistencia")
 	end
 	return true, nil
+end
+
+local function comecar(d: Sessao)
+	if atual ~= d or d.terminado then
+		return
+	end
+	local function como(l: Lutador): Motor.Lutador
+		return {
+			lado = l.lado,
+			player = l.player,
+			nome = l.player.DisplayName,
+			animar = function(clipe, quando)
+				animar(l, clipe, quando)
+			end,
+			mover = function(avanco, ida, volta)
+				correr(d, l, avanco, ida, volta)
+			end,
+		}
+	end
+	d.motor = Motor.iniciar({
+		id = d.id,
+		estado = d.estado,
+		semEscolha = "concentrar",
+		a = como(d.a),
+		b = como(d.b),
+		aoFim = function(vencedor, motivo)
+			terminar(
+				d,
+				if vencedor == "a" then d.a elseif vencedor == "b" then d.b else nil,
+				motivo
+			)
+		end,
+	})
 end
 
 -- Começa um duelo entre `pa` (lado do desafiante) e `pb`. Falha se o ringue estiver ocupado
@@ -393,13 +326,14 @@ function PvP.iniciar(pa: Player, pb: Player, op: Opcoes): (boolean, string?)
 		return false, "personagem"
 	end
 	contador += 1
-	local d: Duelo = {
+	local pontA, pontB = PontosAura.pontuacao(pa), PontosAura.pontuacao(pb)
+	local multA, multB = ArenaPvP.multiplicadores(pontA, pontB)
+	local d: Sessao = {
 		id = 100000 + contador, -- não colide com os ids do duelo contra o Soberano
 		a = a,
 		b = b,
-		estado = ArenaPvP.novo(PontosAura.pontuacao(pa), PontosAura.pontuacao(pb)),
-		fase = "entrada",
-		escolhas = {},
+		estado = Duelo.novo(multA, multB, pontA, pontB),
+		motor = nil,
 		op = op,
 		conexoes = {},
 		terminado = false,
@@ -424,7 +358,7 @@ function PvP.iniciar(pa: Player, pb: Player, op: Opcoes): (boolean, string?)
 	for _, l in { a, b } do
 		local o = outro(d, l)
 		enviar(d, l, "abrir", {
-			estado = ArenaPvP.visao(d.estado, l.lado),
+			estado = Duelo.visao(d.estado, l.lado),
 			nome = l.player.DisplayName,
 			oponente = o.player.DisplayName,
 			lado = l.lado,
@@ -435,7 +369,7 @@ function PvP.iniciar(pa: Player, pb: Player, op: Opcoes): (boolean, string?)
 			estilo = if l.aura then l.aura.estilo else nil,
 		})
 	end
-	task.delay(Animacoes.INTRODUCAO, abrirTurno, d)
+	task.delay(Animacoes.INTRODUCAO, comecar, d)
 	return true, nil
 end
 

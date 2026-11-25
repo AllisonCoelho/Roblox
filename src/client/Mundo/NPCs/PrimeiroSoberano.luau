@@ -53,8 +53,10 @@ local AVISOS = {
 	pesado = "avisoPesado",
 	investida = "avisoInvestida",
 	baluarte = "avisoBaluarte",
+	trinca = "avisoInvestida",
+	finta = "avisoPesado", -- a finta começa igual ao golpe pesado (é o truque)
 }
-local ATAQUES = { investida = true, pesado = true, baluarte = true }
+local ATAQUES = { investida = true, pesado = true, baluarte = true, trinca = true, finta = true }
 
 local function poseDuelo(raiz: BasePart): (Animacoes.Pose?, number, string?, number, number)
 	local agora = Workspace:GetServerTimeNow()

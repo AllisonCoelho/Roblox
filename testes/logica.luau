@@ -1138,46 +1138,6 @@ end
 igual("limite de 10 níveis", Transcendencia.custo(10), nil)
 igual("bônus máximo 1,50x", Transcendencia.sorte(10), 1.50)
 
-local Arena = req("Arena")
-local entrada = Arena.novo()
-igual("arena não permite despertar sem energia", Arena.resolver(entrada, "despertar"), nil)
-igual("arena rejeita ação inventada", Arena.resolver(entrada, "inexistente"), nil)
-local corte = Arena.resolver(entrada, "corte")
-igual("arena dano da técnica", corte.golpes[1].dano, 175)
-igual("arena jogador age antes do soberano", corte.golpes[1].ator, "jogador")
-igual("arena contra-ataque", corte.estado.vida, 900)
-igual("arena preserva os dados de entrada", entrada.soberano, 1000)
-igual("arena mantém a primeira técnica em recarga", Arena.restante(corte.estado, "corte"), 2)
-igual("arena rejeita técnica em recarga", Arena.resolver(corte.estado, "corte"), nil)
-igual("arena avança a rodada", corte.estado.rodada, 2)
-local guarda = Arena.resolver(corte.estado, "guarda")
-igual("arena guarda reduz o golpe pesado", guarda.golpes[2].dano, 91)
-igual("arena guarda gera energia", guarda.estado.energia, 35)
-local ataque = Arena.resolver(guarda.estado, "ataque")
-igual("arena recarga devolve a técnica na rodada 4", Arena.restante(ataque.estado, "corte"), 0)
-local selo = Arena.resolver(ataque.estado, "selo")
-igual("arena baluarte reduz dano recebido pelo soberano", selo.golpes[1].dano, 33)
-igual("arena selo fica ativo até um golpe de dano", selo.estado.selado, true)
-local pesado = Arena.resolver(selo.estado, "ataque")
-igual("arena selo reduz o dano seguinte", pesado.golpes[2].dano, 130)
-igual("arena consome o selo num golpe", pesado.estado.selado, false)
-igual("arena limita energia a 100", pesado.estado.energia, 100)
-local ult = Arena.resolver(pesado.estado, "despertar")
-igual("arena despertar consome a carga", ult.estado.energia, 0)
-igual("arena despertar causa dano", ult.golpes[1].dano, 290)
-local decisivo = Arena.novo()
-decisivo.soberano = 10
-local vitoria = Arena.resolver(decisivo, "ataque")
-igual("arena golpe final limitado à vida restante", vitoria.golpes[1].dano, 10)
-igual("arena vitória cancela a resposta do soberano", #vitoria.golpes, 1)
-igual("arena vitória confirmada", vitoria.resultado, "vitoria")
-igual("arena não aceita agir após vitória", Arena.resolver(vitoria.estado, "ataque"), nil)
-decisivo.soberano = 1000
-decisivo.vida = 1
-local derrota = Arena.resolver(decisivo, "ataque")
-igual("arena derrota confirmada", derrota.resultado, "derrota")
-igual("arena vida nunca fica negativa", derrota.estado.vida, 0)
-
 -- Cosméticos e Passe de Temporada
 do
 	local C = req("Cosmeticos")
@@ -1410,37 +1370,9 @@ end
 do
 	local Anim = req("ArenaAnimacoes")
 	local Pecas = req("SoberanoPecas")
-	local ArenaR = req("Arena")
 	local function perto(a, b)
 		return math.abs(a - b) < 0.05
 	end
-	-- todo golpe que o servidor encena tem tempo e clipe próprios
-	for id in ArenaR.Acoes do
-		igual("animação: tempo do golpe " .. id, Anim.TEMPOS[id] ~= nil, true)
-		igual("animação: clipe do jogador " .. id, Anim.JOGADOR[id] ~= nil, true)
-	end
-	for _, id in { "investida", "pesado", "baluarte" } do
-		igual("animação: tempo do Soberano " .. id, Anim.TEMPOS[id] ~= nil, true)
-		igual("animação: clipe do Soberano " .. id, Anim.SOBERANO[id] ~= nil, true)
-	end
-	-- o clipe cobre preparo + retorno (o próximo golpe não corta a animação no meio)
-	for id, tempo in Anim.TEMPOS do
-		local clipe = Anim.JOGADOR[id] or Anim.SOBERANO[id]
-		if clipe and not clipe.segurar then
-			igual(
-				"animação: " .. id .. " cabe no tempo do golpe",
-				clipe.duracao <= tempo.preparo + tempo.retorno + 0.6,
-				true
-			)
-		end
-	end
-	-- reações referenciam clipes existentes
-	for _, r in { Anim.reacaoJogador(true, 0), Anim.reacaoJogador(false, 260), Anim.reacaoJogador(false, 100) } do
-		igual("animação: reação " .. tostring(r), Anim.JOGADOR[r] ~= nil, true)
-	end
-	igual("animação: baluarte sem guarda não mexe no jogador", Anim.reacaoJogador(false, 0), nil)
-	igual("animação: corte derruba o Soberano", Anim.reacaoSoberano("corte", 175), "atingidoForte")
-	igual("animação: golpe sem dano não abala", Anim.reacaoSoberano("ataque", 0), nil)
 	-- chaves em ordem e dentro da duração
 	local function chavesOk(clipe)
 		local anterior = -1
@@ -1997,7 +1929,7 @@ do
 	igual("tutorial: sem presente sem texto", T.textoPresente(nil), nil)
 end
 
--- Arena 1x1 (Trono e Rankeada)
+-- Arena 1x1 (Trono e Rankeada): força, Elo e divisões
 do
 	local P = req("ArenaPvP")
 	igual("pvp: coroa tem malhas", #req("CoroaVisual") >= 2, true)
@@ -2008,56 +1940,6 @@ do
 	ma, mb = P.multiplicadores(1000000, 1)
 	igual("pvp: multiplicador tem teto", ma, P.MULT_MAX)
 	igual("pvp: multiplicador tem piso", mb, P.MULT_MIN)
-	-- simultâneo
-	local e = P.novo(1000, 1000)
-	local r = P.resolver(e, "ataque", "ataque")
-	igual("pvp: dois golpes na rodada", #r.golpes, 2)
-	igual("pvp: ataque tira 105 de A", r.estado.b.vida, P.VIDA - 105)
-	igual("pvp: ataque tira 105 de B", r.estado.a.vida, P.VIDA - 105)
-	igual("pvp: próxima rodada", r.estado.rodada, 2)
-	igual("pvp: energia do ataque", r.estado.a.energia, 25)
-	igual("pvp: estado original intacto", e.a.vida, P.VIDA)
-	-- guarda reduz e aparece primeiro
-	local g = P.resolver(P.novo(1000, 1000), "ataque", "guarda")
-	igual("pvp: guarda aparece primeiro", g.golpes[1].lado, "b")
-	igual("pvp: guarda reduz 65%", g.estado.b.vida, P.VIDA - math.floor(105 * 0.35 + 0.5))
-	-- selo protege na mesma rodada
-	local s = P.resolver(P.novo(1000, 1000), "selo", "corte")
-	igual("pvp: selo corta pela metade", s.estado.a.vida, P.VIDA - math.floor(175 / 2))
-	igual("pvp: selo é gasto", s.estado.a.selado, false)
-	igual("pvp: recarga do corte", P.restante(s.estado.b, s.estado.rodada, "corte") > 0, true)
-	igual("pvp: técnica recarregando", P.validar(s.estado, "b", "corte") ~= nil, true)
-	igual("pvp: sem energia não desperta", P.validar(s.estado, "a", "despertar") ~= nil, true)
-	igual("pvp: inválido vira guarda", P.ouGuarda(s.estado, "a", "voar"), "guarda")
-	igual("pvp: sem escolha vira guarda", P.ouGuarda(s.estado, "a", nil), "guarda")
-	-- o mais forte vence sempre: forte só ataca, fraco tenta de tudo
-	local forte = P.novo(5000, 1000)
-	local acoesFraco = { "ataque", "selo", "corte", "guarda", "ataque" }
-	local vencedor = nil
-	for i = 1, 40 do
-		local idB = P.ouGuarda(forte, "b", acoesFraco[(i - 1) % #acoesFraco + 1])
-		local res = P.resolver(forte, "ataque", idB)
-		forte = res.estado
-		if res.vencedor then
-			vencedor = res.vencedor
-			break
-		end
-	end
-	igual("pvp: muito mais forte vence", vencedor, "a")
-	-- empate: os dois caem juntos, vence quem tem mais vida (ou o mais forte)
-	local fim = P.novo(1000, 999)
-	fim.a.vida, fim.b.vida = 50, 50
-	local rf = P.resolver(fim, "ataque", "ataque")
-	igual("pvp: queda dupla desempata pelo mais forte", rf.vencedor, "a")
-	-- limite de rodadas
-	local longo = P.novo(1000, 1000)
-	longo.rodada = P.RODADAS_MAX
-	longo.a.vida = 900
-	igual("pvp: limite de rodadas", P.resolver(longo, "guarda", "guarda").vencedor, "b")
-	-- visão
-	local v = P.visao(r.estado, "b")
-	igual("pvp: visão do lado b", v.vida == r.estado.b.vida and v.soberano == r.estado.a.vida, true)
-	-- Elo e divisões
 	local nv, np = P.elo(1000, 1000)
 	igual("pvp: elo igual +16", nv, 1016)
 	igual("pvp: elo igual -16", np, 984)
@@ -2074,6 +1956,111 @@ do
 	igual("pvp: normalizar rating inválido", n.rating, P.RATING_INICIAL)
 	igual("pvp: normalizar mantém vitórias", n.vitorias, 3)
 	igual("pvp: normalizar monarca", n.monarca, 0)
+end
+
+-- Combate reativo (Duelo): PA, golpe no tempo certo, esquivar, aparar, contra-ataque, Ruptura
+do
+	local D = req("Duelo")
+	local A = req("ArenaAnimacoes")
+	-- os acertos de cada golpe cabem no clipe da animação
+	for id, acao in D.ACOES do
+		local clipe = A.JOGADOR[id] or A.SOBERANO[id]
+		if #acao.acertos > 0 then
+			igual("duelo: clipe de " .. id, clipe ~= nil, true)
+			if clipe then
+				igual("duelo: acertos de " .. id .. " dentro do clipe", acao.acertos[#acao.acertos] < clipe.duracao, true)
+			end
+			igual("duelo: dano por acerto de " .. id, #acao.dano, #acao.acertos)
+		end
+	end
+	for _, id in { "esquiva", "aparar", "contra", "concentrar", "rompido" } do
+		igual("duelo: clipe do jogador " .. id, A.JOGADOR[id] ~= nil, true)
+	end
+	for i = 1, 8 do
+		igual("duelo: intenção do Soberano tem clipe " .. i, A.SOBERANO[D.intencao(i)] ~= nil, true)
+	end
+	-- notas
+	igual("duelo: toque perfeito", D.notaQte(0.05), "perfeito")
+	igual("duelo: toque bom", D.notaQte(-0.15), "bom")
+	igual("duelo: toque fora", D.notaQte(0.3), "erro")
+	igual("duelo: sem toque", D.notaQte(nil), "erro")
+	igual("duelo: aparar no tempo", D.notaDefesa("aparar", 0.1, false, false), "aparado")
+	igual("duelo: aparar atrasado", D.notaDefesa("aparar", 0.16, false, false), "atingido")
+	igual("duelo: concentrar amplia a janela", D.notaDefesa("aparar", 0.16, false, true), "aparado")
+	igual("duelo: golpe absoluto não se apara", D.notaDefesa("aparar", 0, true, false), "atingido")
+	igual("duelo: golpe absoluto se esquiva", D.notaDefesa("esquivar", 0.15, true, false), "esquivado")
+	igual("duelo: sem defesa", D.notaDefesa(nil, nil, false, false), "atingido")
+	-- PA e validação
+	local e = D.novo()
+	igual("duelo: começa com 1 PA", e.a.pa, D.PA_INICIAL)
+	igual("duelo: corte pede 2 PA", D.validar(e, "a", "corte") ~= nil, true)
+	igual("duelo: não é a vez de b", D.validar(e, "b", "ataque") ~= nil, true)
+	igual("duelo: ação do Soberano não é do jogador", D.validar(e, "a", "trinca") ~= nil, true)
+	D.iniciarAcao(e, "a", "ataque")
+	local r = D.acerto(e, "a", "ataque", 1, "perfeito", "atingido")
+	igual("duelo: ataque perfeito", r.dano, math.floor(85 * D.MULT_QTE.perfeito + 0.5))
+	D.terminarAcao(e, "a", "ataque", true)
+	igual("duelo: ataque dá 1 PA", e.a.pa, 2)
+	igual("duelo: passa a vez", D.passarVez(e), nil)
+	igual("duelo: vez do Soberano", e.quem, "b")
+	-- defesa e contra-ataque
+	D.iniciarAcao(e, "b", "trinca")
+	local defs = {}
+	for i = 1, 3 do
+		defs[i] = D.acerto(e, "b", "trinca", i, "bom", "aparado").defesa
+	end
+	igual("duelo: aparar não tira vida", e.a.vida, D.VIDA)
+	igual("duelo: aparar dá PA", e.a.pa, 5)
+	igual("duelo: aparar tudo solta o contra", D.contraAtaca(D.ACOES.trinca, defs), true)
+	igual("duelo: um acerto não aparado, sem contra", D.contraAtaca(D.ACOES.trinca, { "aparado", "esquivado", "aparado" }), false)
+	igual("duelo: absoluto não dá contra", D.contraAtaca(D.ACOES.pesado, { "aparado" }), false)
+	igual("duelo: aparar enche a Ruptura de quem golpeia", e.b.ruptura > 0, true)
+	local esquiva = D.acerto(e, "b", "pesado", 1, "bom", "esquivado")
+	igual("duelo: esquivar não tira vida", esquiva.dano, 0)
+	-- Selo: metade do próximo golpe
+	local s = D.novo()
+	s.a.pa = 5
+	D.iniciarAcao(s, "a", "selo")
+	igual("duelo: selo gasta PA", s.a.pa, 3)
+	D.acerto(s, "a", "selo", 1, "bom", "atingido")
+	D.terminarAcao(s, "a", "selo", true)
+	igual("duelo: selo protege", s.a.selado, true)
+	igual("duelo: selo enche a Ruptura", s.b.ruptura >= D.RUPTURA.selo, true)
+	D.passarVez(s)
+	D.iniciarAcao(s, "b", "investida")
+	igual("duelo: selo corta pela metade", D.acerto(s, "b", "investida", 1, "bom", "atingido").dano, 55)
+	-- Ruptura: cheia, o alvo perde a vez e recebe mais dano
+	local rp = D.novo()
+	rp.b.ruptura = 99
+	local rr = D.acerto(rp, "a", "ataque", 1, "bom", "atingido")
+	igual("duelo: rompe", rr.rompeu, true)
+	igual("duelo: rompido", rp.b.rompido, true)
+	local forte = D.acerto(rp, "a", "ataque", 1, "bom", "atingido")
+	igual("duelo: rompido recebe mais dano", forte.dano, math.floor(85 * D.ROMPIDO_DANO + 0.5))
+	igual("duelo: rompido perde a vez", D.passarVez(rp), "b")
+	igual("duelo: e a vez volta para quem rompeu", rp.quem, "a")
+	igual("duelo: sai do rompido", rp.b.rompido, false)
+	-- Baluarte
+	local bl = D.novo()
+	D.iniciarAcao(bl, "b", "baluarte")
+	igual("duelo: baluarte reduz", D.acerto(bl, "a", "ataque", 1, "bom", "atingido").dano, math.floor(85 * D.BALUARTE + 0.5))
+	-- força no PvP e vencedor
+	local pv = D.novo(2, 0.5, 4000, 1000)
+	igual("duelo: força dobra o dano", D.acerto(pv, "a", "ataque", 1, "bom", "atingido").dano, 170)
+	pv.b.vida = 0
+	igual("duelo: vencedor", D.vencedor(pv), "a")
+	local dupla = D.novo(1, 1, 500, 900)
+	dupla.a.vida, dupla.b.vida = 0, 0
+	igual("duelo: queda dupla vai para o mais forte", D.vencedor(dupla), "b")
+	local longo = D.novo()
+	longo.vez = D.RODADAS_MAX + 1
+	longo.a.vida = 10
+	igual("duelo: limite de vezes", D.vencedor(longo), "b")
+	-- nota do acerto segue a última marca
+	igual("duelo: despertar usa a 1ª marca", D.notaDoAcerto(D.ACOES.despertar, { [1] = "perfeito" }, 3), "perfeito")
+	igual("duelo: golpe do Soberano sem anel", D.notaDoAcerto(D.ACOES.trinca, {}, 2), "bom")
+	local v = D.visao(D.novo(), "b")
+	igual("duelo: visão", v.minhaVez == false and v.oponente.vida == D.VIDA, true)
 end
 
 print(string.format("%d testes, %d falhas", total, falhas))

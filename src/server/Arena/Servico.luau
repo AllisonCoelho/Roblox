@@ -1,12 +1,13 @@
 -- Duelo contra o Primeiro Soberano (a prova do trono). Um duelo de cada vez no ringue, que é
 -- dividido com o 1x1 entre jogadores (Palco). Vencer o Soberano conta no perfil e, com o trono
--- vazio, faz do jogador o Rei do Servidor (Trono). O cliente só informa a ação escolhida.
+-- vazio, faz do jogador o Rei do Servidor (Trono). O combate é o reativo (Dados/Duelo e Motor):
+-- o cliente só informa a ação escolhida e os toques (golpe no tempo certo, Esquivar, Aparar).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
-local Arena = require(Shared.Dados.Arena)
+local Duelo = require(Shared.Dados.Duelo)
 local Animacoes = require(Shared.Dados.ArenaAnimacoes)
 local Cena = require(Shared.Dados.ArenaCena)
 local Auras = require(Shared.Dados.Auras)
@@ -17,6 +18,7 @@ local Dados = require(Servicos.Dados)
 local Cosmeticos = require(Servicos.Cosmeticos)
 local Incursoes = require(script.Parent.Parent.Incursoes.Servico)
 local Palco = require(script.Parent.Palco)
+local Motor = require(script.Parent.Motor)
 local PvP = require(script.Parent.PvP)
 local Trono = require(script.Parent.Trono)
 local Rankeada = require(script.Parent.Rankeada)
@@ -30,7 +32,7 @@ local TEMPO_DIALOGO = 30
 local INTERVALO_INTERACAO = 0.8
 local INTERVALO_ALERTA = 25
 
-type Duelo = {
+type Sessao = {
 	id: number,
 	player: Player,
 	personagem: Model,
@@ -41,15 +43,15 @@ type Duelo = {
 	ancorado: boolean,
 	soberano: BasePart,
 	prompt: ProximityPrompt,
-	estado: Arena.Estado,
+	estado: Duelo.Estado,
+	motor: Motor.Duelo?,
 	fase: string,
-	prazo: number?,
 	aura: Auras.Aura?,
 	conexoes: { RBXScriptConnection },
 	tween: Tween?,
 }
 
-local atual: Duelo? = nil
+local atual: Sessao? = nil
 local contador = 0
 local convites: { [Player]: { id: number, personagem: Model, venceEm: number } } = {}
 
@@ -82,7 +84,7 @@ local function alturaDoCorpo(personagem: Model, corpo: BasePart, humanoide: Huma
 	return altura
 end
 
-local function enviar(d: Duelo, tipo: string, dados: { [string]: any }?)
+local function enviar(d: Sessao, tipo: string, dados: { [string]: any }?)
 	if d.player.Parent ~= Players then
 		return
 	end
@@ -94,21 +96,24 @@ end
 
 -- Animações compartilhadas: todo cliente lê estes atributos e toca o mesmo clipe no mesmo
 -- instante do relógio do servidor (o instante pode estar no futuro: a reação ao impacto).
-local function animarJogador(d: Duelo, clipe: string?, quando: number)
+local function animarJogador(d: Sessao, clipe: string?, quando: number)
 	d.player:SetAttribute("ArenaAnim", clipe)
 	d.player:SetAttribute("ArenaAnimEm", if clipe then quando else nil)
 end
 
-local function animarSoberano(d: Duelo, clipe: string?, quando: number)
+local function animarSoberano(d: Sessao, clipe: string?, quando: number)
 	d.soberano:SetAttribute("DueloAnim", clipe)
 	d.soberano:SetAttribute("DueloAnimEm", if clipe then quando else nil)
 end
 
-local function encerrar(d: Duelo)
+local function encerrar(d: Sessao)
 	if atual ~= d then
 		return
 	end
 	atual = nil
+	if d.motor then
+		Motor.parar(d.motor)
+	end
 	for _, conexao in d.conexoes do
 		conexao:Disconnect()
 	end
@@ -134,12 +139,14 @@ local function encerrar(d: Duelo)
 	Palco.liberar("monarca")
 end
 
-local function terminar(d: Duelo, resultado: string)
-	if atual ~= d then
+local function terminar(d: Sessao, resultado: string)
+	if atual ~= d or d.fase == "fim" then
 		return
 	end
 	d.fase = "fim"
-	d.prazo = nil
+	if d.motor then
+		Motor.parar(d.motor)
+	end
 	local agora = workspace:GetServerTimeNow()
 	d.soberano:SetAttribute("DueloIntencao", nil)
 	if resultado == "vitoria" then
@@ -152,133 +159,87 @@ local function terminar(d: Duelo, resultado: string)
 	else
 		animarSoberano(d, "vitoria", agora)
 	end
-	enviar(d, "fim", { resultado = resultado, estado = d.estado })
+	enviar(d, "fim", { resultado = resultado, estado = Duelo.visao(d.estado, "a") })
 	if resultado == "vitoria" then
 		task.spawn(Trono.vencerMonarca, d.player)
 	end
 	task.delay(MOSTRAR_RESULTADO, encerrar, d)
 end
 
-local function abrirTurno(d: Duelo)
-	if atual ~= d then
-		return
-	end
-	d.fase = "escolha"
-	d.soberano:SetAttribute("DueloIntencao", Arena.intencao(d.estado.rodada).id)
-	local prazo = workspace:GetServerTimeNow() + Arena.ESPERA_TURNO
-	d.prazo = prazo
-	enviar(d, "turno", { estado = d.estado, prazo = prazo })
-	task.delay(Arena.ESPERA_TURNO, function()
-		if atual == d and d.fase == "escolha" and d.prazo == prazo then
-			terminar(d, "tempo")
+-- Corre até o Soberano e volta: chega no 1º acerto e volta antes do fim do golpe
+local function mover(d: Sessao, avanco: number, ida: number, volta: number)
+	local agora = workspace:GetServerTimeNow()
+	local function tween(alvo: CFrame, duracao: number, estilo: Enum.EasingStyle)
+		if atual ~= d or d.fase == "fim" then
+			return
 		end
+		if d.tween then
+			d.tween:Cancel()
+		end
+		local t = TweenService:Create(d.corpo, TweenInfo.new(duracao, estilo), { CFrame = alvo })
+		d.tween = t
+		t:Play()
+	end
+	local duracaoIda = math.max(0.1, (ida - agora) * 0.92)
+	tween(d.posto * CFrame.new(0, 0, -avanco), duracaoIda, Enum.EasingStyle.Sine)
+	task.delay(math.max(0, volta - agora - 0.35), function()
+		tween(d.posto, 0.35, Enum.EasingStyle.Quad)
 	end)
 end
 
-local function mover(d: Duelo, alvo: CFrame, duracao: number, estilo: Enum.EasingStyle)
-	if d.tween then
-		d.tween:Cancel()
-	end
-	local tween = TweenService:Create(d.corpo, TweenInfo.new(duracao, estilo), { CFrame = alvo })
-	d.tween = tween
-	tween:Play()
-end
-
-local function encenar(d: Duelo, resolucao: Arena.Resolucao)
-	local guardou = resolucao.golpes[1] ~= nil and resolucao.golpes[1].id == "guarda"
-	for _, golpe in resolucao.golpes do
-		if atual ~= d then
-			return
-		end
-		local tempo = Animacoes.tempo(golpe.id)
-		local preparacao, retorno = tempo.preparo, tempo.retorno
-		local quando = workspace:GetServerTimeNow()
-		local impacto = quando + preparacao
-		d.soberano:SetAttribute("DueloIntencao", nil)
-		if golpe.ator == "soberano" then
-			animarSoberano(d, golpe.id, quando)
-			local reacao = if golpe.estado.vida > 0
-				then Animacoes.reacaoJogador(guardou, golpe.dano)
-				else nil
-			if reacao then
-				animarJogador(d, reacao, impacto)
-			end
-		else
-			animarJogador(d, golpe.id, quando)
-			local reacao = if golpe.estado.soberano > 0
-				then Animacoes.reacaoSoberano(golpe.id, golpe.dano)
-				else nil
-			if reacao then
-				animarSoberano(d, reacao, impacto)
-			end
-		end
-		enviar(d, "golpe", {
-			golpe = golpe,
-			impacto = impacto,
-			fim = impacto + retorno,
-		})
-		local avanco = if golpe.ator == "jogador" then Animacoes.AVANCO[golpe.id] else nil
-		if avanco then
-			-- corre até o Soberano; a pose de corrida vem do clipe
-			mover(d, d.posto * CFrame.new(0, 0, -avanco), preparacao * 0.92, Enum.EasingStyle.Sine)
-		end
-		task.wait(preparacao)
-		if atual ~= d then
-			return
-		end
-		d.estado = golpe.estado
-		if avanco then
-			-- segura o golpe um instante e volta ao posto (salto para trás no clipe)
-			task.wait(retorno * 0.3)
-			if atual ~= d then
-				return
-			end
-			mover(d, d.posto, retorno * 0.55, Enum.EasingStyle.Quad)
-			task.wait(retorno * 0.7)
-		else
-			task.wait(retorno)
-		end
-	end
+local function comecar(d: Sessao)
 	if atual ~= d then
 		return
 	end
-	d.estado = resolucao.estado
-	if resolucao.resultado then
-		terminar(d, resolucao.resultado)
-	else
-		abrirTurno(d)
-	end
+	d.fase = "luta"
+	d.motor = Motor.iniciar({
+		id = d.id,
+		estado = d.estado,
+		semEscolha = "derrota",
+		a = {
+			lado = "a",
+			player = d.player,
+			nome = d.player.DisplayName,
+			animar = function(clipe, quando)
+				animarJogador(d, clipe, quando)
+			end,
+			mover = function(avanco, ida, volta)
+				mover(d, avanco, ida, volta)
+			end,
+		},
+		b = {
+			lado = "b",
+			player = nil,
+			nome = "Primeiro Soberano",
+			animar = function(clipe, quando)
+				animarSoberano(d, clipe, quando)
+			end,
+		},
+		-- na vez do jogador o Soberano mostra o que vai fazer (aviso com o corpo)
+		aoTurno = function(quem)
+			d.soberano:SetAttribute(
+				"DueloIntencao",
+				if quem == "a" then Duelo.intencao(d.estado.vezesB + 1) else nil
+			)
+		end,
+		aoFim = function(vencedor, motivo)
+			terminar(
+				d,
+				if motivo == "tempo"
+					then "tempo"
+					elseif vencedor == "a" then "vitoria"
+					else "derrota"
+			)
+		end,
+	})
 end
 
-local function agir(player: Player, id: any, rodada: any, acao: any): (boolean, string?)
+local function agir(player: Player, id: any, vez: any, acao: any): (boolean, string?)
 	local d = atual
-	if not d or d.player ~= player or d.id ~= id then
+	if not d or d.player ~= player or d.id ~= id or not d.motor then
 		return false, "Você não está neste duelo."
 	end
-	if d.fase ~= "escolha" or d.estado.rodada ~= rodada then
-		return false, "Aguarde o seu próximo turno."
-	end
-	if not d.prazo or workspace:GetServerTimeNow() >= d.prazo then
-		terminar(d, "tempo")
-		return false, "O tempo acabou."
-	end
-	if type(acao) ~= "string" then
-		return false, "Ação inválida."
-	end
-	local resolucao, erro = Arena.resolver(d.estado, acao)
-	if not resolucao then
-		return false, erro
-	end
-	d.fase = "resolvendo"
-	d.prazo = nil
-	task.spawn(function()
-		local ok, erroCena = pcall(encenar, d, resolucao)
-		if not ok then
-			warn("[Arena] " .. tostring(erroCena))
-			encerrar(d)
-		end
-	end)
-	return true, nil
+	return Motor.escolher(player, id, vez, acao)
 end
 
 local function desistir(player: Player, id: any): (boolean, string?)
@@ -291,6 +252,7 @@ local function desistir(player: Player, id: any): (boolean, string?)
 end
 
 function Servico.iniciar()
+	Motor.iniciarServico()
 	PvP.iniciarServico()
 	Trono.iniciar()
 	Rankeada.iniciar()
@@ -410,7 +372,7 @@ function Servico.montar(soberano: BasePart, ponto: BasePart)
 			return false, "O ringue está ocupado. Aguarde a Arena ficar livre."
 		end
 
-		local d: Duelo = {
+		local d: Sessao = {
 			id = convite.id,
 			player = player,
 			personagem = personagem,
@@ -422,7 +384,7 @@ function Servico.montar(soberano: BasePart, ponto: BasePart)
 			soberano = soberano,
 			prompt = prompt,
 			aura = if perfil.equipada then Auras.porId[perfil.equipada] else nil,
-			estado = Arena.novo(),
+			estado = Duelo.novo(),
 			fase = "entrada",
 			conexoes = {},
 		}
@@ -451,13 +413,16 @@ function Servico.montar(soberano: BasePart, ponto: BasePart)
 			end)
 		)
 		enviar(d, "abrir", {
-			estado = d.estado,
+			estado = Duelo.visao(d.estado, "a"),
+			lado = "a",
+			oponente = "Primeiro Soberano",
+			titulo = "Duelo pelo Trono",
 			nome = player.DisplayName,
 			aura = if d.aura then d.aura.nome else nil,
 			cor = if d.aura then d.aura.cores[1] else nil,
 			estilo = if d.aura then d.aura.estilo else nil,
 		})
-		task.delay(INTRODUCAO, abrirTurno, d)
+		task.delay(INTRODUCAO, comecar, d)
 		return true, nil
 	end)
 end

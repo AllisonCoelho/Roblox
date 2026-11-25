@@ -5,7 +5,6 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage.Shared
-local Dados = require(Shared.Dados.Arena)
 local Cena = require(Shared.Dados.ArenaCena)
 
 local Arena = {}
@@ -20,6 +19,7 @@ export type Opcoes = {
 	cor: Color3,
 	estilo: string?,
 	lado: string?, -- 1x1 entre jogadores: "a" (posto do desafiante) ou "b" (posto do outro)
+	pve: boolean?, -- contra o Soberano (o alvo do jogador é mais alto)
 }
 
 -- Referencial da câmera: quem luta do lado "b" vê o ringue espelhado (ele mesmo à esquerda)
@@ -64,13 +64,17 @@ local function anel(pai: Instance, centro: CFrame, cor: Color3, tamanho: number)
 	dissipar(n, 0.46, { Size = Vector3.new(0.06, tamanho, tamanho) })
 end
 
-local function danoFlutuante(pai: Instance, alvo: CFrame, golpe: Dados.Golpe, cor: Color3)
-	-- o Soberano é alto; no 1x1 os dois são jogadores
-	local altura = if (golpe :: any).lado then 5.6 elseif golpe.ator == "jogador" then 8.4 else 5.6
+local function danoFlutuante(
+	pai: Instance,
+	alvo: CFrame,
+	altura: number,
+	texto: string,
+	cor: Color3
+)
 	local ponto = neon(pai, cor, alvo * CFrame.new(0.6, altura, 0), Vector3.one * 0.1)
 	ponto.Transparency = 1
 	local letreiro = Instance.new("BillboardGui")
-	letreiro.Size = UDim2.fromOffset(120, 50)
+	letreiro.Size = UDim2.fromOffset(160, 50)
 	letreiro.AlwaysOnTop = true
 	letreiro.LightInfluence = 0
 	letreiro.Parent = ponto
@@ -79,7 +83,7 @@ local function danoFlutuante(pai: Instance, alvo: CFrame, golpe: Dados.Golpe, co
 	valor.Size = UDim2.fromScale(1, 1)
 	valor.FontFace = FonteNumeros
 	valor.TextSize = 28
-	valor.Text = "−" .. golpe.dano
+	valor.Text = texto
 	valor.TextColor3 = cor:Lerp(Color3.new(1, 1, 1), 0.5)
 	valor.TextStrokeTransparency = 0.25
 	valor.Parent = letreiro
@@ -96,35 +100,74 @@ local function danoFlutuante(pai: Instance, alvo: CFrame, golpe: Dados.Golpe, co
 	):Play()
 end
 
-local function impacto(pai: Instance, golpe: Dados.Golpe, op: Opcoes)
-	local doJogador = golpe.ator == "jogador"
-	-- no 1x1, o lado diz onde cada um está; contra o Soberano, o jogador está sempre no posto "a"
-	local ladoGolpe = (golpe :: any).lado
-	local deA = if ladoGolpe then ladoGolpe == "a" else doJogador
-	local alvo = if deA then Cena.soberano else Cena.jogador
-	local origem = if deA then Cena.jogador else Cena.soberano
-	local cor = if not doJogador then RUBRO elseif golpe.id == "despertar" then op.cor else VIOLETA
-	if golpe.dano > 0 and not op.movimentoReduzido then
-		danoFlutuante(pai, alvo, golpe, cor)
+-- Faíscas de uma aparada: estrela de lâminas curtas saindo do ponto de contato
+local function faiscas(pai: Instance, centro: CFrame, cor: Color3)
+	for i = 1, 8 do
+		local a = i / 8 * math.pi * 2
+		local dir = Vector3.new(math.cos(a), math.sin(a) * 0.8, 0)
+		local p = neon(
+			pai,
+			cor,
+			CFrame.lookAt(centro.Position, centro:PointToWorldSpace(dir)),
+			Vector3.new(0.12, 0.12, 0.9)
+		)
+		dissipar(p, 0.22, {
+			CFrame = CFrame.lookAt(
+				centro:PointToWorldSpace(dir * 1.6),
+				centro:PointToWorldSpace(dir * 3)
+			),
+		})
 	end
-	if golpe.id == "guarda" or golpe.id == "baluarte" then
-		anel(pai, origem + Vector3.new(0, 0.18, 0), if doJogador then MENTA else RUBRO, 7)
+end
+
+-- Efeito de um acerto. deA: o golpe saiu do posto "a"; alvoAlto: o alvo é o Soberano (mais alto)
+local function impacto(
+	pai: Instance,
+	deA: boolean,
+	alvoAlto: boolean,
+	id: string,
+	dano: number,
+	defesa: string,
+	cor: Color3,
+	op: Opcoes
+)
+	local alvo = if deA then Cena.soberano else Cena.jogador
+	local altura = if alvoAlto then 8.4 else 5.6
+	if defesa == "aparado" then
+		faiscas(pai, alvo * CFrame.new(0, if alvoAlto then 4.4 else 3, -1.4), MENTA)
+		anel(pai, alvo + Vector3.new(0, 0.2, 0), MENTA, 6)
+		if not op.movimentoReduzido then
+			danoFlutuante(pai, alvo, altura, "APARADO", MENTA)
+		end
+		return
+	elseif defesa == "esquivado" then
+		anel(pai, alvo + Vector3.new(0, 0.2, 0), Color3.new(1, 1, 1), 4)
+		if not op.movimentoReduzido then
+			danoFlutuante(pai, alvo, altura, "ESQUIVA", Color3.new(1, 1, 1))
+		end
 		return
 	end
-	if op.qualidadeBaixa or op.movimentoReduzido or not golpe.especial then
+	if dano > 0 and not op.movimentoReduzido then
+		danoFlutuante(pai, alvo, altura, "−" .. dano, cor)
+	end
+	local especial = id == "corte"
+		or id == "despertar"
+		or id == "pesado"
+		or id == "contra"
+		or id == "selo"
+	if op.qualidadeBaixa or op.movimentoReduzido or not especial then
 		anel(pai, alvo + Vector3.new(0, 0.26, 0), cor, 5)
 		return
 	end
-	local escala = if golpe.id == "despertar" then 1.35 else 1
-	if golpe.id == "despertar" or golpe.id == "selo" then
+	local escala = if id == "despertar" or id == "pesado" then 1.35 else 1
+	if id == "despertar" or id == "selo" then
 		anel(pai, alvo + Vector3.new(0, 0.22, 0), cor, 10 * escala)
-		if op.estilo == "nevoa" and golpe.id == "despertar" then
+		if op.estilo == "nevoa" and id == "despertar" then
 			return
 		end
 	end
-
-	local centro = alvo * CFrame.new(0, if deA and not ladoGolpe then 4.4 else 2.8, -1)
-	local inclina = if golpe.id == "pesado" then math.rad(50) else math.rad(-14)
+	local centro = alvo * CFrame.new(0, if alvoAlto then 4.4 else 2.8, -1)
+	local inclina = if id == "pesado" then math.rad(50) else math.rad(-14)
 	centro *= CFrame.Angles(0, 0, inclina)
 	for i = 1, 8 do
 		local a = (i - 1) / 8 * math.pi
@@ -146,7 +189,10 @@ local function impacto(pai: Instance, golpe: Dados.Golpe, op: Opcoes)
 end
 
 export type Controle = {
-	tocar: (Dados.Golpe, number, number) -> (),
+	-- começo de um golpe (câmera lateral nos golpes grandes)
+	golpe: (acao: string, meu: boolean, acertos: { number }) -> (),
+	-- resultado de um acerto (efeito, número, tremor)
+	acerto: (acao: string, meu: boolean, dano: number, defesa: string) -> (),
 	encerrar: () -> (),
 }
 
@@ -198,33 +244,48 @@ function Arena.iniciar(op: Opcoes): Controle
 		camera.FieldOfView += (fov - camera.FieldOfView) * passo
 	end)
 
+	local meuLado = op.lado or "a"
+	local GRANDES = {
+		corte = true,
+		despertar = true,
+		trinca = true,
+		finta = true,
+		pesado = true,
+		contra = true,
+	}
 	return {
-		tocar = function(golpe, instante, fim)
+		golpe = function(acao, _meu, acertos)
 			ultimo += 1
 			local token = ultimo
-			local agora = workspace:GetServerTimeNow()
-			lateral = golpe.especial and not op.movimentoReduzido
-			trocarAte = agora + 0.11
-			task.delay(math.max(0, instante - agora), function()
-				if morto or ultimo ~= token then
-					return
-				end
-				if not op.movimentoReduzido and golpe.dano > 0 then
-					tremor = math.max(
-						tremor,
-						if golpe.id == "pesado" or golpe.id == "despertar"
-							then 0.55
-							elseif golpe.especial then 0.32
-							else 0.18
-					)
-				end
-				impacto(efeito, golpe, op)
-			end)
-			task.delay(math.max(0, fim - agora), function()
+			lateral = GRANDES[acao] == true and not op.movimentoReduzido
+			trocarAte = workspace:GetServerTimeNow() + 0.11
+			local fim = (acertos[#acertos] or workspace:GetServerTimeNow()) + 0.6
+			task.delay(math.max(0, fim - workspace:GetServerTimeNow()), function()
 				if not morto and ultimo == token then
 					lateral = false
 				end
 			end)
+		end,
+		acerto = function(acao, meu, dano, defesa)
+			if morto then
+				return
+			end
+			-- quem golpeou: eu (no meu posto) ou o outro
+			local ladoAtacante = if meu then meuLado elseif meuLado == "a" then "b" else "a"
+			local deA = ladoAtacante == "a"
+			local pve = op.pve == true
+			local alvoAlto = pve and deA
+			local cor = if not meu then RUBRO elseif acao == "despertar" then op.cor else VIOLETA
+			if defesa == "atingido" and dano > 0 and not op.movimentoReduzido then
+				tremor = math.max(
+					tremor,
+					if acao == "pesado" or acao == "despertar"
+						then 0.55
+						elseif dano >= 100 then 0.32
+						else 0.18
+				)
+			end
+			impacto(efeito, deA, alvoAlto, acao, dano, defesa, cor, op)
 		end,
 		encerrar = function()
 			morto = true
