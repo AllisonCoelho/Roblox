@@ -157,6 +157,43 @@ function Ajustes.montar(aoAviso: (string) -> ())
 		end
 	end
 
+	-- Rever o tutorial da Lume (os presentes não se repetem)
+	ordem += 1
+	local linhaTutorial = Kit.novo("Frame", {
+		Name = "Tutorial",
+		BackgroundColor3 = Cores.Elevado,
+		BorderSizePixel = 0,
+		Size = UDim2.new(1, -12, 0, 76),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		LayoutOrder = ordem,
+		Parent = rolagem,
+	})
+	Kit.novo("UICorner", { CornerRadius = UDim.new(0, 6), Parent = linhaTutorial })
+	descricaoOpcao(
+		linhaTutorial,
+		"Rever tutorial",
+		"A Lume mostra de novo o básico do jogo. Os presentes do tutorial não se repetem."
+	)
+	local rever = Kit.botaoPlaca({
+		texto = "Rever",
+		tamanho = UDim2.fromOffset(136, 64),
+		tamanhoTexto = 18,
+		tom = "lilas",
+		aoClicar = function()
+			task.spawn(function()
+				local ok, msg = Estado.pedir("TutorialReiniciar")
+				if ok then
+					Navegacao.fechar()
+				elseif msg then
+					aoAviso(msg)
+				end
+			end)
+		end,
+	})
+	rever.placa.quadro.AnchorPoint = Vector2.new(1, 0.5)
+	rever.placa.quadro.Position = UDim2.new(1, -10, 0.5, 0)
+	rever.placa.quadro.Parent = linhaTutorial
+
 	Estado.aoMudar(function(estado)
 		for chave, botao in interruptores do
 			local ligado = estado.configuracoes[chave] == true

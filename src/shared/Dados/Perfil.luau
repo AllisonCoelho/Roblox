@@ -27,6 +27,9 @@ export type Estado = {
 	pets: { [string]: any },
 	-- Equipamento (Dados/Equipamento.luau): peças, equipadas por espaço e visuais ocultos
 	equipamento: { [string]: any },
+	-- Tutorial (Dados/Tutorial.luau): passo atual, concluído e presentes entregues. Fica fora do
+	-- padrão de propósito: quem já tinha perfil sem ele e já girou não vê o tutorial
+	tutorial: { [string]: any }?,
 }
 
 Perfil.VERSAO = 1

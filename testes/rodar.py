@@ -17,6 +17,8 @@ MODULOS = {
     "Equipamento": "src/shared/Dados/Equipamento.luau",
     "Ciclo": "src/shared/Dados/Ciclo.luau",
     "DropsMapa": "src/shared/Dados/DropsMapa.luau",
+    "Tutorial": "src/shared/Dados/Tutorial.luau",
+    "LumeVisual": "src/shared/Dados/LumeVisual.luau",
     "EquipamentoVisual": "src/shared/Dados/EquipamentoVisual.luau",
     "CriaturasVisual": "src/shared/Dados/CriaturasVisual.luau",
     "PetsVisual": "src/shared/Dados/PetsVisual.luau",
