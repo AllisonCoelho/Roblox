@@ -13,6 +13,8 @@ MODULOS = {
     "PontosAura": "src/shared/Dados/PontosAura.luau",
     "Corredor": "src/shared/Dados/Corredor.luau",
     "Pets": "src/shared/Dados/Pets.luau",
+    "Criaturas": "src/shared/Dados/Criaturas.luau",
+    "CriaturasVisual": "src/shared/Dados/CriaturasVisual.luau",
     "PetsVisual": "src/shared/Dados/PetsVisual.luau",
     "CorredorMapa": "src/shared/Dados/CorredorMapa.luau",
     "Artefatos": "src/shared/Dados/Artefatos.luau",

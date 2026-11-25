@@ -1646,4 +1646,61 @@ do
 	igual("corredor: bônus de Fragmentos dos Ecos", g, math.floor(C.FASES[1].primeira * 1.5 + 0.5))
 end
 
+-- Criaturas do Corredor
+do
+	local K = req("Criaturas")
+	local V = req("CriaturasVisual")
+	local C = req("Corredor")
+	local M = req("CorredorMapa")
+	igual("criaturas: uma dupla por fase", #K.FASES, C.TOTAL)
+	for i, f in K.FASES do
+		for _, id in { f.lacaio, f.chefe } do
+			local v = V[id]
+			igual("criaturas: visual de " .. id, v ~= nil, true)
+			igual("criaturas: " .. id .. " é da fase " .. i, v and v.fase, i)
+			local nomes = {}
+			for _, p in (v and v.partes or {}) do
+				nomes[p.nome] = true
+				if p.pai then
+					igual("criaturas: pai de " .. id .. "." .. p.nome .. " vem antes", nomes[p.pai], true)
+				end
+			end
+			igual("criaturas: " .. id .. " tem tronco, cabeça, braços e pernas", nomes.tronco and nomes.cabeca and nomes.braco_d and nomes.perna_e, true)
+		end
+		igual("criaturas: chefe maior que o lacaio na fase " .. i, V[f.chefe].altura > V[f.lacaio].altura * 1.8, true)
+		igual("criaturas: chefe tem mais vida na fase " .. i, K.vida(i, "chefe") > K.vida(i, "lacaio") * 5, true)
+		if i > 1 then
+			igual("criaturas: lacaio mais resistente na fase " .. i, K.vida(i, "lacaio") > K.vida(i - 1, "lacaio"), true)
+		end
+		-- quem tem a Pontuação mínima derruba o lacaio em ~6 golpes
+		local golpes = math.ceil(K.vida(i, "lacaio") / K.danoJogador(math.max(C.FASES[i].requisito, 12)))
+		igual("criaturas: lacaio cai em 6 golpes com a Pontuação mínima (fase " .. i .. ")", golpes, 6)
+	end
+	igual("criaturas: dano cresce com a Pontuação", K.danoJogador(1000) > K.danoJogador(10), true)
+	igual("criaturas: Pontuação estranha não quebra", K.danoJogador(0 / 0), 5)
+	-- posições: dentro da ilha (largura 44, comprimento 150) e o chefe antes do Portão
+	local chefes = 0
+	for _, p in K.POSICOES do
+		igual("criaturas: posição dentro da ilha", math.abs(p.x) < M.largura / 2 - 4 and math.abs(p.y) < M.comprimento / 2 - 8, true)
+		if p.tipo == "chefe" then
+			chefes += 1
+			igual("criaturas: chefe guarda o fim da ilha", p.y > 40, true)
+		end
+	end
+	igual("criaturas: um chefe por fase", chefes, 1)
+	-- recompensas
+	local pts, frag = K.recompensa(3, "lacaio", 10, 0.01, 1)
+	igual("criaturas: lacaio dá segundos de Pontos", pts, 10 * K.LACAIO.pontos)
+	igual("criaturas: lacaio com sorte solta Fragmentos", frag, K.FASES[3].fragmentosLacaio)
+	local _, sem = K.recompensa(3, "lacaio", 10, 0.99, 1)
+	igual("criaturas: sem sorte, sem Fragmentos", sem, 0)
+	local pc, fc = K.recompensa(3, "chefe", 10, 0.01, 1)
+	igual("criaturas: chefe dá mais Pontos", pc > pts, true)
+	igual("criaturas: chefe não sorteia Fragmentos (o Portão dá)", fc, 0)
+	-- paraMundo coincide com o gerador (o centro fica no centro)
+	local f1 = M.fases[1]
+	local x, y, z = K.paraMundo(f1.centro, f1.giro, 0, 0)
+	igual("criaturas: origem da ilha é o centro", math.abs(x - f1.centro[1]) + math.abs(z - f1.centro[3]) < 1e-6 and y == f1.centro[2], true)
+end
+
 print(string.format("%d testes, %d falhas", total, falhas))
