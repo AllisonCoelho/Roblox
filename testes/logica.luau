@@ -1703,4 +1703,80 @@ do
 	igual("criaturas: origem da ilha é o centro", math.abs(x - f1.centro[1]) + math.abs(z - f1.centro[3]) < 1e-6 and y == f1.centro[2], true)
 end
 
+-- Equipamento (RPG)
+do
+	local E = req("Equipamento")
+	local V = req("EquipamentoVisual")
+	igual("equip: 6 conjuntos × 5 espaços", #E.ITENS, 30)
+	local pecaVisual = { elmo = { "elmo" }, armadura = { "armadura" }, manoplas = { "manopla_d", "manopla_e" }, botas = { "bota_d", "bota_e" }, arma = { "arma" } }
+	for _, item in E.ITENS do
+		for _, p in pecaVisual[item.espaco] do
+			igual("equip: visual de " .. item.id .. " (" .. p .. ")", V[item.conjunto] ~= nil and V[item.conjunto][p] ~= nil, true)
+		end
+		igual("equip: " .. item.id .. " tem atributo", E.texto(item.atributos) ~= "", true)
+	end
+	for i = 2, #E.CONJUNTOS do
+		local a, b = E.porId[E.CONJUNTOS[i].id .. "_arma"], E.porId[E.CONJUNTOS[i - 1].id .. "_arma"]
+		igual("equip: arma do mundo " .. i .. " mais forte", a.atributos.dano > b.atributos.dano, true)
+	end
+	local c = E.padrao()
+	local u1 = E.adicionar(c, "limiar_elmo", 0)
+	local u2 = E.adicionar(c, "limiar_armadura", 0)
+	local u3 = E.adicionar(c, "limiar_botas", 0)
+	local u4 = E.adicionar(c, "dunas_elmo", 0)
+	igual("equip: item inventado não entra", E.adicionar(c, "nada", 0), nil)
+	igual("equip: equipar", (E.equipar(c, u1, true)), true)
+	igual("equip: equipa no espaço certo", c.equipados.elmo, u1)
+	E.equipar(c, u4, true)
+	igual("equip: trocar no mesmo espaço substitui", c.equipados.elmo, u4)
+	E.equipar(c, u1, true)
+	E.equipar(c, u2, true)
+	E.equipar(c, u3, true)
+	igual("equip: uid inválido", (E.equipar(c, 7, true)), false)
+	local total = E.total(c)
+	-- elmo 4 sorte + armadura 15 vida e 4 ganho + botas 10 ganho + conjunto de 3 (5 sorte)
+	igual("equip: soma de sorte com bônus de 3 peças", total.sorte, 4 + 5)
+	igual("equip: soma de ganho", total.ganho, 14)
+	igual("equip: soma de vida", total.vida, 15)
+	igual("equip: multiplicador", math.abs(E.multiplicadores(c).sorte - 1.09) < 1e-9, true)
+	-- nível
+	local g = c.lista[u3]
+	local custo0 = E.custoAprimorar(g)
+	g.nivel = 5
+	igual("equip: aprimorar fica mais caro", E.custoAprimorar(g) > custo0, true)
+	igual("equip: nível sobe os atributos", E.atributos(g).ganho, math.floor(10 * (1 + 5 * E.POR_NIVEL) + 0.5))
+	g.nivel = E.NIVEL_MAXIMO
+	igual("equip: nível máximo sem custo", E.custoAprimorar(g), nil)
+	igual("equip: desmontar devolve mais em nível alto", E.valorDesmontar(g) > E.valorDesmontar({ item = "limiar_botas", nivel = 0, desde = 0 }), true)
+	-- ocultar e normalizar
+	igual("equip: ocultar espaço", (E.ocultar(c, "elmo", true)), true)
+	igual("equip: espaço inventado", (E.ocultar(c, "capa", true)), false)
+	local n = E.normalizar({ lista = { q1 = { item = "limiar_arma", nivel = 99 }, x = { item = "nada" } }, equipados = { arma = "q1", elmo = "q1" }, ocultos = { arma = true, nada = true } })
+	igual("equip: normalizar limita o nível", n.lista.q1.nivel, E.NIVEL_MAXIMO)
+	igual("equip: normalizar descarta item inventado", n.lista.x, nil)
+	igual("equip: normalizar confere o espaço", n.equipados.elmo, nil)
+	igual("equip: normalizar mantém o certo", n.equipados.arma, "q1")
+	igual("equip: normalizar ocultos", n.ocultos.arma, true)
+	-- drops
+	local seq, k = { 0.0, 0.99 }, 0
+	local drop = E.sortearDrop(2, "chefe", function()
+		k += 1
+		return seq[k]
+	end)
+	igual("equip: chefe com sorte dá peça do seu mundo", drop, "bosque_arma")
+	igual("equip: lacaio sem sorte não dá", E.sortearDrop(2, "lacaio", function()
+		return 0.5
+	end), nil)
+	igual("equip: fase inexistente", E.sortearDrop(9, "chefe", function()
+		return 0
+	end), nil)
+	-- conjunto completo
+	local cheio = E.padrao()
+	for _, espaco in E.ESPACOS do
+		E.equipar(cheio, E.adicionar(cheio, "vazio_" .. espaco, 0), true)
+	end
+	local t5 = E.total(cheio)
+	igual("equip: conjunto completo soma os dois bônus", t5.ganho >= 60 + 150, true)
+end
+
 print(string.format("%d testes, %d falhas", total, falhas))

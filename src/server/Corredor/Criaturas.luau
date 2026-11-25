@@ -19,6 +19,7 @@ local Servicos = script.Parent.Parent.Servicos
 local Dados = require(Servicos.Dados)
 local PontosAura = require(Servicos.PontosAura)
 local PetsServico = require(Servicos.Pets)
+local EquipamentoServico = require(Servicos.Equipamento)
 
 local Servico = {}
 
@@ -99,7 +100,8 @@ local function morrer(c: Criatura, agora: number)
 			continue
 		end
 		local ganho = PontosAura.ganho(player)
-		local _, _, multFrag = PetsServico.multiplicadores(player)
+		local _, _, multFragPets = PetsServico.multiplicadores(player)
+		local multFrag = multFragPets * EquipamentoServico.multiplicadores(player).fragmentos
 		local pontos, fragmentos =
 			Criaturas.recompensa(c.fase, c.tipo, ganho, rng:NextNumber(), multFrag)
 		Dados.alterar(player, function(estado)
@@ -110,6 +112,7 @@ local function morrer(c: Criatura, agora: number)
 			return true
 		end)
 		player:SetAttribute("PontosAura", math.floor((Dados.de(player) :: any).poder.pontos))
+		EquipamentoServico.darDrop(player, c.fase, c.tipo)
 		if c.tipo == "chefe" then
 			credito[player] = credito[player] or {}
 			credito[player][c.fase] = true
@@ -147,7 +150,11 @@ end
 
 local function golpear(player: Player, c: Criatura, agora: number)
 	ultimoGolpe[player] = agora
-	local dano = Criaturas.danoJogador(PontosAura.pontuacao(player))
+	local dano = math.floor(
+		Criaturas.danoJogador(PontosAura.pontuacao(player))
+				* EquipamentoServico.multiplicadores(player).dano
+			+ 0.5
+	)
 	c.vida = math.max(0, c.vida - dano)
 	c.ajudaram[player] = (c.ajudaram[player] or 0) + dano
 	c.parte:SetAttribute("Vida", c.vida)

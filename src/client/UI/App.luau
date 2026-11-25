@@ -27,6 +27,7 @@ local Indice = require(Telas.Indice)
 local Evoluir = require(Telas.Evoluir)
 local CorredorTela = require(Telas.Corredor)
 local EcosTela = require(Telas.Ecos)
+local EquipamentoTela = require(Telas.Equipamento)
 local Inventario = require(Telas.Inventario)
 local Loja = require(Telas.Loja)
 local EtiquetasChat = require(script.Parent.EtiquetasChat)
@@ -295,6 +296,7 @@ function App.iniciar()
 		end,
 		aoAbrirAjustes = Ajustes.abrir,
 		aoAbrirEvoluir = Evoluir.abrir,
+		aoAbrirEquipamento = EquipamentoTela.abrir,
 		aoAbrirEcos = function()
 			EcosTela.abrir("Meus")
 		end,
@@ -318,6 +320,7 @@ function App.iniciar()
 	Evoluir.montar(Avisos.toast)
 	CorredorTela.montar(Avisos.toast)
 	EcosTela.montar(raiz, Avisos.toast)
+	EquipamentoTela.montar(Avisos.toast)
 	Inventario.montar(Avisos.toast)
 	Loja.montar({ aviso = Avisos.toast, oferecer = oferecer, temPasse = temPasse })
 	EtiquetasChat.iniciar()

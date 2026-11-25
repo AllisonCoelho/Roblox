@@ -22,6 +22,7 @@ local PrimeiroSoberano = require(
 local ArenaCorpo = require(script.Parent:WaitForChild("Mundo"):WaitForChild("ArenaCorpo"))
 local EcosMundo = require(script.Parent:WaitForChild("Mundo"):WaitForChild("Ecos"))
 local CriaturasMundo = require(script.Parent:WaitForChild("Mundo"):WaitForChild("Criaturas"))
+local EquipamentoMundo = require(script.Parent:WaitForChild("Mundo"):WaitForChild("Equipamento"))
 local EcosTela = require(UI:WaitForChild("Telas"):WaitForChild("Ecos"))
 
 local K_CIRCULO = 0.5523 -- fator de Bézier para 4 arcos formarem um círculo
@@ -280,6 +281,7 @@ end)
 ArenaCorpo.iniciar()
 EcosMundo.iniciar()
 CriaturasMundo.iniciar()
+EquipamentoMundo.iniciar()
 Estado.aoMudar(function(estado)
 	CriaturasMundo.definir({
 		qualidadeBaixa = estado.configuracoes.qualidadeBaixa == true,
