@@ -19,6 +19,8 @@ local PrimeiroSoberano = require(
 	script.Parent:WaitForChild("Mundo"):WaitForChild("NPCs"):WaitForChild("PrimeiroSoberano")
 )
 local ArenaCorpo = require(script.Parent:WaitForChild("Mundo"):WaitForChild("ArenaCorpo"))
+local EcosMundo = require(script.Parent:WaitForChild("Mundo"):WaitForChild("Ecos"))
+local EcosTela = require(UI:WaitForChild("Telas"):WaitForChild("Ecos"))
 
 local K_CIRCULO = 0.5523 -- fator de Bézier para 4 arcos formarem um círculo
 
@@ -274,7 +276,21 @@ end)
 -- Primeiro Soberano: armadura 3D e repouso (o NPC em si é do servidor)
 -- ArenaCorpo: corpo dos jogadores em duelo (todos os clientes veem os mesmos golpes)
 ArenaCorpo.iniciar()
+EcosMundo.iniciar()
 Estado.aoMudar(function(estado)
+	EcosMundo.definir({
+		qualidadeBaixa = estado.configuracoes.qualidadeBaixa == true,
+		movimentoReduzido = estado.configuracoes.movimentoReduzido == true,
+	})
+	-- Núcleos acesos no Cristal: os que a pessoa já pode abrir
+	local corredor = (estado :: any).corredor
+	local liberados: { [number]: boolean } = {}
+	for i = 1, 6 do
+		liberados[i] = type(corredor) == "table"
+			and type(corredor.concluidas) == "table"
+			and (tonumber(corredor.concluidas[tostring(i)]) or 0) > 0
+	end
+	EcosMundo.definirLiberados(liberados)
 	PrimeiroSoberano.definir({
 		qualidadeBaixa = estado.configuracoes.qualidadeBaixa == true,
 		movimentoReduzido = estado.configuracoes.movimentoReduzido == true,
@@ -296,6 +312,8 @@ ProximityPromptService.PromptTriggered:Connect(function(prompt, jogador)
 		Navegacao.abrir("Incursoes")
 	elseif acao == "corredor" then
 		Navegacao.abrir("Corredor")
+	elseif acao == "nucleos" then
+		EcosTela.abrir("Nucleos")
 	elseif acao == "em_construcao" or acao == "eco" then
 		local texto = prompt:GetAttribute("Texto")
 		if type(texto) == "string" then

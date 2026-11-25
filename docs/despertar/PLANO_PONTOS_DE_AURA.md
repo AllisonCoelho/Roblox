@@ -5,6 +5,8 @@
 > **Já implementado:** Etapa 1 e o painel Evoluir da Etapa 2. A sorte já entra no giro. As Incursões estão desligadas. Detalhes em `PONTOS_DE_AURA.md`.
 >
 > **Corredor dos Perdidos (Etapa 4):** seis fases no céu do Nexo, sem as criaturas por enquanto. Detalhes em `CORREDOR.md`.
+>
+> **Ecos e Núcleos (Etapa 3):** 18 Ecos em 6 Núcleos, despertados no Cristal do Nexo. Detalhes em `ECOS.md`.
 
 ## A ideia em uma frase
 

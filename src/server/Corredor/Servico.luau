@@ -17,6 +17,7 @@ local Servicos = script.Parent.Parent.Servicos
 local Acoes = require(Servicos.Acoes)
 local Dados = require(Servicos.Dados)
 local PontosAura = require(Servicos.PontosAura)
+local PetsServico = require(Servicos.Pets)
 
 local Servico = {}
 
@@ -152,7 +153,8 @@ local function concluir(player: Player, n: number)
 	estar.concluiu = true
 	local ganho, primeira = 0, false
 	local ok = Dados.alterar(player, function(estado)
-		ganho, primeira = Corredor.concluir((estado :: any).corredor, n, os.time())
+		local _, _, fragmentos = PetsServico.multiplicadores(player)
+		ganho, primeira = Corredor.concluir((estado :: any).corredor, n, os.time(), fragmentos)
 		return true
 	end)
 	if not ok then

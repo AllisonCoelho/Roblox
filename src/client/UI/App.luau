@@ -26,6 +26,7 @@ local HUD = require(Telas.HUD)
 local Indice = require(Telas.Indice)
 local Evoluir = require(Telas.Evoluir)
 local CorredorTela = require(Telas.Corredor)
+local EcosTela = require(Telas.Ecos)
 local Inventario = require(Telas.Inventario)
 local Loja = require(Telas.Loja)
 local EtiquetasChat = require(script.Parent.EtiquetasChat)
@@ -294,6 +295,9 @@ function App.iniciar()
 		end,
 		aoAbrirAjustes = Ajustes.abrir,
 		aoAbrirEvoluir = Evoluir.abrir,
+		aoAbrirEcos = function()
+			EcosTela.abrir("Meus")
+		end,
 	})
 	Revelacao.montar(raiz, {
 		aoEquipar = function(auraId)
@@ -313,6 +317,7 @@ function App.iniciar()
 	Indice.montar(Avisos.toast)
 	Evoluir.montar(Avisos.toast)
 	CorredorTela.montar(Avisos.toast)
+	EcosTela.montar(raiz, Avisos.toast)
 	Inventario.montar(Avisos.toast)
 	Loja.montar({ aviso = Avisos.toast, oferecer = oferecer, temPasse = temPasse })
 	EtiquetasChat.iniciar()
