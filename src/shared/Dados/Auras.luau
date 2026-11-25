@@ -80,8 +80,8 @@ for i, d in Catalogo.lista do
 	Auras.porId[aura.id] = aura
 end
 
--- Tabelas dos 11 niveis de Transcendencia em cache, montadas uma vez.
--- Fontes futuras de sorte podem usar ate 3.00 sem provocar overflow de probabilidades.
+-- Tabelas dos 11 niveis de Transcendencia em cache, montadas uma vez. A sorte total
+-- (Dados/PontosAura: evolução x Transcendência x pets) vai até Probabilidades.MAX_SORTE.
 Probabilidades.validarCatalogo(Auras.lista)
 local precalculadas: { [number]: { pesos: { number }, total: number } } = {}
 for nivel = 0, Probabilidades.MAX_NIVEL do
@@ -90,6 +90,10 @@ for nivel = 0, Probabilidades.MAX_NIVEL do
 	precalculadas[nivel] = { pesos = pesos, total = total }
 end
 
+-- Outras sortes (evolução e pets): guarda as últimas usadas (o Índice pede 67 vezes seguidas)
+local recentes: { [number]: { pesos: { number }, total: number } } = {}
+local quantasRecentes = 0
+
 local function pesosPara(sorte: number?): ({ number }, number)
 	local s = Probabilidades.sorteValida(sorte)
 	local nivel = math.floor((s - 1) / 0.05 + 0.5)
@@ -97,7 +101,18 @@ local function pesosPara(sorte: number?): ({ number }, number)
 	if pronta and math.abs(s - Probabilidades.sorteTranscendencia(nivel)) < 1e-9 then
 		return pronta.pesos, pronta.total
 	end
-	return Probabilidades.distribuicao(Auras.lista, s)
+	local guardada = recentes[s]
+	if guardada then
+		return guardada.pesos, guardada.total
+	end
+	local pesos, total = Probabilidades.distribuicao(Auras.lista, s)
+	if quantasRecentes >= 32 then
+		table.clear(recentes)
+		quantasRecentes = 0
+	end
+	recentes[s] = { pesos = pesos, total = total }
+	quantasRecentes += 1
+	return pesos, total
 end
 
 function Auras.sorteTranscendencia(nivel: any): number

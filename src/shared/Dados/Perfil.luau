@@ -16,6 +16,8 @@ export type Estado = {
 	-- Loja (Dados/Cosmeticos e Dados/Temporada): só aparência, nunca poder.
 	cosmeticos: { possui: { [string]: boolean }, equipados: { [string]: string } },
 	temporada: { [string]: any },
+	-- Pontos de Aura (Dados/PontosAura.luau): saldo, total gerado e níveis das evoluções
+	poder: { pontos: number, total: number, nivel: number, fluxo: number, sorte: number },
 }
 
 Perfil.VERSAO = 1
@@ -60,6 +62,7 @@ function Perfil.padrao(): Estado
 			resgates = { gratis = {}, premium = {} },
 			giroDia = { dia = 0, xp = 0 },
 		},
+		poder = { pontos = 0, total = 0, nivel = 0, fluxo = 0, sorte = 0 },
 	}
 end
 

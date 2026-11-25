@@ -15,6 +15,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local NexoColisores = require(
 	ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Dados"):WaitForChild("NexoColisores")
 )
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 
 local Nexo = {}
 
@@ -782,7 +783,17 @@ local function construirBastiao(pasta: Instance)
 		Size = Vector3.new(2, 2, 2),
 		CFrame = olhar * CFrame.new(0, 3.2, -3),
 	})
-	interacao(mesa, "incursoes", "Planejar incursão", "Mesa dos Cartógrafos")
+	if Config.IncursoesAtivas then
+		interacao(mesa, "incursoes", "Planejar incursão", "Mesa dos Cartógrafos")
+	else
+		interacao(
+			mesa,
+			"em_construcao",
+			"Ver mapa",
+			"Mesa dos Cartógrafos",
+			"As Incursões estão fechadas por enquanto. O Corredor dos Perdidos chega em breve."
+		)
+	end
 	placa(
 		pasta,
 		(olhar * CFrame.new(0, 29, 11)).Position,
