@@ -28,23 +28,13 @@ O painel abre em **"Trono e Rankeada"**, perto do Soberano (tecla **G**). Tem tr
 **Perfil:** guarda o número de reinados e o reinado mais longo.
 
 ## O x1 entre jogadores
-O x1 usa as mesmas ações do duelo contra o Soberano: Ataque, Corte, Selo, Guarda e Despertar.
-
-**Escolha:** os dois escolhem **ao mesmo tempo**, com 20 s por rodada. Quem não escolher faz Guarda. As duas ações acontecem juntas; na tela, a Guarda aparece primeiro.
-
-**Dano pela Pontuação de Aura:** multiplicador = (sua Pontuação / a do oponente)^0,6, entre ×0,35 e ×2,8.
-- **Bem mais forte:** quem é muito mais forte vence sempre.
-- **Parecidos:** entre auras parecidas, cada turno decide (Guarda na hora certa, Selo antes do golpe pesado, energia para o Despertar).
-- **Na tela:** o painel do turno mostra a força dos dois.
-
-**Fim do duelo**
-- **Queda dupla:** se os dois caem juntos, vence quem tem mais vida e, empatando, o mais forte.
-- **Limite:** no máximo 20 rodadas; depois disso vale a mesma regra.
-- **Desistência:** sair, morrer ou sair do jogo conta como desistência.
-
-**Tela e câmera:** são as do duelo contra o Soberano. Quem está do outro lado do ringue vê a câmera espelhada, com ele mesmo à esquerda. As animações são as mesmas, com os dois jogadores animados.
-
-**Corredor:** quem estava no Corredor é tirado de lá e, no fim, volta para a entrada da Arena.
+O x1 usa o **combate reativo** (veja `COMBATE_REATIVO.md`), o mesmo do duelo contra o Soberano.
+- **Turnos:** vez a vez. Na sua vez, você escolhe a ação e acerta o tempo do golpe; na do oponente, Esquiva ou Apara cada golpe.
+- **Dano pela Pontuação de Aura:** multiplicador = (sua Pontuação / a do oponente)^0,6, entre ×0,35 e ×2,8. O mais forte vence; entre auras parecidas, cada turno decide.
+- **Sem escolha no prazo:** quem não escolher em 30 s Concentra.
+- **Fim:** depois de 40 vezes, vence quem tem mais vida. Sair, morrer ou sair do jogo conta como desistência.
+- **Câmera e animações:** a câmera é espelhada para quem está do outro lado do ringue, e as animações são as mesmas.
+- **Corredor:** quem estava no Corredor sai dele e, no fim, volta para a entrada da Arena.
 
 ## Rankeada e ranking global
 **Rating:** Elo, começando em 1000, com K = 32. Vencer quem tem rating maior vale mais.
@@ -95,38 +85,16 @@ O x1 usa as mesmas ações do duelo contra o Soberano: Ataque, Corte, Selo, Guar
 
 ## Duelo contra o Primeiro Soberano (a prova do trono)
 
-Aproxime-se do Primeiro Soberano no Nexo e escolha **Desafiar**. O atalho no teclado é **F**.
-O diálogo oferece duas respostas.
-
-- **Eu te desafio pelo trono.** O Soberano se levanta, os dois ocupam os pedestais e o painel
-  mostra a intenção dele.
+Aproxime-se do Primeiro Soberano no Nexo e escolha **Desafiar**. O atalho no teclado é **F**. O diálogo oferece duas respostas:
+- **Eu te desafio pelo trono.** O Soberano salta do trono para o ringue.
 - **Hoje não. Vou embora.** O personagem recua até a entrada da Arena.
 
-Um jogador por vez pode ocupar a Arena em cada servidor. Quem espera pode assistir do próprio
-ponto de vista.
-
-## Como funciona
-
-O jogador escolhe primeiro. Se o Soberano ainda tiver vida depois da ação, ele responde com o
-movimento anunciado. O prazo de escolha é 35 segundos. Em caso de vitória, derrota ou tempo
-esgotado, o resultado aparece por cinco segundos. **Sair** encerra o duelo durante a partida.
-A vida usada no combate é própria da Arena. No final, o jogador volta ao ponto do desafio.
-
-| Ação | Efeito inicial |
-|---|---|
-| Ataque | 105 de dano e 25 de energia. |
-| Corte de Ressonância | 175 de dano, 15 de energia e recarga de duas rodadas. |
-| Selo de Ruptura | 60 de dano, 15 de energia e recarga de três rodadas. Reduz pela metade o próximo golpe recebido. |
-| Guarda | Reduz o golpe da rodada em 65% e dá 20 de energia. |
-| Despertar | Custa 100 de energia e causa 290 de dano. A aura equipada define o nome e a aparência do efeito. |
-
-Os dois começam com 1.000 PV. O Soberano alterna Investida (100 de dano), Sentença (260 de dano)
-e Baluarte (redução de 45% do dano recebido). Os números servem ao primeiro playtest. A raridade
-da aura tem efeito na apresentação. Vencer o Soberano é a prova do trono (veja acima).
-
-A câmera de decisão mostra o avatar à esquerda, o Soberano à direita e o trono ao fundo. Técnicas,
-Despertar e Sentença usam um corte lateral. O modo movimento reduzido conserva a câmera de decisão.
-Os comandos aceitam toque, mouse, seleção por controle e teclas **1–4**.
+**O combate é reativo** (veja `COMBATE_REATIVO.md`):
+- **Sua vez:** escolha Ataque, Corte, Selo, Despertar ou Concentrar. Acerte o anel dourado no tempo certo.
+- **Vez do Soberano:** **Esquive** ou **Apare** cada golpe. Aparar todos solta o contra-ataque.
+- **Aviso:** a tela mostra o que o Soberano prepara. Os dois começam com 1.000 PV.
+- **Prazo:** 30 s para escolher; sem escolha, o duelo termina.
+- **Ringue:** é um só para o Soberano, o Trono e a Rankeada.
 
 ## Animações do duelo
 
@@ -166,12 +134,4 @@ As animações são feitas por código, sem assets publicados. Os quadros-chave 
 
 ## Playtest
 
-1. Abra o build no Studio e use **Desafiar** perto do trono. Na entrada, o Soberano deve saltar do trono e pousar no ringue sem atravessar o chão. Os pés não podem deslizar nem afundar; se afundarem, ajuste `PERNA_R15` ou as posições `peD`/`peE` dos clipes. Teste a fuga primeiro e depois confirme
-   o duelo. Confira a câmera e os botões no PC e no emulador de celular em paisagem.
-2. Use Guarda na Sentença, confira as recargas das duas técnicas e carregue o Despertar com uma
-   aura equipada. Observe o dano, a resposta do Soberano e a volta ao enquadramento de decisão.
-3. Com dois clientes, verifique se o segundo consegue assistir e desafiar depois que a Arena for
-   liberada. Repita com Sair, reset durante um golpe e abandono por tempo. A câmera e o HUD do
-   Nexo devem voltar e o Soberano deve retornar ao trono.
-4. Gire uma aura, abra o Índice e entre na fila de Incursões após sair do duelo. Confira também
-   movimento reduzido e qualidade baixa.
+O roteiro de playtest do combate (tempo dos anéis, aparar, Ruptura, celular e ping) está em `COMBATE_REATIVO.md`. As animações continuam com os cuidados acima: os pés não podem deslizar nem afundar, e o modo movimento reduzido e a qualidade baixa precisam ser conferidos.

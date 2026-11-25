@@ -17,6 +17,8 @@
 > **Tutorial e HUD no celular:** a Lume, Guardiã do Nexo, guia os primeiros ~3 minutos com destaques e presentes; o HUD fica 20% menor no toque. Detalhes em `TUTORIAL.md`.
 >
 > **Arena: Trono do Servidor, x1 e Rankeada:** quem vence o Soberano vira Rei do Servidor (buff e coroa) e o trono passa a ser disputado no 1x1; a Rankeada tem rating Elo e ranking global. Detalhes em `ARENA.md`.
+>
+> **Combate reativo:** turno com defesa em tempo real (Esquivar, Aparar e contra-ataque), golpe no tempo certo, PA e Ruptura, com base na engenharia reversa de Clair Obscur: Expedition 33. Detalhes em `COMBATE_REATIVO.md`.
 
 ## A ideia em uma frase
 

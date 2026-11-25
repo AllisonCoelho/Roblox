@@ -16,51 +16,12 @@ local Animacoes = {}
 export type Pose = { [string]: number }
 export type Chave = { t: number, pose: Pose, curva: string? }
 export type Clipe = { duracao: number, chaves: { Chave }, laco: boolean?, segurar: boolean? }
-export type Tempo = { preparo: number, retorno: number }
 
 -- Duração da entrada do Soberano (salto do trono até o ringue) antes do primeiro turno
 Animacoes.INTRODUCAO = 2.6
 
--- preparo = até o impacto; retorno = do impacto até o próximo golpe
-Animacoes.TEMPOS = {
-	ataque = { preparo = 0.38, retorno = 0.52 },
-	corte = { preparo = 0.5, retorno = 0.66 },
-	selo = { preparo = 0.48, retorno = 0.6 },
-	guarda = { preparo = 0.3, retorno = 0.45 },
-	despertar = { preparo = 0.95, retorno = 0.9 },
-	investida = { preparo = 0.42, retorno = 0.6 },
-	pesado = { preparo = 0.72, retorno = 0.85 },
-	baluarte = { preparo = 0.36, retorno = 0.5 },
-} :: { [string]: Tempo }
-
--- Quanto o jogador avança até o Soberano em cada golpe (studs)
-Animacoes.AVANCO = { ataque = 9, corte = 8 } :: { [string]: number }
-
-function Animacoes.tempo(id: string): Tempo
-	return Animacoes.TEMPOS[id] or { preparo = 0.3, retorno = 0.4 }
-end
-
--- Reação do jogador ao golpe do Soberano
-function Animacoes.reacaoJogador(guardou: boolean, dano: number): string?
-	if guardou then
-		return "defender"
-	elseif dano >= 200 then
-		return "atingidoForte"
-	elseif dano > 0 then
-		return "atingido"
-	end
-	return nil
-end
-
--- Reação do Soberano ao golpe do jogador
-function Animacoes.reacaoSoberano(id: string, dano: number): string?
-	if dano <= 0 then
-		return nil
-	elseif id == "despertar" or id == "corte" then
-		return "atingidoForte"
-	end
-	return "atingido"
-end
+-- Os instantes de cada acerto ficam em Dados/Duelo (ACOES[id].acertos): cada clipe foi feito
+-- para bater com eles (os testes conferem que os acertos cabem no clipe).
 
 ---------------------------------------------------------------------------------------------
 -- Montagem das poses
@@ -126,6 +87,30 @@ local GUARDA_J = J({
 	cotoveloD = { 62, 0, 0 },
 	ombroE = { 96, 0, 34 },
 	cotoveloE = { 62, 0, 0 },
+})
+
+-- Descarga do Despertar (os braços empurram a energia) e o recolher entre as descargas
+local DESCARGA_1 = 0.96
+local DESCARGA = J({
+	raiz = { 0, 0.7, 0, 0, 0, 0 },
+	cintura = { -24, 0, 0 },
+	pescoco = { -4, 0, 0 },
+	ombroD = { 92, 0, -6 },
+	cotoveloD = { 0, 0, 0 },
+	ombroE = { 92, 0, 6 },
+	cotoveloE = { 0, 0, 0 },
+	peD = { 0.6, 0.6 },
+	peE = { 0.5, -0.3 },
+})
+local RECARGA = J({
+	raiz = { 0, 0.55, 0.15, 0, 0, 0 },
+	cintura = { -8, 0, 0 },
+	ombroD = { 60, 0, -20 },
+	cotoveloD = { 80, 0, 0 },
+	ombroE = { 60, 0, 20 },
+	cotoveloE = { 80, 0, 0 },
+	peD = { 0.5, 0.6 },
+	peE = { 0.45, -0.3 },
 })
 
 Animacoes.JOGADOR = {
@@ -235,9 +220,9 @@ Animacoes.JOGADOR = {
 			k(0.9, POSTURA),
 		},
 	},
-	-- avança, salta e gira com o corte
+	-- Corte de Ressonância: salta e gira no 1º golpe (0,5 s) e volta com um corte de revés (0,86 s)
 	corte = {
-		duracao = 1.16,
+		duracao = 1.3,
 		chaves = {
 			k(0, POSTURA),
 			k(
@@ -265,7 +250,7 @@ Animacoes.JOGADOR = {
 				})
 			),
 			k(
-				0.44,
+				0.42,
 				J({
 					raiz = { 0, 0.8, 0, 0, 62, 0 },
 					cintura = { -10, 30, 0 },
@@ -277,9 +262,9 @@ Animacoes.JOGADOR = {
 				}),
 				"saida"
 			),
-			-- giro completo no impacto, braço esticado
+			-- 1º golpe: giro no ar com o braço esticado
 			k(
-				0.56,
+				0.5,
 				J({
 					raiz = { 0, 0.5, 0, 0, -250, 0 },
 					cintura = { -14, -10, 0 },
@@ -290,14 +275,15 @@ Animacoes.JOGADOR = {
 					peE = { 1.1, -0.4 },
 				})
 			),
+			-- pousa e arma o revés
 			k(
-				0.68,
+				0.66,
 				J({
-					raiz = { 0, -0.75, 0, 0, -346, 0 },
-					cintura = { -24, -8, 0 },
-					ombroD = { 60, 0, 70 },
-					cotoveloD = { 5, 0, 0 },
-					ombroE = { 30, 0, -50 },
+					raiz = { 0, -0.8, 0, 0, -320, 0 },
+					cintura = { -20, 40, 0 },
+					ombroD = { 40, 0, -30 },
+					cotoveloD = { 70, 0, 0 },
+					ombroE = { 30, 0, -40 },
 					peD = { 0, 0.9 },
 					peE = { 0, -0.9 },
 					abrirD = { 14 },
@@ -305,20 +291,34 @@ Animacoes.JOGADOR = {
 				}),
 				"entrada"
 			),
+			-- 2º golpe: revés com o braço aberto
 			k(
 				0.86,
 				J({
-					raiz = { 0, -0.7, 0, 0, -346, 0 },
-					cintura = { -20, -8, 0 },
-					ombroD = { 55, 0, 60 },
-					cotoveloD = { 15, 0, 0 },
+					raiz = { 0, -0.6, 0, 0, -386, 0 },
+					cintura = { -20, -34, 0 },
+					ombroD = { 88, 0, 46 },
+					cotoveloD = { 2, 0, 0 },
+					ombroE = { 34, 0, -40 },
 					peD = { 0, 0.9 },
-					peE = { 0, -0.9 },
+					peE = { 0, -1.0 },
 					abrirD = { 14 },
 					abrirE = { -14 },
+				}),
+				"saida"
+			),
+			k(
+				1.02,
+				J({
+					raiz = { 0, -0.65, 0, 0, -380, 0 },
+					cintura = { -18, -28, 0 },
+					ombroD = { 80, 0, 40 },
+					cotoveloD = { 8, 0, 0 },
+					peD = { 0, 0.9 },
+					peE = { 0, -1.0 },
 				})
 			),
-			k(1.16, J({ raiz = { 0, -0.35, 0, 0, -346, 0 } })),
+			k(1.3, J({ raiz = { 0, -0.35, 0, 0, -346, 0 } })),
 		},
 	},
 	-- base aberta, as duas palmas empurram o selo
@@ -383,9 +383,10 @@ Animacoes.JOGADOR = {
 		segurar = true,
 		chaves = { k(0, POSTURA), k(0.3, GUARDA_J, "saida") },
 	},
-	-- junta a energia agachado, sobe flutuando com os braços ao céu e descarrega à frente
+	-- junta a energia agachado, sobe com os braços ao céu e descarrega três vezes à frente
+	-- (0,96 s, 1,26 s e 1,56 s; a última é a maior)
 	despertar = {
-		duracao = 1.85,
+		duracao = 2.2,
 		chaves = {
 			k(0, POSTURA),
 			k(
@@ -419,23 +420,27 @@ Animacoes.JOGADOR = {
 				}),
 				"saida"
 			),
+			k(DESCARGA_1, DESCARGA, "saida"),
+			k(1.11, RECARGA),
+			k(1.26, DESCARGA, "saida"),
+			k(1.41, RECARGA),
 			k(
-				0.96,
+				1.56,
 				J({
-					raiz = { 0, 0.7, 0, 0, 0, 0 },
-					cintura = { -24, 0, 0 },
-					pescoco = { -4, 0, 0 },
-					ombroD = { 92, 0, -6 },
+					raiz = { 0, 0.4, -0.4, 0, 0, 0 },
+					cintura = { -30, 0, 0 },
+					pescoco = { -6, 0, 0 },
+					ombroD = { 96, 0, -8 },
 					cotoveloD = { 0, 0, 0 },
-					ombroE = { 92, 0, 6 },
+					ombroE = { 96, 0, 8 },
 					cotoveloE = { 0, 0, 0 },
-					peD = { 0.6, 0.6 },
-					peE = { 0.5, -0.3 },
+					peD = { 0.3, 0.7 },
+					peE = { 0.2, -0.5 },
 				}),
 				"saida"
 			),
 			k(
-				1.2,
+				1.82,
 				J({
 					raiz = { 0, -0.7, 0, 0, 0, 0 },
 					cintura = { -18, 0, 0 },
@@ -450,8 +455,7 @@ Animacoes.JOGADOR = {
 				}),
 				"entrada"
 			),
-			k(1.5, J({ raiz = { 0, -0.6, 0, 0, 6, 0 }, cintura = { -14, 0, 0 } })),
-			k(1.85, POSTURA),
+			k(2.2, POSTURA),
 		},
 	},
 	-- segurou a guarda: desliza para trás com o impacto
@@ -1054,10 +1058,435 @@ Animacoes.SOBERANO = {
 	},
 } :: { [string]: Clipe }
 
+---------------------------------------------------------------------------------------------
+-- Combate reativo (Dados/Duelo): defesas, contra-ataque, concentrar e Ruptura
+
+-- Esquiva: passo rápido para o lado e para trás, o corpo inclinado
+Animacoes.JOGADOR.esquiva = {
+	duracao = 0.55,
+	chaves = {
+		k(0, POSTURA),
+		k(
+			0.08,
+			J({
+				raiz = { 1.7, -0.7, 0.5, 0, 18, 0 },
+				cintura = { 4, 6, -20 },
+				pescoco = { 0, -10, 10 },
+				ombroD = { 72, 0, 14 },
+				cotoveloD = { 104, 0, 0 },
+				ombroE = { 76, 0, -12 },
+				cotoveloE = { 100, 0, 0 },
+				peD = { 0, 0.9 },
+				peE = { 0, -0.2 },
+				abrirD = { 14 },
+				abrirE = { -4 },
+			}),
+			"saida"
+		),
+		k(
+			0.3,
+			J({
+				raiz = { 1.5, -0.65, 0.45, 0, 16, 0 },
+				cintura = { 2, 6, -14 },
+				ombroD = { 66, 0, 14 },
+				cotoveloD = { 100, 0, 0 },
+				ombroE = { 70, 0, -12 },
+				cotoveloE = { 96, 0, 0 },
+				peD = { 0, 0.9 },
+				peE = { 0, -0.2 },
+				abrirD = { 12 },
+			})
+		),
+		k(0.55, POSTURA, "entrada"),
+	},
+}
+
+-- Aparar: os antebraços batem de frente no golpe e recuam um pouco
+Animacoes.JOGADOR.aparar = {
+	duracao = 0.45,
+	chaves = {
+		k(0, POSTURA),
+		k(
+			0.05,
+			J({
+				raiz = { 0, -0.55, -0.2, 0, 0, 0 },
+				cintura = { -14, 0, 0 },
+				pescoco = { -6, 0, 0 },
+				ombroD = { 104, 0, -24 },
+				cotoveloD = { 46, 0, 0 },
+				ombroE = { 98, 0, 30 },
+				cotoveloE = { 52, 0, 0 },
+				peD = { 0, 0.8 },
+				peE = { 0, -0.6 },
+			}),
+			"saida"
+		),
+		k(
+			0.18,
+			J({
+				raiz = { 0, -0.6, 0.25, 4, 0, 0 },
+				cintura = { -6, 0, 0 },
+				ombroD = { 96, 0, -30 },
+				cotoveloD = { 58, 0, 0 },
+				ombroE = { 92, 0, 34 },
+				cotoveloE = { 60, 0, 0 },
+				peD = { 0, 0.9 },
+				peE = { 0, -0.5 },
+			})
+		),
+		k(0.45, POSTURA),
+	},
+}
+
+-- Contra-ataque: depois de aparar tudo, arranca e acerta um gancho (acerto aos 0,3 s)
+Animacoes.JOGADOR.contra = {
+	duracao = 0.8,
+	chaves = {
+		k(0, GUARDA_J),
+		k(
+			0.12,
+			J({
+				raiz = { 0, -0.6, 0, 0, 30, 0 },
+				cintura = { -24, 24, 0 },
+				ombroD = { -30, 0, 30 },
+				cotoveloD = { 110, 0, 0 },
+				ombroE = { 70, 0, -10 },
+				peD = { 0.6, -0.4 },
+				peE = { 0, 0.6 },
+			})
+		),
+		k(
+			0.3,
+			J({
+				raiz = { 0, 0.2, 0, -6, -20, 0 },
+				cintura = { -20, -34, 0 },
+				pescoco = { 6, 16, 0 },
+				ombroD = { 150, 0, 10 },
+				cotoveloD = { 30, 0, 0 },
+				ombroE = { 30, 0, -30 },
+				cotoveloE = { 100, 0, 0 },
+				peD = { 0.5, 0.6 },
+				peE = { 0, -1.0 },
+			}),
+			"saida"
+		),
+		k(
+			0.5,
+			J({
+				raiz = { 0, 0.55, 0, 10, 8, 0 },
+				ombroD = { 30, 0, 30 },
+				ombroE = { 30, 0, -30 },
+				peD = { 1.0, 0.5 },
+				peE = { 1.1, -0.1 },
+			}),
+			"saida"
+		),
+		k(0.64, J({ raiz = { 0, -0.6, 0, 0, 14, 0 }, cintura = { -12, 8, 0 } }), "entrada"),
+		k(0.8, POSTURA),
+	},
+}
+
+-- Concentrar: junta as mãos no peito, respira e abre os braços com a aura
+Animacoes.JOGADOR.concentrar = {
+	duracao = 1.1,
+	chaves = {
+		k(0, POSTURA),
+		k(
+			0.3,
+			J({
+				raiz = { 0, -0.8, 0, 0, 0, 0 },
+				cintura = { 10, 0, 0 },
+				pescoco = { 16, 0, 0 },
+				ombroD = { 60, 0, -36 },
+				cotoveloD = { 110, 0, 0 },
+				ombroE = { 60, 0, 36 },
+				cotoveloE = { 110, 0, 0 },
+				peD = { 0, 0.5 },
+				peE = { 0, -0.5 },
+			})
+		),
+		k(
+			0.75,
+			J({
+				raiz = { 0, 0.1, 0, 0, 0, 0 },
+				cintura = { -6, 0, 0 },
+				pescoco = { -10, 0, 0 },
+				ombroD = { 40, 0, 70 },
+				cotoveloD = { 10, 0, 0 },
+				ombroE = { 40, 0, -70 },
+				cotoveloE = { 10, 0, 0 },
+				peD = { 0, 0.5 },
+				peE = { 0, -0.5 },
+				abrirD = { 12 },
+				abrirE = { -12 },
+			}),
+			"saida"
+		),
+		k(1.1, POSTURA),
+	},
+}
+
+-- Rompido: curvado e tonto até a próxima vez
+Animacoes.JOGADOR.rompido = {
+	duracao = 0.35,
+	segurar = true,
+	chaves = {
+		k(0, POSTURA),
+		k(
+			0.35,
+			J({
+				raiz = { 0, -1.0, 0.4, 0, 0, 6 },
+				cintura = { 34, 0, 8 },
+				pescoco = { 26, 0, 12 },
+				ombroD = { 14, 0, 18 },
+				cotoveloD = { 20, 0, 0 },
+				ombroE = { 10, 0, -18 },
+				cotoveloE = { 24, 0, 0 },
+				peD = { 0, 0.6 },
+				peE = { 0, -0.4 },
+			}),
+			"entrada"
+		),
+	},
+}
+
+-- Fúria Tripla: arranca e corta de um lado (0,5 s), do outro (0,9 s) e de cima (1,3 s)
+Animacoes.SOBERANO.trinca = {
+	duracao = 2.1,
+	chaves = {
+		k(0, AVISO_INVESTIDA),
+		k(
+			0.25,
+			S({
+				raiz = { 0, -0.5, -3.0, 0, 0, 0 },
+				torso = { -14, 30, 0 },
+				cabeca = { -6, -24, 0 },
+				bracoD = { -16, 0, 50 },
+				antebracoD = { 40, 0, 0 },
+				bracoE = { 56, 0, -22 },
+				peD = { 0, -1.6 },
+				peE = { 1.2, -3.8 },
+			})
+		),
+		k(
+			0.5,
+			S({
+				raiz = { 0, -0.85, -6.3, 0, 0, 0 },
+				torso = { -26, -32, 0 },
+				cabeca = { -4, 24, 0 },
+				bracoD = { 88, 0, -36 },
+				antebracoD = { 4, 0, 0 },
+				bracoE = { 18, 0, -42 },
+				peD = { 0, -4.7 },
+				peE = { 0, -7.7 },
+			}),
+			"saida"
+		),
+		k(
+			0.7,
+			S({
+				raiz = { 0, -0.7, -6.3, 0, 0, 0 },
+				torso = { -18, 34, 0 },
+				cabeca = { -4, -20, 0 },
+				bracoD = { -10, 0, 56 },
+				antebracoD = { 36, 0, 0 },
+				bracoE = { 50, 0, -20 },
+				peD = { 0, -4.7 },
+				peE = { 0, -7.7 },
+			})
+		),
+		k(
+			0.9,
+			S({
+				raiz = { 0, -0.85, -6.5, 0, 0, 0 },
+				torso = { -24, -30, 0 },
+				cabeca = { -4, 22, 0 },
+				bracoD = { 92, 0, -30 },
+				antebracoD = { 6, 0, 0 },
+				bracoE = { 20, 0, -40 },
+				peD = { 0, -4.9 },
+				peE = { 0, -7.9 },
+			}),
+			"saida"
+		),
+		k(
+			1.1,
+			S({
+				raiz = { 0, -0.4, -6.4, 0, 0, 0 },
+				torso = { 10, 0, 0 },
+				cabeca = { 6, 0, 0 },
+				bracoD = { 164, 0, 6 },
+				antebracoD = { -10, 0, 0 },
+				bracoE = { 156, 0, -12 },
+				peD = { 0, -4.8 },
+				peE = { 0, -7.8 },
+			})
+		),
+		k(
+			1.3,
+			S({
+				raiz = { 0, -1.1, -7.2, 0, 0, 0 },
+				torso = { -40, 0, 0 },
+				cabeca = { 12, 0, 0 },
+				bracoD = { 42, 0, 2 },
+				antebracoD = { 0, 0, 0 },
+				bracoE = { 44, 0, -4 },
+				peD = { 0, -6.4 },
+				peE = { 0, -8.2 },
+			}),
+			"entrada"
+		),
+		k(
+			1.6,
+			S({
+				raiz = { 0, -1.0, -7.2, 0, 0, 0 },
+				torso = { -36, 0, 0 },
+				bracoD = { 40, 0, 4 },
+				bracoE = { 42, 0, -6 },
+				peD = { 0, -6.4 },
+				peE = { 0, -8.2 },
+			})
+		),
+		k(1.85, S({ raiz = { 0, -0.2, -3.2, 0, 0, 0 }, peD = { 1.1, -3.6 }, peE = { 0, -3.8 } })),
+		k(2.1, GUARDA_S),
+	},
+}
+
+-- Lâmina Hesitante: ameaça o golpe pesado, para no meio (a finta), e ataca duas vezes depois
+Animacoes.SOBERANO.finta = {
+	duracao = 2.3,
+	chaves = {
+		k(0, AVISO_PESADO),
+		k(
+			0.35,
+			S({
+				raiz = { 0, -1.0, 0, 0, 0, 0 },
+				torso = { 12, 0, 0 },
+				bracoD = { 166, 0, 6 },
+				antebracoD = { -10, 0, 0 },
+				bracoE = { 160, 0, -12 },
+				peD = { 0, 0.55 },
+				peE = { 0, -0.55 },
+			})
+		),
+		-- a finta: avança um passo como se fosse descer a espada... e segura
+		k(
+			0.58,
+			S({
+				raiz = { 0, -0.5, -2.2, 0, 0, 0 },
+				torso = { -10, 0, 0 },
+				bracoD = { 120, 0, 6 },
+				antebracoD = { -4, 0, 0 },
+				bracoE = { 116, 0, -12 },
+				peD = { 0, -1.4 },
+				peE = { 0, -3.0 },
+			})
+		),
+		k(
+			0.85,
+			S({
+				raiz = { 0, -0.55, -2.0, 0, 0, 0 },
+				torso = { -4, 14, 0 },
+				cabeca = { -4, -10, 0 },
+				bracoD = { -14, 0, 50 },
+				antebracoD = { 40, 0, 0 },
+				bracoE = { 56, 0, -22 },
+				peD = { 0, -1.4 },
+				peE = { 0, -3.0 },
+			})
+		),
+		k(
+			1.0,
+			S({
+				raiz = { 0, -0.6, -4.0, 0, 0, 0 },
+				torso = { -12, 32, 0 },
+				bracoD = { -16, 0, 52 },
+				antebracoD = { 40, 0, 0 },
+				peD = { 0, -2.6 },
+				peE = { 1.0, -4.6 },
+			})
+		),
+		k(
+			1.15,
+			S({
+				raiz = { 0, -0.85, -6.3, 0, 0, 0 },
+				torso = { -26, -32, 0 },
+				cabeca = { -4, 24, 0 },
+				bracoD = { 88, 0, -36 },
+				antebracoD = { 4, 0, 0 },
+				bracoE = { 18, 0, -42 },
+				peD = { 0, -4.7 },
+				peE = { 0, -7.7 },
+			}),
+			"saida"
+		),
+		k(
+			1.3,
+			S({
+				raiz = { 0, -0.75, -6.3, 0, 0, 0 },
+				torso = { -18, 34, 0 },
+				bracoD = { -10, 0, 56 },
+				antebracoD = { 36, 0, 0 },
+				peD = { 0, -4.7 },
+				peE = { 0, -7.7 },
+			})
+		),
+		k(
+			1.45,
+			S({
+				raiz = { 0, -0.85, -6.5, 0, 0, 0 },
+				torso = { -24, -30, 0 },
+				bracoD = { 92, 0, -30 },
+				antebracoD = { 6, 0, 0 },
+				bracoE = { 20, 0, -40 },
+				peD = { 0, -4.9 },
+				peE = { 0, -7.9 },
+			}),
+			"saida"
+		),
+		k(
+			1.75,
+			S({
+				raiz = { 0, -0.8, -6.4, 0, 0, 0 },
+				torso = { -20, -26, 0 },
+				peD = { 0, -4.8 },
+				peE = { 0, -7.8 },
+			})
+		),
+		k(2.05, S({ raiz = { 0, -0.2, -2.8, 0, 0, 0 }, peD = { 1.1, -3.4 }, peE = { 0, -3.6 } })),
+		k(2.3, GUARDA_S),
+	},
+}
+
+-- Rompido: ajoelha com a espada fincada, tonto, até a próxima vez
+Animacoes.SOBERANO.rompido = {
+	duracao = 0.5,
+	segurar = true,
+	chaves = {
+		k(0, GUARDA_S),
+		k(
+			0.5,
+			S({
+				raiz = { 0, -1.3, 0.5, 0, 0, 4 },
+				torso = { -22, 0, 8 },
+				cabeca = { -24, 10, 0 },
+				bracoD = { 34, 0, 12 },
+				antebracoD = { 44, 0, 0 },
+				bracoE = { 0, 0, -14 },
+				antebracoE = { 14, 0, 0 },
+				peD = { 0, 1.4 },
+				peE = { 0, -0.4 },
+			}),
+			"entrada"
+		),
+	},
+}
+
 -- Instantes (em segundos do clipe) em que algo bate no chão: o cliente solta a onda de poeira
 Animacoes.POUSOS = {
 	entrada = { 1.5 },
 	pesado = { 0.72 },
+	trinca = { 1.3 },
 } :: { [string]: { number } }
 
 ---------------------------------------------------------------------------------------------
