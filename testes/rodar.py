@@ -11,6 +11,8 @@ MODULOS = {
     "Receitas": "src/shared/Dados/Receitas.luau",
     "Transcendencia": "src/shared/Dados/Transcendencia.luau",
     "PontosAura": "src/shared/Dados/PontosAura.luau",
+    "Corredor": "src/shared/Dados/Corredor.luau",
+    "CorredorMapa": "src/shared/Dados/CorredorMapa.luau",
     "Artefatos": "src/shared/Dados/Artefatos.luau",
     "Itens": "src/shared/Dados/Itens.luau",
     "Perfil": "src/shared/Dados/Perfil.luau",

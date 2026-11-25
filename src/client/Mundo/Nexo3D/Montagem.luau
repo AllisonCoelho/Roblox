@@ -77,6 +77,58 @@ local function preencher(pasta: Folder, prontas: Malha.Cache): Resultado
 	return resultado
 end
 
+-- Corredor dos Perdidos (CenaCorredor, gerada por assets/corredor). As ilhas flutuam alto no
+-- céu: nenhuma peça projeta sombra (senão a praça inteira ficaria manchada lá embaixo).
+export type ResultadoCorredor = {
+	pasta: Folder,
+	veus: { Peca },
+	deriva: { Peca },
+}
+
+function Montagem.construirCorredor(pai: Instance): ResultadoCorredor
+	local CenaCorredor = require(script.Parent.CenaCorredor)
+	local pasta = Instance.new("Folder")
+	pasta.Name = "KitCorredor"
+	local prontas: Malha.Cache = {}
+	local resultado: ResultadoCorredor = { pasta = pasta, veus = {}, deriva = {} }
+	local ok, erro = pcall(function()
+		for indice, dados in CenaCorredor.pecas :: { { [string]: any } } do
+			local parte, centroMalha = Malha.criar(dados.malha, prontas)
+			local escala = dados.escala or 1
+			local pos = dados.posicao
+			local pivo = CFrame.new(pos[1], pos[2], pos[3])
+				* CFrame.Angles(0, math.rad(dados.giro or 0), 0)
+			local centro = centroMalha * escala
+			local tamanho = parte.Size * escala
+			parte.Size = tamanho
+			parte.CFrame = pivo * CFrame.new(centro)
+			parte.Material = (Enum.Material :: any)[dados.material] or Enum.Material.Slate
+			parte.Transparency = dados.transparencia or 0
+			parte.CastShadow = false
+			parte.Parent = pasta
+			local peca: Peca =
+				{ parte = parte, pivo = pivo, centro = centro, tamanho = tamanho, dados = dados }
+			if dados.grupo == "veu" then
+				table.insert(resultado.veus, peca)
+			elseif dados.grupo == "deriva" then
+				table.insert(resultado.deriva, peca)
+			end
+			if indice % 6 == 0 then
+				task.wait()
+			end
+		end
+	end)
+	for _, pronta in prontas do
+		pronta.modelo:Destroy()
+	end
+	if not ok then
+		pasta:Destroy()
+		error(erro, 0)
+	end
+	pasta.Parent = pai
+	return resultado
+end
+
 -- Só coloca a pasta no mundo quando o kit inteiro estiver pronto.
 function Montagem.construir(nexo: Instance): Resultado
 	local pasta = Instance.new("Folder")

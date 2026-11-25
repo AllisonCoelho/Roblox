@@ -1503,4 +1503,54 @@ do
 	igual("sorte: distribuição soma 100% em sorte qualquer", math.abs(soma - 1) < 1e-9, true)
 end
 
+-- Corredor dos Perdidos: acesso, conclusão, recompensas, bônus e o mapa gerado
+do
+	local C = req("Corredor")
+	local M = req("CorredorMapa")
+	igual("corredor: seis fases", C.TOTAL, 6)
+	igual("corredor: mapa com seis ilhas", #M.fases, 6)
+	local p = C.padrao()
+	igual("corredor: fase 1 aberta a todos", (C.podeEntrar(p, 1, 0)), true)
+	igual("corredor: fase 2 pede a 1 concluída", (C.podeEntrar(p, 2, 1e9)), false)
+	igual("corredor: fase inexistente", (C.podeEntrar(p, 7, 1e9)), false)
+	igual("corredor: fase de tipo errado", (C.podeEntrar(p, "2", 1e9)), false)
+	igual("corredor: acesso inicial", C.acesso(p, 1e9), 1)
+	local ganho, primeira = C.concluir(p, 1, 1000)
+	igual("corredor: primeira conclusão paga o bônus", ganho, C.FASES[1].primeira)
+	igual("corredor: marcada como primeira", primeira, true)
+	igual("corredor: fragmentos somados", p.fragmentos, C.FASES[1].primeira)
+	igual("corredor: fase 2 sem Pontuação", (C.podeEntrar(p, 2, C.FASES[2].requisito - 1)), false)
+	igual("corredor: fase 2 com Pontuação", (C.podeEntrar(p, 2, C.FASES[2].requisito)), true)
+	igual("corredor: acesso sobe", C.acesso(p, 1e9), 2)
+	local g2 = C.concluir(p, 1, 1000 + C.ESPERA_REPETIR - 1)
+	igual("corredor: repetir antes da espera não paga", g2, 0)
+	local g3 = C.concluir(p, 1, 1000 + C.ESPERA_REPETIR)
+	igual("corredor: repetir depois da espera paga menos", g3, C.FASES[1].repetir)
+	igual("corredor: bônus ativo", C.multiplicador(p, 1000 + C.ESPERA_REPETIR + 1), C.BONUS_MULTIPLICADOR)
+	igual("corredor: bônus acaba", C.multiplicador(p, 1000 + C.ESPERA_REPETIR + C.BONUS_DURACAO + 1), 1)
+	local estranho = C.normalizar({ fragmentos = -5, concluidas = { ["1"] = "x", ["9"] = 3 }, bonusAte = 0 / 0 })
+	igual("corredor: normalizar limpa", estranho.fragmentos + estranho.bonusAte, 0)
+	igual("corredor: normalizar ignora fase inválida", estranho.concluidas["9"], nil)
+	-- requisitos crescem; o mapa sobe em espiral e fica dentro da parede do Nexo (raio 238)
+	for i = 2, C.TOTAL do
+		igual("corredor: requisito cresce na fase " .. i, C.FASES[i].requisito > C.FASES[i - 1].requisito, true)
+		igual("corredor: ilha " .. i .. " mais alta", M.fases[i].centro[2] > M.fases[i - 1].centro[2], true)
+	end
+	for _, f in M.fases do
+		local dentro = true
+		for _, k in { "inicio", "retorno", "fim", "portao" } do
+			local pt = f.pontos[k]
+			if math.sqrt(pt[1] * pt[1] + pt[3] * pt[3]) > 230 then
+				dentro = false
+			end
+		end
+		igual("corredor: pontos da fase " .. f.fase .. " dentro do mapa", dentro, true)
+		igual("corredor: fase " .. f.fase .. " tem colisão", #f.colisores > 5, true)
+		local ini, fim, por = f.pontos.inicio, f.pontos.fim, f.pontos.portao
+		local d1 = math.sqrt((ini[1] - por[1]) ^ 2 + (ini[3] - por[3]) ^ 2)
+		local d2 = math.sqrt((fim[1] - por[1]) ^ 2 + (fim[3] - por[3]) ^ 2)
+		igual("corredor: a conclusão fica antes do Portão na fase " .. f.fase, d2 < d1, true)
+	end
+end
+
 print(string.format("%d testes, %d falhas", total, falhas))

@@ -18,6 +18,8 @@ export type Estado = {
 	temporada: { [string]: any },
 	-- Pontos de Aura (Dados/PontosAura.luau): saldo, total gerado e níveis das evoluções
 	poder: { pontos: number, total: number, nivel: number, fluxo: number, sorte: number },
+	-- Corredor dos Perdidos (Dados/Corredor.luau): Fragmentos, fases concluídas e o bônus
+	corredor: { [string]: any },
 }
 
 Perfil.VERSAO = 1
@@ -63,6 +65,7 @@ function Perfil.padrao(): Estado
 			giroDia = { dia = 0, xp = 0 },
 		},
 		poder = { pontos = 0, total = 0, nivel = 0, fluxo = 0, sorte = 0 },
+		corredor = { fragmentos = 0, concluidas = {}, ultima = {}, bonusAte = 0 },
 	}
 end
 

@@ -113,6 +113,8 @@ function Servico.iniciar()
 					estado.poder.pontos += g
 					estado.poder.total += g
 					player:SetAttribute("PontosAura", math.floor(estado.poder.pontos))
+					-- bônus com prazo (Ressonância de Combate) mudam o ganho sem mudar o perfil
+					player:SetAttribute("GanhoAura", g)
 					if tique % ENVIO == 0 then
 						Dados.enviar(player)
 					end
