@@ -126,6 +126,11 @@ local function selo(pai: Instance, numero: string)
 	)
 end
 
+-- Quanto o HUD encolhe: no toque (celular e tablet) 80%, em tela pequena sem toque 90%
+function HUD.escalaDoHud(): number
+	return if Escala.toque then 0.8 elseif Escala.compacto then 0.9 else 1
+end
+
 function HUD.montar(raiz: Frame, op: Opcoes): Api
 	local hud = Kit.novo("Frame", {
 		Name = "HUD",
@@ -133,6 +138,9 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 		Size = UDim2.fromScale(1, 1),
 		Parent = raiz,
 	})
+	-- No celular o HUD fica menor que o resto da interface (os painéis continuam do tamanho de
+	-- leitura). O quadro cresce na mesma proporção para continuar cobrindo a tela inteira.
+	local escalaHud = Kit.novo("UIScale", { Parent = hud }) :: UIScale
 
 	-- ================================================================ cartão do jogador
 	local cartao = Kit.placa({
@@ -776,7 +784,10 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 
 	Escala.aoMudar(function()
 		local compacto = Escala.compacto
-		local tela = Escala.tamanho
+		local k = HUD.escalaDoHud()
+		escalaHud.Scale = k
+		hud.Size = UDim2.fromScale(1 / k, 1 / k)
+		local tela = Escala.tamanho / k
 		local estreito = tela.X < 760
 		local horizontal = estreito or tela.Y < 610
 		local escalaMaxima = if estreito then 0.7 elseif compacto then 0.85 else 1

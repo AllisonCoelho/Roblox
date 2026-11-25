@@ -17,6 +17,7 @@ local PontosAura = require(Shared.Dados.PontosAura)
 local Corredor = require(Shared.Dados.Corredor)
 local Pets = require(Shared.Dados.Pets)
 local Equipamento = require(Shared.Dados.Equipamento)
+local Tutorial = require(Shared.Dados.Tutorial)
 local Remotos = require(Shared.Remotos)
 local Sessao = require(script.Parent.Sessao)
 
@@ -203,6 +204,7 @@ function Dados.carregar(player: Player)
 	estado.corredor = Corredor.normalizar(estado.corredor)
 	estado.pets = Pets.normalizar(estado.pets)
 	estado.equipamento = Equipamento.normalizar(estado.equipamento)
+	estado.tutorial = Tutorial.normalizar(estado.tutorial, estado.giros)
 	estados[player] = estado
 	for _, fn in aoCarregar do
 		local ok, erro = pcall(fn, player, estado)

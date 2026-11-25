@@ -1895,4 +1895,60 @@ do
 	igual("drops: texto do prêmio", D.texto("lasca", { pontos = 0, fragmentos = 3, bencao = false }), "Lasca de Fragmento! +3 Fragmentos")
 end
 
+-- Tutorial (Lume)
+do
+	local T = req("Tutorial")
+	local L = req("LumeVisual")
+	local papeis = {}
+	for _, p in L do
+		papeis[p.papel] = true
+	end
+	igual("tutorial: retrato tem olhos e boca separados", papeis.olhos == true and papeis.boca == true, true)
+	for i, p in T.PASSOS do
+		igual("tutorial: passo " .. p.id .. " tem falas", #p.falas > 0, true)
+		igual("tutorial: índice de " .. p.id, T.porId[p.id], i)
+		if p.objetivo ~= "continuar" then
+			igual("tutorial: " .. p.id .. " tem dica", type(p.dica) == "string", true)
+		end
+	end
+	igual("tutorial: novato começa", T.normalizar(nil, 0).concluido, false)
+	igual("tutorial: veterano não vê", T.normalizar(nil, 12).concluido, true)
+	igual("tutorial: veterano já ganhou os presentes", T.normalizar(nil, 12).presenteAte, #T.PASSOS)
+	igual("tutorial: passo inválido vira 1", T.normalizar({ passo = "x" }).passo, 1)
+	igual("tutorial: passo acima do total", T.normalizar({ passo = 99 }).passo, #T.PASSOS)
+	local nada = { giros = 0, evolucoes = 0 }
+	local girou = { giros = 1, evolucoes = 0 }
+	local tudo = { giros = 1, evolucoes = 1 }
+	local p = T.padrao()
+	igual("tutorial: fora de ordem", (T.avancar(p, 2, tudo)), false)
+	igual("tutorial: passo 1 avança", (T.avancar(p, 1, nada)), true)
+	igual("tutorial: girar exige giro", (T.avancar(p, 2, nada)), false)
+	local ok, presente = T.avancar(p, 2, girou)
+	igual("tutorial: depois de girar avança", ok, true)
+	igual("tutorial: passo 3 sem presente", presente, nil)
+	local _, presente4 = T.avancar(p, 3, girou)
+	igual("tutorial: entrar em evoluir dá presente", presente4 and presente4.pontos, 40)
+	igual("tutorial: evoluir exige evolução", (T.avancar(p, 4, girou)), false)
+	T.avancar(p, 4, tudo)
+	T.avancar(p, 5, tudo)
+	T.avancar(p, 6, tudo)
+	local _, presenteFinal = T.avancar(p, 7, tudo)
+	igual("tutorial: presente final", presenteFinal and presenteFinal.fragmentos, 5)
+	igual("tutorial: concluir no último", (T.avancar(p, 8, tudo)), true)
+	igual("tutorial: concluído", p.concluido, true)
+	igual("tutorial: não avança depois de concluído", (T.avancar(p, 8, tudo)), false)
+	-- rever não repete os presentes
+	T.reiniciar(p)
+	igual("tutorial: rever volta ao começo", p.passo == 1 and not p.concluido, true)
+	T.avancar(p, 1, tudo)
+	T.avancar(p, 2, tudo)
+	local _, repetido = T.avancar(p, 3, tudo)
+	igual("tutorial: rever não repete presente", repetido, nil)
+	local q = T.padrao()
+	T.pular(q)
+	igual("tutorial: pular conclui", q.concluido, true)
+	igual("tutorial: texto do presente", T.textoPresente({ pontos = 60, fragmentos = 5 }), "+60 Pontos de Aura · +5 Fragmentos")
+	igual("tutorial: sem presente sem texto", T.textoPresente(nil), nil)
+end
+
 print(string.format("%d testes, %d falhas", total, falhas))

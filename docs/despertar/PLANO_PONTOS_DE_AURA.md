@@ -13,6 +13,8 @@
 > **Equipamento (RPG):** elmo, armadura, manoplas, botas e arma, mais os acessórios minimalistas (colar, manto, bracelete e auréola), em seis conjuntos, com bônus, visual no personagem e olho para ocultar. Detalhes em `EQUIPAMENTO.md`.
 >
 > **Ciclo de dia e noite e drops pelo mapa:** volta de 20 min sincronizada em todos os servidores. Orbes, lascas e, à noite, Estrelas Cadentes espalhados pelo Nexo. Detalhes em `CICLO_E_DROPS.md`.
+>
+> **Tutorial e HUD no celular:** a Lume, Guardiã do Nexo, guia os primeiros ~3 minutos com destaques e presentes; o HUD fica 20% menor no toque. Detalhes em `TUTORIAL.md`.
 
 ## A ideia em uma frase
 
