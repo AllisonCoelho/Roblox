@@ -19,7 +19,11 @@ export type Opcoes = {
 	qualidadeBaixa: boolean,
 	cor: Color3,
 	estilo: string?,
+	lado: string?, -- 1x1 entre jogadores: "a" (posto do desafiante) ou "b" (posto do outro)
 }
+
+-- Referencial da câmera: quem luta do lado "b" vê o ringue espelhado (ele mesmo à esquerda)
+local referencia = Cena.referencia
 
 local function enquadrar(lateral: boolean, estreito: boolean): (CFrame, CFrame, number)
 	local posicao = if lateral
@@ -27,8 +31,8 @@ local function enquadrar(lateral: boolean, estreito: boolean): (CFrame, CFrame, 
 		elseif estreito then Vector3.new(12, 11, -23)
 		else Vector3.new(12, 10, -21)
 	local centro = if lateral then Vector3.new(0, 4.8, 0) else Vector3.new(0, 5.2, 2.8)
-	local foco = Cena.referencia * CFrame.new(centro)
-	local camera = CFrame.lookAt(Cena.referencia:PointToWorldSpace(posicao), foco.Position)
+	local foco = referencia * CFrame.new(centro)
+	local camera = CFrame.lookAt(referencia:PointToWorldSpace(posicao), foco.Position)
 	return camera, foco, if estreito then 68 elseif lateral then 53 else 56
 end
 
@@ -61,7 +65,8 @@ local function anel(pai: Instance, centro: CFrame, cor: Color3, tamanho: number)
 end
 
 local function danoFlutuante(pai: Instance, alvo: CFrame, golpe: Dados.Golpe, cor: Color3)
-	local altura = if golpe.ator == "jogador" then 8.4 else 5.6
+	-- o Soberano é alto; no 1x1 os dois são jogadores
+	local altura = if (golpe :: any).lado then 5.6 elseif golpe.ator == "jogador" then 8.4 else 5.6
 	local ponto = neon(pai, cor, alvo * CFrame.new(0.6, altura, 0), Vector3.one * 0.1)
 	ponto.Transparency = 1
 	local letreiro = Instance.new("BillboardGui")
@@ -93,8 +98,11 @@ end
 
 local function impacto(pai: Instance, golpe: Dados.Golpe, op: Opcoes)
 	local doJogador = golpe.ator == "jogador"
-	local alvo = if doJogador then Cena.soberano else Cena.jogador
-	local origem = if doJogador then Cena.jogador else Cena.soberano
+	-- no 1x1, o lado diz onde cada um está; contra o Soberano, o jogador está sempre no posto "a"
+	local ladoGolpe = (golpe :: any).lado
+	local deA = if ladoGolpe then ladoGolpe == "a" else doJogador
+	local alvo = if deA then Cena.soberano else Cena.jogador
+	local origem = if deA then Cena.jogador else Cena.soberano
 	local cor = if not doJogador then RUBRO elseif golpe.id == "despertar" then op.cor else VIOLETA
 	if golpe.dano > 0 and not op.movimentoReduzido then
 		danoFlutuante(pai, alvo, golpe, cor)
@@ -115,7 +123,7 @@ local function impacto(pai: Instance, golpe: Dados.Golpe, op: Opcoes)
 		end
 	end
 
-	local centro = alvo * CFrame.new(0, if doJogador then 4.4 else 2.8, -1)
+	local centro = alvo * CFrame.new(0, if deA and not ladoGolpe then 4.4 else 2.8, -1)
 	local inclina = if golpe.id == "pesado" then math.rad(50) else math.rad(-14)
 	centro *= CFrame.Angles(0, 0, inclina)
 	for i = 1, 8 do
@@ -143,6 +151,9 @@ export type Controle = {
 }
 
 function Arena.iniciar(op: Opcoes): Controle
+	referencia = if op.lado == "b"
+		then Cena.referencia * CFrame.Angles(0, math.pi, 0)
+		else Cena.referencia
 	local camera = workspace.CurrentCamera
 	local tipoAnterior = if camera then camera.CameraType else Enum.CameraType.Custom
 	local fovAnterior = if camera then camera.FieldOfView else 70

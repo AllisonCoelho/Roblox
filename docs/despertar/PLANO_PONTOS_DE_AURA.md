@@ -15,6 +15,8 @@
 > **Ciclo de dia e noite e drops pelo mapa:** volta de 20 min sincronizada em todos os servidores. Orbes, lascas e, à noite, Estrelas Cadentes espalhados pelo Nexo. Detalhes em `CICLO_E_DROPS.md`.
 >
 > **Tutorial e HUD no celular:** a Lume, Guardiã do Nexo, guia os primeiros ~3 minutos com destaques e presentes; o HUD fica 20% menor no toque. Detalhes em `TUTORIAL.md`.
+>
+> **Arena: Trono do Servidor, x1 e Rankeada:** quem vence o Soberano vira Rei do Servidor (buff e coroa) e o trono passa a ser disputado no 1x1; a Rankeada tem rating Elo e ranking global. Detalhes em `ARENA.md`.
 
 ## A ideia em uma frase
 

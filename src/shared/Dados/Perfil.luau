@@ -24,6 +24,9 @@ export type Estado = {
 	pets: { [string]: any },
 	-- Equipamento (Dados/Equipamento.luau): peças, equipadas por espaço e visuais ocultos
 	equipamento: { [string]: any },
+	-- Arena (Dados/ArenaPvP.luau): rating da Rankeada, vitórias, derrotas, vitórias sobre o
+	-- Primeiro Soberano e reinados como Rei do Servidor
+	arena: { [string]: any },
 	-- Tutorial (Dados/Tutorial.luau): passo atual, concluído e presentes entregues. Fica fora do
 	-- padrão de propósito: quem já tinha perfil sem ele e já girou não vê o tutorial
 	tutorial: { [string]: any }?,
@@ -75,6 +78,14 @@ function Perfil.padrao(): Estado
 		corredor = { fragmentos = 0, concluidas = {}, ultima = {}, bonusAte = 0 },
 		pets = { lista = {}, equipados = {}, contador = 0, vistos = {} },
 		equipamento = { lista = {}, equipados = {}, ocultos = {}, contador = 0 },
+		arena = {
+			rating = 1000,
+			vitorias = 0,
+			derrotas = 0,
+			monarca = 0,
+			reinados = 0,
+			maiorReinado = 0,
+		},
 	}
 end
 

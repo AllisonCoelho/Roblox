@@ -1951,4 +1951,83 @@ do
 	igual("tutorial: sem presente sem texto", T.textoPresente(nil), nil)
 end
 
+-- Arena 1x1 (Trono e Rankeada)
+do
+	local P = req("ArenaPvP")
+	igual("pvp: coroa tem malhas", #req("CoroaVisual") >= 2, true)
+	local ma, mb = P.multiplicadores(1000, 1000)
+	igual("pvp: forças iguais", ma == 1 and mb == 1, true)
+	ma, mb = P.multiplicadores(2000, 1000)
+	igual("pvp: mais forte bate mais", ma > 1 and mb < 1, true)
+	ma, mb = P.multiplicadores(1000000, 1)
+	igual("pvp: multiplicador tem teto", ma, P.MULT_MAX)
+	igual("pvp: multiplicador tem piso", mb, P.MULT_MIN)
+	-- simultâneo
+	local e = P.novo(1000, 1000)
+	local r = P.resolver(e, "ataque", "ataque")
+	igual("pvp: dois golpes na rodada", #r.golpes, 2)
+	igual("pvp: ataque tira 105 de A", r.estado.b.vida, P.VIDA - 105)
+	igual("pvp: ataque tira 105 de B", r.estado.a.vida, P.VIDA - 105)
+	igual("pvp: próxima rodada", r.estado.rodada, 2)
+	igual("pvp: energia do ataque", r.estado.a.energia, 25)
+	igual("pvp: estado original intacto", e.a.vida, P.VIDA)
+	-- guarda reduz e aparece primeiro
+	local g = P.resolver(P.novo(1000, 1000), "ataque", "guarda")
+	igual("pvp: guarda aparece primeiro", g.golpes[1].lado, "b")
+	igual("pvp: guarda reduz 65%", g.estado.b.vida, P.VIDA - math.floor(105 * 0.35 + 0.5))
+	-- selo protege na mesma rodada
+	local s = P.resolver(P.novo(1000, 1000), "selo", "corte")
+	igual("pvp: selo corta pela metade", s.estado.a.vida, P.VIDA - math.floor(175 / 2))
+	igual("pvp: selo é gasto", s.estado.a.selado, false)
+	igual("pvp: recarga do corte", P.restante(s.estado.b, s.estado.rodada, "corte") > 0, true)
+	igual("pvp: técnica recarregando", P.validar(s.estado, "b", "corte") ~= nil, true)
+	igual("pvp: sem energia não desperta", P.validar(s.estado, "a", "despertar") ~= nil, true)
+	igual("pvp: inválido vira guarda", P.ouGuarda(s.estado, "a", "voar"), "guarda")
+	igual("pvp: sem escolha vira guarda", P.ouGuarda(s.estado, "a", nil), "guarda")
+	-- o mais forte vence sempre: forte só ataca, fraco tenta de tudo
+	local forte = P.novo(5000, 1000)
+	local acoesFraco = { "ataque", "selo", "corte", "guarda", "ataque" }
+	local vencedor = nil
+	for i = 1, 40 do
+		local idB = P.ouGuarda(forte, "b", acoesFraco[(i - 1) % #acoesFraco + 1])
+		local res = P.resolver(forte, "ataque", idB)
+		forte = res.estado
+		if res.vencedor then
+			vencedor = res.vencedor
+			break
+		end
+	end
+	igual("pvp: muito mais forte vence", vencedor, "a")
+	-- empate: os dois caem juntos, vence quem tem mais vida (ou o mais forte)
+	local fim = P.novo(1000, 999)
+	fim.a.vida, fim.b.vida = 50, 50
+	local rf = P.resolver(fim, "ataque", "ataque")
+	igual("pvp: queda dupla desempata pelo mais forte", rf.vencedor, "a")
+	-- limite de rodadas
+	local longo = P.novo(1000, 1000)
+	longo.rodada = P.RODADAS_MAX
+	longo.a.vida = 900
+	igual("pvp: limite de rodadas", P.resolver(longo, "guarda", "guarda").vencedor, "b")
+	-- visão
+	local v = P.visao(r.estado, "b")
+	igual("pvp: visão do lado b", v.vida == r.estado.b.vida and v.soberano == r.estado.a.vida, true)
+	-- Elo e divisões
+	local nv, np = P.elo(1000, 1000)
+	igual("pvp: elo igual +16", nv, 1016)
+	igual("pvp: elo igual -16", np, 984)
+	local zv = P.elo(1000, 1400)
+	igual("pvp: zebra vale mais", zv - 1000 > 16, true)
+	local fv = P.elo(1400, 1000)
+	igual("pvp: favorito ganha pouco", fv - 1400 < 16 and fv - 1400 >= 1, true)
+	igual("pvp: rating não fica negativo", select(2, P.elo(3000, 5)) >= 0, true)
+	igual("pvp: divisão inicial", P.divisao(P.RATING_INICIAL).nome, "Bronze")
+	igual("pvp: divisão ouro", P.divisao(1300).nome, "Ouro")
+	igual("pvp: divisão mestre", P.divisao(2400).nome, "Mestre")
+	igual("pvp: janela cresce", P.janela(30) > P.janela(0), true)
+	local n = P.normalizar({ rating = -5, vitorias = 3, monarca = "x" })
+	igual("pvp: normalizar rating inválido", n.rating, P.RATING_INICIAL)
+	igual("pvp: normalizar mantém vitórias", n.vitorias, 3)
+	igual("pvp: normalizar monarca", n.monarca, 0)
+end
+
 print(string.format("%d testes, %d falhas", total, falhas))

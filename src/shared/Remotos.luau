@@ -12,6 +12,7 @@ Remotos.Eventos = {
 	"Incursao", -- servidor -> jogador: fila, andar, estado da partida, Pulso e resultado
 	"Corredor", -- servidor -> todos: golpes da aura nas criaturas do Corredor (efeito e dano)
 	"DropsMapa", -- servidor -> todos: drop do mapa coletado (quem pegou e o prêmio)
+	"Trono", -- servidor -> Rei do Servidor: alguém desafiou pelo trono (Lutar ou Entregar)
 }
 Remotos.Funcoes = {
 	"Acao", -- cliente -> servidor: pedido validado no servidor; devolve (ok, mensagem)

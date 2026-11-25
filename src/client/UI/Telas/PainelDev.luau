@@ -467,6 +467,9 @@ local function montar(paiHud: Frame, op: Opcoes)
 		end, i, "lilas")
 	end
 	ajustarFases()
+	botao(inc, "Vencer o Soberano / virar Rei (teste)", function()
+		pedir("rei")
+	end)
 
 	UserInputService.InputBegan:Connect(function(input, processado)
 		if not processado and input.KeyCode == Enum.KeyCode.F8 then
