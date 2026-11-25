@@ -15,6 +15,8 @@ MODULOS = {
     "Pets": "src/shared/Dados/Pets.luau",
     "Criaturas": "src/shared/Dados/Criaturas.luau",
     "Equipamento": "src/shared/Dados/Equipamento.luau",
+    "Ciclo": "src/shared/Dados/Ciclo.luau",
+    "DropsMapa": "src/shared/Dados/DropsMapa.luau",
     "EquipamentoVisual": "src/shared/Dados/EquipamentoVisual.luau",
     "CriaturasVisual": "src/shared/Dados/CriaturasVisual.luau",
     "PetsVisual": "src/shared/Dados/PetsVisual.luau",
@@ -63,6 +65,15 @@ Vector3.__mul = function(a, b)
     if type(a) == "number" then a, b = b, a end
     return Vector3.new(a.X * b, a.Y * b, a.Z * b)
 end
+-- Color3 mínimo: só o que as tabelas de cor do ciclo de dia e noite usam
+local Color3 = {}
+Color3.__index = Color3
+function Color3.new(r, g, b) return setmetatable({ R = r or 0, G = g or 0, B = b or 0 }, Color3) end
+function Color3.fromHex(h)
+    h = h:gsub("#", "")
+    return Color3.new(tonumber(h:sub(1, 2), 16) / 255, tonumber(h:sub(3, 4), 16) / 255, tonumber(h:sub(5, 6), 16) / 255)
+end
+function Color3.Lerp(a, b, t) return Color3.new(a.R + (b.R - a.R) * t, a.G + (b.G - a.G) * t, a.B + (b.B - a.B) * t) end
 local MODULOS, CACHE = {}, {}
 local function req(nome)
     if CACHE[nome] == nil then CACHE[nome] = MODULOS[nome]() end
