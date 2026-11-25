@@ -436,6 +436,15 @@ local function montar(paiHud: Frame, op: Opcoes)
 		end, i, "lilas")
 	end
 	ajustarUniversos()
+	local pontos = entrada(inc, "Pontos de Aura de teste")
+	botao(inc, "Definir Pontos de Aura", function()
+		local total = tonumber(pontos.Text)
+		if total then
+			pedir("pontosAura", total)
+		else
+			Avisos.toast("Digite a quantidade de Pontos de Aura")
+		end
+	end)
 	local saldo = entrada(inc, "Fragmentos de teste")
 	botao(inc, "Definir fragmentos", function()
 		local total = tonumber(saldo.Text)

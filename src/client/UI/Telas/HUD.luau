@@ -14,7 +14,7 @@ local Icones = require(Shared.Dados.Icones)
 local Itens = require(Shared.Dados.Itens)
 local Perfil = require(Shared.Dados.Perfil)
 local Temporada = require(Shared.Dados.Temporada)
-local Transcendencia = require(Shared.Dados.Transcendencia)
+local PontosAura = require(Shared.Dados.PontosAura)
 local Cores = require(Shared.Tema).Orbita
 local Escala = require(script.Parent.Parent.Escala)
 local Kit = require(script.Parent.Parent.Kit)
@@ -33,7 +33,9 @@ local DESTAQUE = {
 	Ajustes = Cores.Lilas,
 	Giros = Color3.fromHex("FFD36B"),
 	Fragmentos = Color3.fromHex("C9A2FF"),
+	Evoluir = Color3.fromHex("B7FFD9"),
 }
+local ICONE_PONTOS = 31
 
 export type EstadoGiro = "perfil" | "pedido" | "recarregando" | "pular" | "pronto"
 
@@ -54,6 +56,7 @@ type Opcoes = {
 	aoAbrirLoja: () -> (),
 	aoAbrirTemporada: (() -> ())?,
 	aoAbrirAjustes: () -> (),
+	aoAbrirEvoluir: (() -> ())?,
 }
 
 local function corTier(aura: Auras.Aura): Color3
@@ -251,6 +254,106 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 	local giros = moeda(1, Icones.MENU.Giros, "GIROS", DESTAQUE.Giros)
 	local fragmentos = moeda(2, Icones.MENU.Fragmentos, "FRAGM.", DESTAQUE.Fragmentos)
 
+	-- ================================================================ Pontos de Aura
+	-- No topo, no centro: o número que sobe sem parar (como nos jogos de treino do Roblox).
+	-- O servidor escreve o saldo a cada segundo; aqui o contador anda entre um e outro.
+	local painelPontos = Kit.placa({
+		nome = "PontosAura",
+		tamanho = UDim2.fromOffset(320, 62),
+		ancora = Vector2.new(0.5, 0),
+		posicao = UDim2.new(0.5, 0, 0, 14),
+		borda = DESTAQUE.Evoluir,
+		corte = 12,
+		pai = hud,
+	})
+	IconeImagem.criar(
+		painelPontos.conteudo,
+		ICONE_PONTOS,
+		UDim2.fromOffset(10, 10),
+		UDim2.fromOffset(40, 40)
+	)
+	local valorPontos = texto(painelPontos.conteudo, {
+		fonte = "titulo",
+		Text = "0",
+		TextSize = 28,
+		TextColor3 = DESTAQUE.Evoluir,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextScaled = true,
+		Position = UDim2.fromOffset(58, 4),
+		Size = UDim2.new(1, -150, 0, 32),
+	})
+	Kit.novo("UITextSizeConstraint", { MinTextSize = 12, MaxTextSize = 28, Parent = valorPontos })
+	local ganhoPontos = texto(painelPontos.conteudo, {
+		fonte = "mono",
+		Text = "+0/s",
+		TextSize = 14,
+		TextColor3 = Cores.Menta,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Position = UDim2.fromOffset(58, 36),
+		Size = UDim2.new(1, -150, 0, 18),
+	})
+	texto(painelPontos.conteudo, {
+		Text = "PONTUAÇÃO",
+		TextSize = 11,
+		TextColor3 = Cores.TextoSuave,
+		TextXAlignment = Enum.TextXAlignment.Right,
+		Position = UDim2.new(1, -96, 0, 8),
+		Size = UDim2.fromOffset(86, 14),
+	})
+	local valorPontuacao = texto(painelPontos.conteudo, {
+		fonte = "mono",
+		Text = "0",
+		TextSize = 18,
+		TextXAlignment = Enum.TextXAlignment.Right,
+		Position = UDim2.new(1, -96, 0, 22),
+		Size = UDim2.fromOffset(86, 20),
+	})
+	local valorSorte = texto(painelPontos.conteudo, {
+		fonte = "mono",
+		Text = "Sorte 1,0x",
+		TextSize = 12,
+		TextColor3 = Color3.fromHex("7BF0A0"),
+		TextXAlignment = Enum.TextXAlignment.Right,
+		Position = UDim2.new(1, -96, 0, 42),
+		Size = UDim2.fromOffset(86, 14),
+	})
+	local alvoPontos = Kit.alvo(painelPontos.quadro, "Evoluir Aura", function()
+		(op.aoAbrirEvoluir or op.aoAbrirIndice)()
+	end)
+	animarToque(painelPontos.quadro, alvoPontos)
+	do
+		local eu = Players.LocalPlayer
+		local base, baseEm = 0, os.clock()
+		local function grande(n: number): string
+			return if n < 1000000 then Formato.inteiro(math.floor(n)) else Formato.curto(n)
+		end
+		local function ler()
+			base = tonumber(eu:GetAttribute("PontosAura")) or 0
+			baseEm = os.clock()
+			local g = tonumber(eu:GetAttribute("GanhoAura")) or 0
+			ganhoPontos.Text = "+" .. (string.format("%.1f", g):gsub("%.", ",")) .. "/s"
+			valorPontuacao.Text = grande(tonumber(eu:GetAttribute("Pontuacao")) or 0)
+			valorSorte.Text = "Sorte "
+				.. (string
+					.format("%.1f", tonumber(eu:GetAttribute("SorteTotal")) or 1)
+					:gsub("%.", ","))
+				.. "x"
+		end
+		for _, nome in { "PontosAura", "GanhoAura", "Pontuacao", "SorteTotal" } do
+			eu:GetAttributeChangedSignal(nome):Connect(ler)
+		end
+		ler()
+		task.spawn(function()
+			while hud.Parent do
+				local g = tonumber(eu:GetAttribute("GanhoAura")) or 0
+				-- o contador anda no ritmo do ganho até o próximo valor do servidor (no máx. 1 s)
+				local estimado = base + g * math.min(os.clock() - baseEm, 1)
+				valorPontos.Text = grande(estimado)
+				task.wait(0.1)
+			end
+		end)
+	end
+
 	-- ================================================================ menu lateral
 	local menu = Kit.novo("Frame", {
 		Name = "Menu",
@@ -318,7 +421,8 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 	atalho(1, "Loja", Icones.MENU.Loja, DESTAQUE.Loja, op.aoAbrirLoja)
 	atalho(2, "Bolsa", Icones.MENU.Bolsa, DESTAQUE.Bolsa, op.aoAbrirInventario)
 	atalho(3, "Índice", Icones.MENU.Indice, DESTAQUE.Indice, op.aoAbrirIndice)
-	atalho(4, "Passe", Icones.MENU.Temporada, DESTAQUE.Passe, op.aoAbrirTemporada or op.aoAbrirLoja)
+	-- o Passe continua no cartão do jogador; o menu ganha Evoluir (o centro do jogo agora)
+	atalho(4, "Evoluir", ICONE_PONTOS, DESTAQUE.Evoluir, op.aoAbrirEvoluir or op.aoAbrirIndice)
 	local ajustesBotao =
 		atalho(5, "Ajustes", Icones.MENU.Ajustes, DESTAQUE.Ajustes, op.aoAbrirAjustes)
 
@@ -641,6 +745,15 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 			b.NextSelectionLeft = if horizontal then botoesMenu[i - 1] else nil
 			b.NextSelectionRight = if horizontal then botoesMenu[i + 1] else nil
 		end
+		-- em tela estreita o painel de pontos desce para debaixo das moedas
+		painelPontos.quadro.Size =
+			UDim2.fromOffset(if estreito then math.min(300, tela.X - 24) else 320, 62)
+		painelPontos.quadro.AnchorPoint = if estreito
+			then Vector2.new(0, 0)
+			else Vector2.new(0.5, 0)
+		painelPontos.quadro.Position = if estreito
+			then UDim2.fromOffset(12, if compacto then 154 + 62 else 162 + 62)
+			else UDim2.new(0.5, 0, 0, if compacto then 10 else 14)
 		local largura = if estreito then math.min(250, tela.X - 24) else 336
 		moedas.Size = UDim2.fromOffset(largura, 40)
 		cartao.quadro.Size = UDim2.fromOffset(largura, 92)
@@ -737,9 +850,7 @@ function HUD.montar(raiz: Frame, op: Opcoes): Api
 				espAura.valor.Text = aura.nome
 				espAura.valor.TextColor3 = Kit.corLegivel(cor)
 				espAura.titulo.Text = "1 em "
-					.. Formato.chanceCurta(
-						Auras.chanceEfetiva(aura, Transcendencia.sorte(estado.transcendencia.nivel))
-					)
+					.. Formato.chanceCurta(Auras.chanceEfetiva(aura, PontosAura.sorteTotal(estado)))
 			else
 				espAura.placa.definirCor(Cores.Painel, Cores.Borda)
 				IconeImagem.definir(espAura.simbolo, Icones.MENU.Aura)

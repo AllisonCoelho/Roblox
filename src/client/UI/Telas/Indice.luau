@@ -8,7 +8,7 @@ local Auras = require(Shared.Dados.Auras)
 local Formato = require(Shared.Formato)
 local Icones = require(Shared.Dados.Icones)
 local Perfil = require(Shared.Dados.Perfil)
-local Transcendencia = require(Shared.Dados.Transcendencia)
+local PontosAura = require(Shared.Dados.PontosAura)
 local Cores = require(Shared.Tema).Orbita
 local Cartoes = require(script.Parent.Parent.Cartoes)
 local Estado = require(script.Parent.Parent.Estado)
@@ -83,7 +83,7 @@ local function atualizar()
 			filho:Destroy()
 		end
 	end
-	local sorte = Transcendencia.sorte(estado.transcendencia.nivel)
+	local sorte = PontosAura.sorteTotal(estado)
 	local nomeFiltro = if filtro == 0 then "Todas as auras" else Auras.Tiers[filtro].nome
 	Cartoes.secao(lista, 1, nomeFiltro, "Toque numa aura sua para equipar")
 	local grade = Cartoes.grade(lista, 2, Vector2.new(204, 236))

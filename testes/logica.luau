@@ -823,7 +823,7 @@ igual("Centelha 20.9966%", math.abs(Auras.PROBABILIDADE_RESERVA - 0.209966227926
 igual("sorte NaN segura", Probabilidades.sorteValida(0 / 0), 1)
 igual("sorte infinito segura", Probabilidades.sorteValida(math.huge), 1)
 igual("sorte negativa segura", Probabilidades.sorteValida(-1), 1)
-igual("limite superior de sorte 3", Probabilidades.sorteValida(10), 3)
+igual("limite superior de sorte 20", Probabilidades.sorteValida(50), 20)
 igual("transcendencia 0", Probabilidades.sorteTranscendencia(0), 1)
 igual("transcendencia X", Probabilidades.sorteTranscendencia(10), 1.5)
 igual("transcendencia maior que X", Probabilidades.sorteTranscendencia(20), 1.5)
@@ -1443,6 +1443,64 @@ do
 	igual("soberano: entrada termina no ringue", Anim.amostrar(entrada, entrada.duracao).viagem1, 1)
 	igual("soberano: entrada cabe na introdução", entrada.duracao <= Anim.INTRODUCAO, true)
 	igual("soberano: peças do duelo com pernas", #Pecas.duelo, 6)
+end
+
+-- Pontos de Aura, evoluções e sorte total
+do
+	local PA = req("PontosAura")
+	local AurasP = req("Auras")
+	local ProbP = req("Probabilidades")
+	local p = PA.padrao()
+	igual("pontos: começa zerado", p.pontos + p.nivel + p.fluxo + p.sorte, 0)
+	-- raridade gera mais, mas suavizado
+	local comum = PA.forcaDaAura("musgo_luminoso")
+	local divina = PA.forcaDaAura("soberania_do_vazio")
+	igual("pontos: aura rara gera mais", divina > comum, true)
+	igual("pontos: 1 em 100 milhões gera 100/s", math.abs(divina - 100) < 0.01, true)
+	igual("pontos: sem aura ainda gera um pouco", PA.forcaDaAura(nil), PA.SEM_AURA)
+	igual("pontos: aura inventada conta como sem aura", PA.forcaDaAura("nao_existe"), PA.SEM_AURA)
+	-- evoluir cobra, sobe o nível e respeita saldo e máximo
+	igual("evoluir: sem saldo falha", (PA.evoluir(p, "nivel")), false)
+	p.pontos = PA.custo("nivel", 0)
+	igual("evoluir: com saldo compra", (PA.evoluir(p, "nivel")), true)
+	igual("evoluir: nível sobe", p.nivel, 1)
+	igual("evoluir: saldo gasto", p.pontos, 0)
+	igual("evoluir: custo cresce", PA.custo("nivel", 1) > PA.custo("nivel", 0), true)
+	igual("evoluir: id inválido", (PA.evoluir(p, "voar")), false)
+	igual("evoluir: tipo inválido", (PA.evoluir(p, 12)), false)
+	local cheio = PA.normalizar({ pontos = 1e300, sorte = 999 })
+	igual("evoluir: normalizar limita o máximo", cheio.sorte, PA.porId.sorte.maximo)
+	igual("evoluir: no máximo não compra", (PA.evoluir(cheio, "sorte")), false)
+	local estranho = PA.normalizar({ pontos = 0 / 0, nivel = -3, fluxo = "x" })
+	igual("normalizar: NaN e negativos viram zero", estranho.pontos + estranho.nivel + estranho.fluxo, 0)
+	igual("normalizar: nil vira padrão", PA.normalizar(nil).total, 0)
+	-- fluxo e nível mudam ganho e pontuação
+	local base = PA.ganhoPorSegundo(PA.padrao(), "musgo_luminoso")
+	local comFluxo = PA.ganhoPorSegundo({ pontos = 0, total = 0, nivel = 0, fluxo = 10, sorte = 0 }, "musgo_luminoso")
+	igual("fluxo: 10 níveis dobram o ganho", math.abs(comFluxo - 2 * base) < 1e-9, true)
+	igual("fluxo: multiplicador extra", math.abs(PA.ganhoPorSegundo(PA.padrao(), "musgo_luminoso", 3) - 3 * base) < 1e-9, true)
+	local pt0 = PA.pontuacao(PA.padrao(), "musgo_luminoso")
+	local pt4 = PA.pontuacao({ pontos = 0, total = 0, nivel = 4, fluxo = 0, sorte = 0 }, "musgo_luminoso")
+	igual("pontuação: 4 níveis dobram", pt4, math.floor(2 * 10 * PA.forcaDaAura("musgo_luminoso")))
+	igual("pontuação: aura rara pesa mais", PA.pontuacao(PA.padrao(), "soberania_do_vazio") > pt0, true)
+	-- sorte total: evolução x Transcendência x extra, com teto
+	igual("sorte: começa em 1", PA.sorteTotal({ poder = PA.padrao(), transcendencia = { nivel = 0 } }), 1)
+	igual("sorte: estado estranho é 1", PA.sorteTotal(nil), 1)
+	local s5 = PA.sorteTotal({ poder = { sorte = 20 }, transcendencia = { nivel = 10 } })
+	igual("sorte: evolução x transcendência", math.abs(s5 - 5 * 1.5) < 1e-9, true)
+	local teto = PA.sorteTotal({ poder = { sorte = 95 }, transcendencia = { nivel = 10 } }, 50)
+	igual("sorte: respeita o teto", teto, PA.SORTE_MAXIMA)
+	igual("sorte: teto é o do sorteio", PA.SORTE_MAXIMA, ProbP.MAX_SORTE)
+	-- no teto, a aura mais rara continua rara (nunca fácil) e a sorte ajuda de verdade
+	local rara = AurasP.porId.soberania_do_vazio
+	local noTeto = AurasP.chanceEfetiva(rara, PA.SORTE_MAXIMA)
+	igual("sorte: no teto a mais rara ainda passa de 1 em 1 milhão", noTeto > 1000000, true)
+	igual("sorte: no teto fica bem mais fácil que a base", noTeto < rara.chance / 50, true)
+	local soma = 0
+	for _, a in AurasP.lista do
+		soma += AurasP.probabilidadeReal(a.id, 7.3)
+	end
+	igual("sorte: distribuição soma 100% em sorte qualquer", math.abs(soma - 1) < 1e-9, true)
 end
 
 print(string.format("%d testes, %d falhas", total, falhas))

@@ -8,8 +8,9 @@ Ao entrar no jogo, o perfil converte os 30 IDs antigos em auras novas de raridad
 - Musgo Luminoso: **1/6**. Todas as outras 65 chances explicitas seguem a versao V2.
 - Peso = pBase * sorte ^ expoenteTier; probabilidade efetiva = peso / soma(pesos).
 - Expoentes: Comum 0, Incomum 0.25, Raro 1, Epico 1.2, Lendario 1.4, Mitico 1.6, Divino 1.8.
-- Nivel 0..10 de Transcendencia gera indice de sorte 1.00..1.50, limitado tecnicamente a 3.00 para futuras fontes. E um **indice**, nao garantia de multiplicar chances de todas as auras por 1.5.
-- O servidor usa o nível de Transcendência do perfil, e o Índice distingue chances **Base** e **Atual**.
+- Nivel 0..10 de Transcendencia gera indice de sorte 1.00..1.50. E um **indice**, nao garantia de multiplicar chances de todas as auras por 1.5.
+- **Desde nov/2026 (autorizado pelo dono):** a sorte do giro e a **sorte total** = evolucao Sorte (Pontos de Aura) x Transcendencia x pets, com teto de **20x** (`Probabilidades.MAX_SORTE`). Valores e tabela em [PONTOS_DE_AURA.md](PONTOS_DE_AURA.md).
+- O servidor usa a sorte total do perfil, e o Índice distingue chances **Base** e **Atual**.
 - A sorte **nao** afeta drops das Incursoes, raridade intrinseca, ranking ou ressonancia.
 
 ## Referencias de teste (catalogo 67, nivel X / sorte 1.50)

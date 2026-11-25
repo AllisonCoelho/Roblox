@@ -165,6 +165,21 @@ local function fragmentos(player: Player, total: any): (boolean, string?)
 	return true, "Fragmentos atualizados na sessão de teste"
 end
 
+-- Só na sessão de teste (perfil temporário): nada disto chega ao DataStore
+local function pontosAura(player: Player, total: any): (boolean, string?)
+	if not inteiro(total) then
+		return false, "Informe um inteiro de 0 a 1 bilhão"
+	end
+	local estado = estadoDeTeste(player)
+	if not estado then
+		return false, "Aguardando o perfil carregar"
+	end
+	estado.poder.pontos = total
+	player:SetAttribute("PontosAura", total)
+	Dados.enviar(player)
+	return true, "Pontos de Aura atualizados na sessão de teste"
+end
+
 local function incursao(player: Player, universo: any, andar: any): (boolean, string?)
 	if type(universo) ~= "string" or not Incursoes.porId[universo] then
 		return false, "Universo desconhecido"
@@ -222,6 +237,7 @@ local comandos: { [string]: Comando } = {
 	quantidade = quantidade,
 	girar = girar,
 	fragmentos = fragmentos,
+	pontosAura = pontosAura,
 	incursao = incursao,
 	previa = AuraVisual.definirPrevia,
 	ritual = function(_, indice)
