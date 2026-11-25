@@ -12,6 +12,7 @@ local Remotos = require(Shared.Remotos)
 local Servicos = script.Parent.Parent.Servicos
 local Acoes = require(Servicos.Acoes)
 local Dados = require(Servicos.Dados)
+local Cosmeticos = require(Servicos.Cosmeticos)
 local Incursoes = require(script.Parent.Parent.Incursoes.Servico)
 
 local Servico = {}
@@ -137,6 +138,7 @@ local function terminar(d: Duelo, resultado: string)
 	if resultado == "vitoria" then
 		animarSoberano(d, "derrota", agora)
 		animarJogador(d, "vitoria", agora + 0.3)
+		Cosmeticos.celebrar(d.player, d.corpo, d.soberano)
 	elseif resultado == "derrota" then
 		animarJogador(d, "derrota", agora)
 		animarSoberano(d, "vitoria", agora + 0.3)

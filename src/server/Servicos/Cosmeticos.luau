@@ -5,7 +5,10 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Auras = require(Shared.Dados.Auras)
 local Catalogo = require(Shared.Dados.Cosmeticos)
+local Conveniencia = require(Shared.Dados.Conveniencia)
+local Perfil = require(Shared.Dados.Perfil)
 local Tema = require(Shared.Tema)
 local Acoes = require(script.Parent.Acoes)
 local Dados = require(script.Parent.Dados)
@@ -26,6 +29,9 @@ end
 local function itemEquipado(player: Player, tipo: string): Catalogo.Item?
 	local id = equipados(player)[tipo]
 	local item = if id then Catalogo.porId[id] else nil
+	if item and item.exigeAssinatura and not Passes.tem(player, "assinatura") then
+		return nil
+	end
 	return if item and item.tipo == tipo then item else nil
 end
 
@@ -119,6 +125,10 @@ local function aplicar(player: Player)
 	player:SetAttribute("CosDistintivo", if distintivo then distintivo.texto else nil)
 	player:SetAttribute("CosDistintivoCor", if distintivo then distintivo.cor else nil)
 	player:SetAttribute("CosVip", Passes.tem(player, "vip"))
+	-- Cores do ritual de giro (cada cliente aplica ao tocar o ritual deste jogador)
+	local ritual = itemEquipado(player, "ritual")
+	player:SetAttribute("CosRitualCor", if ritual then ritual.cor else nil)
+	player:SetAttribute("CosRitualCor2", if ritual then ritual.cor2 else nil)
 	local personagem = player.Character
 	if personagem then
 		placa(personagem, titulo, distintivo)
@@ -129,11 +139,13 @@ end
 local function atualizarSeMudou(player: Player)
 	local e = equipados(player)
 	local chave = string.format(
-		"%s|%s|%s|%s",
+		"%s|%s|%s|%s|%s|%s",
 		e.titulo or "",
 		e.distintivo or "",
 		e.rastro or "",
-		tostring(Passes.tem(player, "vip"))
+		e.ritual or "",
+		tostring(Passes.tem(player, "vip")),
+		tostring(Passes.tem(player, "assinatura"))
 	)
 	if assinatura[player] ~= chave then
 		assinatura[player] = chave
@@ -153,6 +165,10 @@ local function concederPacotes(player: Player)
 				table.insert(ids, id)
 			end
 		end
+	end
+	if Passes.tem(player, "assinatura") then
+		local agora = os.date("!*t")
+		table.insert(ids, Catalogo.mensal(agora.year, agora.month))
 	end
 	local estado = Dados.de(player) :: any
 	local possui = estado.cosmeticos and estado.cosmeticos.possui or {}
@@ -185,6 +201,10 @@ local function equipar(player: Player, tipo: any, id: any): (boolean, string?)
 		if not Catalogo.podeEquipar(e.cosmeticos, tipo, id) then
 			return false, "Você ainda não tem esse item."
 		end
+		local item = Catalogo.porId[id]
+		if item and item.exigeAssinatura and not Passes.tem(player, "assinatura") then
+			return false, "Exclusivo da Assinatura do Nexo."
+		end
 		e.cosmeticos.equipados = e.cosmeticos.equipados or {}
 		e.cosmeticos.equipados[tipo] = if id == "" then nil else id
 		return true
@@ -195,8 +215,145 @@ local function equipar(player: Player, tipo: any, id: any): (boolean, string?)
 	return ok, msg
 end
 
+-- ===================================================================== Presets de Auras
+
+local function salvarPreset(player: Player, slot: any): (boolean, string?)
+	if not Conveniencia.slotValido(slot) then
+		return false, "Pedido inválido"
+	end
+	if not Passes.tem(player, "presets") then
+		return false, "Presets de Auras é um passe de 49 Robux."
+	end
+	return Dados.alterar(player, function(e: any)
+		e.presets = if type(e.presets) == "table" then e.presets else {}
+		local cos = e.cosmeticos and e.cosmeticos.equipados or {}
+		-- preenche os espaços anteriores para manter a lista sem buracos (serializável)
+		for i = 1, slot - 1 do
+			e.presets[i] = e.presets[i] or Conveniencia.criarPreset(nil, nil)
+		end
+		e.presets[slot] = Conveniencia.criarPreset(e.equipada, cos)
+		return true, "Preset " .. slot .. " salvo."
+	end)
+end
+
+local function aplicarPreset(player: Player, slot: any): (boolean, string?)
+	if not Conveniencia.slotValido(slot) then
+		return false, "Pedido inválido"
+	end
+	if not Passes.tem(player, "presets") then
+		return false, "Presets de Auras é um passe de 49 Robux."
+	end
+	if player:GetAttribute("EmDueloArena") then
+		return false, "A aura fica equipada até o duelo terminar."
+	end
+	local ok, msg = Dados.alterar(player, function(e: any)
+		local p = type(e.presets) == "table" and e.presets[slot]
+		if type(p) ~= "table" then
+			return false, "Preset vazio."
+		end
+		local aura = p.aura
+		if
+			type(aura) == "string"
+			and aura ~= ""
+			and Auras.porId[aura]
+			and Perfil.possui(e, aura)
+		then
+			e.equipada = aura
+		end
+		e.cosmeticos = e.cosmeticos or Catalogo.padrao()
+		local novos = {}
+		if type(p.cosmeticos) == "table" then
+			for tipo, id in p.cosmeticos do
+				if
+					type(tipo) == "string"
+					and type(id) == "string"
+					and Catalogo.podeEquipar(e.cosmeticos, tipo, id)
+				then
+					novos[tipo] = id
+				end
+			end
+		end
+		e.cosmeticos.equipados = novos
+		return true, "Preset " .. slot .. " aplicado."
+	end)
+	if ok then
+		atualizarSeMudou(player)
+	end
+	return ok, msg
+end
+
+-- ===================================================================== Arena
+
+local function explosao(
+	pai: BasePart,
+	item: Catalogo.Item,
+	quantidade: number,
+	velocidade: number,
+	duracao: number
+)
+	local anexo = Instance.new("Attachment")
+	anexo.Name = "CosmeticoCelebracao"
+	anexo.Parent = pai
+	local e = Instance.new("ParticleEmitter")
+	e.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	e.Color = ColorSequence.new(Color3.fromHex(item.cor), Color3.fromHex(item.cor2 or item.cor))
+	e.LightEmission = 0.8
+	e.Size =
+		NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.6), NumberSequenceKeypoint.new(1, 0) })
+	e.Lifetime = NumberRange.new(0.8, 1.6)
+	e.Speed = NumberRange.new(velocidade * 0.5, velocidade)
+	e.SpreadAngle = Vector2.new(180, 180)
+	e.Rate = 0
+	e.Parent = anexo
+	e:Emit(quantidade)
+	local luz = Instance.new("PointLight")
+	luz.Color = Color3.fromHex(item.cor)
+	luz.Range = 14
+	luz.Brightness = 3
+	luz.Parent = anexo
+	task.delay(duracao, function()
+		anexo:Destroy()
+	end)
+end
+
+local function letreiro(pai: BasePart, item: Catalogo.Item)
+	local gui = Instance.new("BillboardGui")
+	gui.Name = "CosmeticoCelebracao"
+	gui.Size = UDim2.fromOffset(260, 40)
+	gui.StudsOffsetWorldSpace = Vector3.new(0, 5, 0)
+	gui.LightInfluence = 0
+	local t = Instance.new("TextLabel")
+	t.BackgroundTransparency = 1
+	t.Size = UDim2.fromScale(1, 1)
+	t.FontFace = Tema.FonteNegrito
+	t.TextScaled = true
+	t.TextColor3 = Color3.fromHex(item.cor)
+	t.TextStrokeTransparency = 0.3
+	t.Text = item.nome
+	t.Parent = gui
+	gui.Parent = pai
+	task.delay(3, function()
+		gui:Destroy()
+	end)
+end
+
+-- Vitória na Arena: emote equipado no jogador e finalização no Soberano (todos veem)
+function Servico.celebrar(player: Player, corpo: BasePart?, soberano: BasePart?)
+	local emote = itemEquipado(player, "emote")
+	if emote and corpo and corpo.Parent then
+		explosao(corpo, emote, if emote.id == "emo_tempestade" then 120 else 80, 18, 3)
+		letreiro(corpo, emote)
+	end
+	local fin = itemEquipado(player, "finalizacao")
+	if fin and soberano and soberano.Parent then
+		explosao(soberano, fin, if fin.id == "fin_eclipse" then 160 else 110, 26, 3)
+	end
+end
+
 function Servico.iniciar()
 	Acoes.registrar("EquiparCosmetico", equipar)
+	Acoes.registrar("SalvarPreset", salvarPreset)
+	Acoes.registrar("AplicarPreset", aplicarPreset)
 	Passes.aoMudar(concederPacotes)
 	Dados.quandoCarregar(function(player)
 		concederPacotes(player)

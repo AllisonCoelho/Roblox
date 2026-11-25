@@ -179,7 +179,7 @@ do
 	igual("loja: 16 produtos no catálogo", #M.PRODUTOS, 16)
 	igual("loja: giro automático 49", M.porId.autoGiro.preco, 49)
 	igual("loja: pular animação 39", M.porId.pularAnimacao.preco, 39)
-	igual("loja: 5 ativos", #M.ativos(), 5)
+	igual("loja: todos os 16 ativos", #M.ativos(), 16)
 	igual("loja: iniciante 49", M.porId.iniciante.preco, 49)
 	igual("loja: vip 199", M.porId.vip.preco, 199)
 	igual("loja: passe de temporada 299", M.porId.passeTemporada.preco, 299)
@@ -1260,6 +1260,52 @@ do
 		T.ganhar(maximo, "vitoria", 1, true)
 	end
 	igual("temporada: XP limitado ao último nível", maximo.xp, T.NIVEIS * T.XP_POR_NIVEL)
+end
+
+-- Itens avulsos, assinatura e conveniências
+do
+	local C = req("Cosmeticos")
+	local V = req("Conveniencia")
+	local M = req("Monetizacao")
+	for _, grupo in
+		{ "titulos", "trilhas", "aparenciaAlternativa", "emotesVitoria", "finalizacoes" }
+	do
+		local itens = C.doGrupo(grupo)
+		igual("avulso: grupo tem itens " .. grupo, #itens >= 2, true)
+		igual("avulso: grupo é produto " .. grupo, M.porId[grupo].tipo, "produto")
+		for _, i in itens do
+			igual("avulso: preço dentro da faixa " .. i.id, i.preco >= M.porId[grupo].preco, true)
+			igual("avulso: sem ID inventado " .. i.id, i.developerProductId, nil)
+		end
+	end
+	igual("avulso: sem ID nenhum produto é achado", C.porProduto(123), nil)
+	for _, id in C.MENSAIS do
+		igual("assinatura: mensal existe " .. id, C.porId[id] ~= nil, true)
+	end
+	igual("assinatura: mês seguinte troca o item", C.mensal(2026, 11) ~= C.mensal(2026, 12), true)
+	igual("assinatura: virada de ano segue a lista", C.mensal(2026, 12) ~= C.mensal(2027, 1), true)
+	igual("assinatura: título exclusivo", C.porId.tit_membro.exigeAssinatura, true)
+	igual("ritual: estilos do passe", #C.PACOTES.ritualPersonalizado, 3)
+
+	igual("auto: limiar válido", V.limiarValido(10000), true)
+	igual("auto: limiar inválido", V.limiarValido(12345), false)
+	igual("auto: texto não é limiar", V.limiarValido("1000"), false)
+	local a = { pararChance = 10000, pararNova = false }
+	igual("auto: para em aura rara", V.devePararAuto(a, 50000, false) ~= nil, true)
+	igual("auto: segue em aura comum", V.devePararAuto(a, 50, false), nil)
+	igual("auto: nova só com opção", V.devePararAuto(a, 2, true), nil)
+	a.pararNova = true
+	igual("auto: para em aura nova", V.devePararAuto(a, 2, true) ~= nil, true)
+	igual("auto: padrão nunca para", V.devePararAuto(V.autoPadrao(), 10 ^ 9, true), nil)
+	igual("auto: sem dados não para", V.devePararAuto(nil, 10 ^ 9, true), nil)
+	igual("presets: slot 1", V.slotValido(1), true)
+	igual("presets: slot 6", V.slotValido(6), false)
+	igual("presets: slot fracionado", V.slotValido(1.5), false)
+	local cos = { titulo = "tit_vip" }
+	local p = V.criarPreset("aura_x", cos)
+	cos.titulo = "outro"
+	igual("presets: cópia dos cosméticos", p.cosmeticos.titulo, "tit_vip")
+	igual("presets: sem aura vira vazio", V.criarPreset(nil, nil).aura, "")
 end
 
 -- Gear 5: duas silhuetas em repouso e contatos no passo que move o corpo.

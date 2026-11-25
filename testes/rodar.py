@@ -41,6 +41,7 @@ MODULOS = {
     "Icones": "src/shared/Dados/Icones.luau",
     "Cosmeticos": "src/shared/Dados/Cosmeticos.luau",
     "Temporada": "src/shared/Dados/Temporada.luau",
+    "Conveniencia": "src/shared/Dados/Conveniencia.luau",
     "IncursoesRun": "src/shared/Dados/IncursoesRun.luau",
     "IncursoesDesafios": "src/shared/Dados/IncursoesDesafios.luau",
 }
