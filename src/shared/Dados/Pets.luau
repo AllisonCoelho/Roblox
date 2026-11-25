@@ -16,6 +16,7 @@ export type Eco = {
 	raridade: number, -- índice em Pets.RARIDADES
 	nucleo: number,
 	bonus: Bonus,
+	serie: string?, -- Ecos exclusivos (versão anime): de qual obra vem a inspiração
 }
 export type Nucleo = {
 	numero: number,
@@ -24,6 +25,8 @@ export type Nucleo = {
 	preco: number, -- Fragmentos por Núcleo
 	fase: number, -- fase do Corredor que precisa estar concluída
 	ecos: { { id: string, peso: number } },
+	exclusivo: boolean?, -- Núcleos exclusivos (versão anime)
+	serie: string?,
 }
 export type Guardado = { eco: string, prisma: boolean, desde: number }
 export type Colecao = {
@@ -204,6 +207,92 @@ Pets.ECOS = {
 		nucleo = 6,
 		bonus = { ganho = 2200 },
 	},
+	-- Exclusivos (versão anime): releituras chibi próprias inspiradas em Naruto, One Piece e
+	-- Solo Leveling. Nomes autorizados pelo dono como referência (CLAUDE.md); modelos originais.
+	-- 7 · Núcleo da Folha (Naruto)
+	{
+		id = "sapo_invocado",
+		nome = "Sapinho Invocado",
+		conceito = "Chega numa nuvem de fumaça com um pergaminho nas costas e pronto para a missão.",
+		raridade = 4,
+		nucleo = 7,
+		bonus = { ganho = 400 },
+		serie = "Naruto",
+	},
+	{
+		id = "cao_ninja",
+		nome = "Cão Ninja",
+		conceito = "De colete e bandana, fareja Fragmentos a quilômetros. Reclama de tudo, mas nunca falha.",
+		raridade = 5,
+		nucleo = 7,
+		bonus = { fragmentos = 60 },
+		serie = "Naruto",
+	},
+	{
+		id = "kurama_chibi",
+		nome = "Kurama Chibi",
+		conceito = "Nove caudas, olhos vermelhos e pouca paciência. Empresta o chakra só para quem merece.",
+		raridade = 6,
+		nucleo = 7,
+		bonus = { ganho = 1500 },
+		serie = "Naruto",
+	},
+	-- 8 · Núcleo do Grand Line (One Piece)
+	{
+		id = "den_den_mushi",
+		nome = "Den Den Mushi",
+		conceito = "Um caracol-telefone que sempre atende quando a sorte liga.",
+		raridade = 4,
+		nucleo = 8,
+		bonus = { sorte = 25 },
+		serie = "One Piece",
+	},
+	{
+		id = "rena_doutora",
+		nome = "Rena Doutora",
+		conceito = "Nariz azul, chapéu rosa e um remédio para cada tropeço da sua aura.",
+		raridade = 5,
+		nucleo = 8,
+		bonus = { ganho = 700 },
+		serie = "One Piece",
+	},
+	{
+		id = "nika_chibi",
+		nome = "Nika Chibi",
+		conceito = "Uma nuvem que ri sem parar, de chapéu de palha e cabelo de chama branca.",
+		raridade = 6,
+		nucleo = 8,
+		bonus = { ganho = 2500 },
+		serie = "One Piece",
+	},
+	-- 9 · Núcleo das Sombras (Solo Leveling)
+	{
+		id = "soldado_sombrio",
+		nome = "Soldado Sombrio",
+		conceito = "Levantou-se da sombra de um inimigo derrotado e agora só obedece a você.",
+		raridade = 4,
+		nucleo = 9,
+		bonus = { fragmentos = 50 },
+		serie = "Solo Leveling",
+	},
+	{
+		id = "beru_chibi",
+		nome = "Beru Chibi",
+		conceito = "O rei-formiga das sombras, em miniatura e com asas que zunem quando a sorte passa.",
+		raridade = 5,
+		nucleo = 9,
+		bonus = { sorte = 70 },
+		serie = "Solo Leveling",
+	},
+	{
+		id = "igris_chibi",
+		nome = "Igris Chibi",
+		conceito = "O cavaleiro de penacho vermelho. Pequeno, leal e mais forte que tudo no Nexo.",
+		raridade = 7,
+		nucleo = 9,
+		bonus = { ganho = 4000 },
+		serie = "Solo Leveling",
+	},
 } :: { Eco }
 
 Pets.porId = {} :: { [string]: Eco }
@@ -282,6 +371,49 @@ Pets.NUCLEOS = {
 			{ id = "olho_errante", peso = 70 },
 			{ id = "gato_constelacao", peso = 27 },
 			{ id = "dragao_estelar", peso = 3 },
+		},
+	},
+	-- Exclusivos (versão anime): mais caros e só com Ecos Épicos para cima
+	{
+		numero = 7,
+		nome = "Núcleo da Folha",
+		cor = "FF8A1F",
+		preco = 150,
+		fase = 2,
+		exclusivo = true,
+		serie = "Naruto",
+		ecos = {
+			{ id = "sapo_invocado", peso = 70 },
+			{ id = "cao_ninja", peso = 27 },
+			{ id = "kurama_chibi", peso = 3 },
+		},
+	},
+	{
+		numero = 8,
+		nome = "Núcleo do Grand Line",
+		cor = "4AA8FF",
+		preco = 400,
+		fase = 4,
+		exclusivo = true,
+		serie = "One Piece",
+		ecos = {
+			{ id = "den_den_mushi", peso = 70 },
+			{ id = "rena_doutora", peso = 27 },
+			{ id = "nika_chibi", peso = 3 },
+		},
+	},
+	{
+		numero = 9,
+		nome = "Núcleo das Sombras",
+		cor = "8C5CFF",
+		preco = 900,
+		fase = 6,
+		exclusivo = true,
+		serie = "Solo Leveling",
+		ecos = {
+			{ id = "soldado_sombrio", peso = 70 },
+			{ id = "beru_chibi", peso = 27 },
+			{ id = "igris_chibi", peso = 3 },
 		},
 	},
 } :: { Nucleo }

@@ -23,6 +23,18 @@ Os preços estão em Fragmentos. Raridades vão de Comum a Divino, com as mesmas
 
 **Prismático:** 1 em 50 Ecos nasce prismático, com bônus em dobro, contorno de arco-íris e faíscas.
 
+## Exclusivos · versão anime
+
+São três Núcleos especiais, um por obra, só com Ecos Épicos para cima. Ficam num anel menor e mais alto em volta do Cristal, girando ao contrário, e têm uma seção própria no painel.
+
+As releituras são **chibi e próprias**: nenhum modelo, arte, frame ou som dos animes, só a ideia do companheiro. Os nomes de personagens foram autorizados pelo dono como referência (CLAUDE.md). Antes do lançamento público, o dono decide sobre licença ou adaptação dos nomes.
+
+| Núcleo (preço, fase pedida) | Ecos (chance, bônus) |
+|---|---|
+| **Núcleo da Folha** · Naruto (150, fase 2) | **Sapinho Invocado**: sapo laranja com pergaminho nas costas (Épico 70%, +400% Pontos). **Cão Ninja**: colete e bandana (Lendário 27%, +60% Fragmentos). **Kurama Chibi**: raposa de nove caudas e olhos vermelhos acesos (Mítico 3%, +1500% Pontos) |
+| **Núcleo do Grand Line** · One Piece (400, fase 4) | **Den Den Mushi**: caracol-telefone com fone na concha (Épico 70%, +25% Sorte). **Rena Doutora**: nariz azul e chapéu rosa (Lendário 27%, +700% Pontos). **Nika Chibi**: nuvem risonha de chapéu de palha e cabelo de chama branca (Mítico 3%, +2500% Pontos) |
+| **Núcleo das Sombras** · Solo Leveling (900, fase 6) | **Soldado Sombrio**: soldado de sombra com chamas violeta (Épico 70%, +50% Fragmentos). **Beru Chibi**: rei-formiga com asas que batem (Lendário 27%, +70% Sorte). **Igris Chibi**: cavaleiro de penacho e capa vermelhos com espada de brilho violeta (Divino 3%, +4000% Pontos) |
+
 ## Regras (`Dados/Pets`)
 
 **Abrir um Núcleo**
@@ -45,7 +57,7 @@ Os preços estão em Fragmentos. Raridades vão de Comum a Divino, com as mesmas
 
 | Arquivo | Papel |
 |---|---|
-| `assets/pets/source/generate_pets.py` | Os 18 Ecos e os 6 Núcleos no Blender (`--render` refaz as prévias) |
+| `assets/pets/source/generate_pets.py` | Os 27 Ecos e os 9 Núcleos no Blender (`--render` refaz as prévias; `SO_ANIME=1` renderiza só os exclusivos) |
 | `assets/pets/previews/*.jpg` | Renders do Blender (não são prints do Roblox) |
 | `src/client/Mundo/Nexo3D/Dados/pet_*.luau`, `nucleo_*.luau` | Malhas (~14 mil triângulos no total) |
 | `src/shared/Dados/PetsVisual.luau` | Peças de cada Eco e juntas das asas (gerado) |
