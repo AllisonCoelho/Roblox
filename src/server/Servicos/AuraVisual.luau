@@ -182,6 +182,12 @@ local function aplicar(player: Player, forcar: boolean?)
 	local mudou = anterior ~= nil and string.split(anterior, "|")[1] ~= id
 	aplicada[player] = chave
 	limpar(personagem)
+	-- Camada extravagante (Mundo/Auras/Extravagancia): vale para TODAS as auras
+	if mudou then
+		personagem:SetAttribute("AuraIdEm", Workspace:GetServerTimeNow())
+	end
+	personagem:SetAttribute("AuraCor", if aparencia then aparencia.cor else nil)
+	personagem:SetAttribute("AuraId", if id ~= "" then id else nil)
 	-- Auras com VFX próprio: cada cliente monta o efeito a partir deste atributo.
 	-- "AuraVfxEm" só muda quando o jogador troca de aura (não no respawn): é a deixa da manifestação.
 	if AurasVfx[id] then
