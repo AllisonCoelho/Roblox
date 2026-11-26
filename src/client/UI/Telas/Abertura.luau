@@ -9,6 +9,7 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage.Shared
 local PrimeirosMinutos = require(Shared.Dados.PrimeirosMinutos)
+local ImagensUI = require(Shared.Dados.ImagensUI)
 local Sons = require(script.Parent.Parent.Parent.Mundo.Sons)
 
 local Abertura = {}
@@ -113,6 +114,48 @@ function Abertura.tocar()
 		TextColor3 = Color3.fromHex("FFF1B0"),
 		ZIndex = 3,
 	})
+	-- Logo e frase em imagem (Dados/ImagensUI) quando o dono já enviou; sem ID fica o texto
+	local function imagem(id: string, pos: UDim2, tamanho: UDim2, proporcao: number): ImageLabel?
+		if id == "" then
+			return nil
+		end
+		local i = Instance.new("ImageLabel")
+		i.BackgroundTransparency = 1
+		i.Image = id
+		i.ImageTransparency = 1
+		i.AnchorPoint = Vector2.new(0.5, 0.5)
+		i.Position = pos
+		i.Size = tamanho
+		i.ScaleType = Enum.ScaleType.Fit
+		i.ZIndex = 3
+		local r = Instance.new("UIAspectRatioConstraint")
+		r.AspectRatio = proporcao
+		r.Parent = i
+		local esc = Instance.new("UIScale")
+		esc.Scale = 0.85
+		esc.Parent = i
+		i.Parent = gui
+		return i
+	end
+	local logo = imagem(
+		ImagensUI.logoAbertura,
+		UDim2.fromScale(0.5, 0.45),
+		UDim2.fromScale(0.72, 0.5),
+		1774 / 713
+	)
+	local frase = imagem(
+		ImagensUI.fraseAbertura,
+		UDim2.fromScale(0.5, 0.82),
+		UDim2.fromScale(0.78, 0.09),
+		1673 / 174
+	)
+	if logo then
+		titulo.Visible = false
+		sub.Visible = false
+	end
+	if frase then
+		promessa.Visible = false
+	end
 	local pular = Instance.new("TextButton")
 	pular.AnchorPoint = Vector2.new(1, 1)
 	pular.Position = UDim2.new(1, -24, 1, -18)
@@ -135,6 +178,26 @@ function Abertura.tocar()
 			TextStrokeTransparency = if visivel then 0.2 else 1,
 		}):Play()
 	end
+	-- imagem: aparece crescendo com um quique; some encolhendo de leve
+	local function aparecerImagem(i: ImageLabel?, visivel: boolean, dur: number)
+		if not i then
+			return
+		end
+		TweenService:Create(i, TweenInfo.new(dur), { ImageTransparency = if visivel then 0 else 1 })
+			:Play()
+		local esc = i:FindFirstChildOfClass("UIScale")
+		if esc then
+			TweenService:Create(
+				esc,
+				TweenInfo.new(
+					if visivel then dur * 1.4 else dur,
+					Enum.EasingStyle.Back,
+					Enum.EasingDirection.Out
+				),
+				{ Scale = if visivel then 1 else 0.92 }
+			):Play()
+		end
+	end
 
 	local inicio = os.clock()
 	local fim = false
@@ -155,6 +218,8 @@ function Abertura.tocar()
 		aparecer(titulo, false, 0.3)
 		aparecer(sub, false, 0.3)
 		aparecer(promessa, false, 0.3)
+		aparecerImagem(logo, false, 0.3)
+		aparecerImagem(frase, false, 0.3)
 		task.delay(0.45, function()
 			gui:Destroy()
 			tocando = false
@@ -168,6 +233,7 @@ function Abertura.tocar()
 			0.9,
 			function()
 				aparecer(titulo, true, 0.5)
+				aparecerImagem(logo, true, 0.5)
 				Sons.tocar("revelacao", camera, 0.8, 0.6)
 			end,
 		},
@@ -182,12 +248,14 @@ function Abertura.tocar()
 			function()
 				aparecer(titulo, false, 0.6)
 				aparecer(sub, false, 0.6)
+				aparecerImagem(logo, false, 0.6)
 			end,
 		},
 		{
 			4.6,
 			function()
 				aparecer(promessa, true, 0.5)
+				aparecerImagem(frase, true, 0.5)
 				Sons.tocar("chamado", camera, 1.2, 0.5)
 			end,
 		},
