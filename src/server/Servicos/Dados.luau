@@ -19,6 +19,7 @@ local Pets = require(Shared.Dados.Pets)
 local Equipamento = require(Shared.Dados.Equipamento)
 local Tutorial = require(Shared.Dados.Tutorial)
 local ArenaPvP = require(Shared.Dados.ArenaPvP)
+local EventoSol = require(Shared.Dados.EventoSol)
 local Remotos = require(Shared.Remotos)
 local Sessao = require(script.Parent.Sessao)
 
@@ -207,6 +208,7 @@ function Dados.carregar(player: Player)
 	estado.equipamento = Equipamento.normalizar(estado.equipamento)
 	estado.tutorial = Tutorial.normalizar(estado.tutorial, estado.giros)
 	estado.arena = ArenaPvP.normalizar(estado.arena)
+	estado.evento = EventoSol.normalizar(estado.evento)
 	estados[player] = estado
 	for _, fn in aoCarregar do
 		local ok, erro = pcall(fn, player, estado)

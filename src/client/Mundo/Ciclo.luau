@@ -23,10 +23,60 @@ function Mundo.estado(): Ciclo.Estado
 	return Ciclo.estado(Mundo.segundos())
 end
 
+-- Evento Despertar do Sol (Shared/Dados/EventoSol): durante o aviso o céu vai clareando até o
+-- "sol do meio-dia" branco e dourado, que fica durante a luta e se desfaz no fim. 0..1
+function Mundo.fatorEvento(): number
+	local fase = Workspace:GetAttribute("EventoFase")
+	local fim = tonumber(Workspace:GetAttribute("EventoFim")) or 0
+	local resta = fim - Workspace:GetServerTimeNow()
+	if fase == "aviso" then
+		return math.clamp(1 - resta / 60, 0, 1) * 0.85
+	elseif fase == "luta" then
+		return 1
+	elseif fase == "fim" then
+		return math.clamp(resta / 20, 0, 1)
+	end
+	return 0
+end
+
+-- Céu do evento: claro, quente e com pouca névoa (sem estourar: brilho e exposição contidos)
+local SOL = {
+	relogio = 13,
+	brilho = 2.2,
+	exposicao = -0.05,
+	ambiente = Color3.fromHex("B89A6A"),
+	externo = Color3.fromHex("C8B088"),
+	topo = Color3.fromHex("FFF1C8"),
+	baixo = Color3.fromHex("FFD27A"),
+	nevoa = Color3.fromHex("FFF0C8"),
+	densidade = 0.28,
+	bruma = 1.2,
+	tinta = Color3.fromHex("FFF6E2"),
+	saturacao = 0.18,
+}
+
+local function misturar(luz: any, k: number): any
+	if k <= 0 then
+		return luz
+	end
+	local m = table.clone(luz)
+	for chave, alvo in SOL do
+		local v = luz[chave]
+		if typeof(v) == "Color3" then
+			m[chave] = v:Lerp(alvo, k)
+		elseif type(v) == "number" then
+			m[chave] = v + (alvo - v) * k
+		end
+	end
+	m.estrelas = luz.estrelas * (1 - k)
+	return m
+end
+
 local function aplicar()
 	local e = Mundo.estado()
-	local luz = Ciclo.luz(e.relogio)
-	Lighting.ClockTime = e.relogio
+	local k = Mundo.fatorEvento()
+	local luz = misturar(Ciclo.luz(e.relogio), k)
+	Lighting.ClockTime = e.relogio + (SOL.relogio - e.relogio) * k
 	Lighting.Brightness = luz.brilho
 	Lighting.ExposureCompensation = luz.exposicao
 	Lighting.Ambient = luz.ambiente

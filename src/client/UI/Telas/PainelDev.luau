@@ -470,6 +470,19 @@ local function montar(paiHud: Frame, op: Opcoes)
 	botao(inc, "Vencer o Soberano / virar Rei (teste)", function()
 		pedir("rei")
 	end)
+	texto(inc, "Evento Despertar do Sol (vale para o servidor todo):")
+	local ev, ajustarEv = grade(inc, 4)
+	for i, par in
+		{ { "Aviso agora", "aviso" }, { "Titã agora", "luta" }, { "Horário normal", "normal" } }
+	do
+		botao(ev, par[1], function()
+			pedir("evento", par[2])
+		end, i, "lilas")
+	end
+	botao(ev, "+7 baús (teste)", function()
+		pedir("baus")
+	end, 4, "lilas")
+	ajustarEv()
 
 	UserInputService.InputBegan:Connect(function(input, processado)
 		if not processado and input.KeyCode == Enum.KeyCode.F8 then

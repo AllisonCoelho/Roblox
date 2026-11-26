@@ -18,6 +18,8 @@
 >
 > **Arena: Trono do Servidor, x1 e Rankeada:** quem vence o Soberano vira Rei do Servidor (buff e coroa) e o trono passa a ser disputado no 1x1; a Rankeada tem rating Elo e ranking global. Detalhes em `ARENA.md`.
 >
+> **Evento Despertar do Sol (Gear 5):** a cada 30 min o Titã de Borracha cai na praça; quem ajuda ganha baús com chance da aura Gear 5 (garantida no 60º baú). Música ambiente procedural. Detalhes em `EVENTO_SOL.md`.
+>
 > **Combate reativo:** turno com defesa em tempo real (Esquivar, Aparar e contra-ataque), golpe no tempo certo, PA e Ruptura, com base na engenharia reversa de Clair Obscur: Expedition 33. Detalhes em `COMBATE_REATIVO.md`.
 
 ## A ideia em uma frase

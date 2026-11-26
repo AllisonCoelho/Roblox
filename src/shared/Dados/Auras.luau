@@ -18,6 +18,7 @@ export type Aura = {
 	estilo: string, -- "brilho" | "chama" | "nevoa"
 	tier: number, -- índice em Auras.Tiers
 	ordem: number, -- posição no catálogo (1 = mais comum)
+	exclusiva: boolean?, -- fora do sorteio: só vem de eventos (ex.: Gear 5 no Baú do Sol)
 }
 
 export type Tier = { nome: string, minimo: number, cor: string }
@@ -80,6 +81,19 @@ for i, d in Catalogo.lista do
 	Auras.porId[aura.id] = aura
 end
 
+-- Auras exclusivas de eventos: ficam em porId (guardar, equipar, Pontuação, anúncios), mas
+-- FORA de Auras.lista, então nunca entram no sorteio do giro nem no total do Índice.
+Auras.EXCLUSIVAS = {
+	{
+		id = "gear5",
+		nome = "Gear 5",
+		chance = 5000000,
+		cores = { "FFFFFF", "FFD54A" },
+		estilo = "brilho",
+		origem = "Evento Despertar do Sol",
+	},
+}
+
 -- Tabelas dos 11 niveis de Transcendencia em cache, montadas uma vez. A sorte total
 -- (Dados/PontosAura: evolução x Transcendência x pets) vai até Probabilidades.MAX_SORTE.
 Probabilidades.validarCatalogo(Auras.lista)
@@ -115,6 +129,23 @@ local function pesosPara(sorte: number?): ({ number }, number)
 	return pesos, total
 end
 
+for _, d in Auras.EXCLUSIVAS do
+	local tier = Auras.tierDe(d.chance)
+	Auras.porId[d.id] = {
+		id = d.id,
+		nome = d.nome,
+		chance = d.chance,
+		pBase = 0,
+		tierNome = Auras.Tiers[tier].nome,
+		reserva = false,
+		cores = d.cores,
+		estilo = d.estilo,
+		tier = tier,
+		ordem = 0,
+		exclusiva = true,
+	}
+end
+
 function Auras.sorteTranscendencia(nivel: any): number
 	return Probabilidades.sorteTranscendencia(nivel)
 end
@@ -128,7 +159,7 @@ end
 -- A chance BASE e a efetiva usam a mesma distribuicao que o servidor sorteia.
 function Auras.probabilidadeReal(id: string, sorte: number?): number
 	local aura = Auras.porId[id]
-	if not aura then
+	if not aura or aura.exclusiva then
 		return 0
 	end
 	local pesos, total = pesosPara(sorte)
@@ -151,7 +182,8 @@ end
 function Auras.contarDescobertas(colecao: { [string]: number }): number
 	local n = 0
 	for id, qtd in colecao do
-		if Auras.porId[id] and qtd > 0 then
+		local aura = Auras.porId[id]
+		if aura and not aura.exclusiva and qtd > 0 then
 			n += 1
 		end
 	end
@@ -161,6 +193,9 @@ end
 -- Compatibilidade com as telas de Forja: retorna o denominador efetivo 1 em N.
 -- Os sorteios continuam usando apenas a distribuicao normalizada por tier.
 function Auras.chanceEfetiva(aura: Aura, sorte: number?): number
+	if aura.exclusiva then
+		return aura.chance
+	end
 	return 1 / Auras.probabilidadeReal(aura.id, sorte)
 end
 

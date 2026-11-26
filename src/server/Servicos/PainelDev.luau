@@ -13,6 +13,7 @@ local Acoes = require(script.Parent.Acoes)
 local AuraVisual = require(script.Parent.AuraVisual)
 local Dados = require(script.Parent.Dados)
 local DropsMapa = require(script.Parent.DropsMapa)
+local EventoSol = require(script.Parent.EventoSol)
 local PermissaoDev = require(script.Parent.PermissaoDev)
 local Sorteio = require(script.Parent.Sorteio)
 local Nexo = require(script.Parent.Parent.Mundo.Nexo)
@@ -249,6 +250,15 @@ local comandos: { [string]: Comando } = {
 	renascer = renascer,
 	ciclo = function(_, fase)
 		return DropsMapa.irParaFase(fase)
+	end,
+	evento = function(_, fase)
+		return EventoSol.irPara(fase)
+	end,
+	baus = function(player)
+		if not estadoDeTeste(player) then
+			return false, "Disponível só na sessão de teste (perfil temporário)"
+		end
+		return EventoSol.darBausTeste(player)
 	end,
 	-- conta como vitória sobre o Soberano: com o trono vazio, vira o Rei
 	rei = function(player)
