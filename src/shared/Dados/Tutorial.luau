@@ -22,6 +22,7 @@ export type Progresso = {
 	passo: number,
 	concluido: boolean,
 	presenteAte: number, -- último passo cujo presente já foi entregue (rever não dá de novo)
+	apresentacaoOferecida: boolean?, -- migração da dispensa silenciosa dos veteranos
 }
 
 Tutorial.NOME = "Lume"
@@ -124,22 +125,34 @@ local function inteiro(v: any, minimo: number, maximo: number, padrao: number): 
 		else padrao
 end
 
--- Perfil sem tutorial salvo: quem nunca girou começa o tutorial; quem já jogou não vê
--- (os presentes contam como entregues)
+-- Oferece a apresentação uma única vez, inclusive para veteranos que foram
+-- dispensados automaticamente pelo tutorial anterior. Os presentes permanecem marcados
+-- como recebidos para contas com giros anteriores; nunca duplicamos recompensas.
+-- Marcador adicionado em 2026-11-26: evita voltar a oferecer nas próximas entradas.
 function Tutorial.normalizar(t: any, giros: number?): Progresso
 	local n = #Tutorial.PASSOS
+	local veterano = (giros or 0) > 0
 	if type(t) ~= "table" then
-		local veterano = (giros or 0) > 0
 		return {
 			passo = 1,
-			concluido = veterano,
+			concluido = false,
 			presenteAte = if veterano then n else 1,
+			apresentacaoOferecida = true,
 		}
 	end
+	-- Migração: versão antiga marcava veteranos como concluídos sem sequer abrir
+	-- a primeira fala. Essa combinação identifica a dispensa automática antiga.
+	-- Ao oferecer uma vez, mantém todos os presentes como já recebidos.
+	local dispensaAntiga = veterano
+		and t.apresentacaoOferecida ~= true
+		and t.concluido == true
+		and t.passo == 1
+		and t.presenteAte == n
 	return {
 		passo = inteiro(t.passo, 1, n, 1),
-		concluido = t.concluido == true,
+		concluido = if dispensaAntiga then false else t.concluido == true,
 		presenteAte = inteiro(t.presenteAte, 1, n, 1),
+		apresentacaoOferecida = true,
 	}
 end
 
