@@ -203,11 +203,8 @@ local function comecar(d: Sessao)
 			end,
 		},
 		-- na vez do jogador o Soberano mostra o que vai fazer (aviso com o corpo)
-		aoTurno = function(quem)
-			d.soberano:SetAttribute(
-				"DueloIntencao",
-				if quem == "a" then Duelo.intencao(d.estado.vezesB + 1) else nil
-			)
+		aoTurno = function()
+			d.soberano:SetAttribute("DueloIntencao", Duelo.intencao(d.estado.vezesB + 1))
 		end,
 		aoFim = function(vencedor, motivo)
 			terminar(

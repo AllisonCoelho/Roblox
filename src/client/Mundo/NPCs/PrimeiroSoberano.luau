@@ -84,7 +84,7 @@ local function poseDuelo(raiz: BasePart): (Animacoes.Pose?, number, string?, num
 	local intencao = raiz:GetAttribute("DueloIntencao")
 	local aviso = if type(intencao) == "string" then AVISOS[intencao] else nil
 	local laco = Animacoes.SOBERANO[aviso or "espera"]
-	return Animacoes.amostrar(laco, os.clock()), if intencao == "pesado" then 0.5 else 0, nil, 0, t
+	return Animacoes.amostrar(laco, t), if intencao == "pesado" then 0.5 else 0, nil, 0, t
 end
 
 local PERNAS = { "quadril_duelo", "coxa_dir", "coxa_esq", "canela_dir", "canela_esq" }
@@ -369,12 +369,20 @@ function PrimeiroSoberano.iniciar()
 				pose.peE1 = math.min(pose.peE1 or 0, 0.8)
 			end
 			local anterior = poseAnterior
-			if anterior and clipeNome ~= "entrada" then
+			if anterior and clipeNome ~= "entrada" and (not clipeNome or tClipe < 0.09) then
 				pose = Animacoes.misturar(
 					anterior,
 					pose,
 					1 - math.exp(-dt * (if clipeNome then 26 else 8))
 				)
+			end
+			-- A capa acompanha a torção do tronco e abre durante o salto.
+			if capa > 0 then
+				local giro = math.rad(math.clamp(-(pose.torso2 or 0) * 0.42, -20, 20))
+				local abrir =
+					math.rad(math.clamp((pose.raiz2 or 0) * 4 - (pose.torso1 or 0) * 0.24, 0, 22))
+				pecas.capa_dir.giro *= CFrame.Angles(-abrir, giro, abrir * 0.35)
+				pecas.capa_esq.giro *= CFrame.Angles(-abrir, giro, -abrir * 0.35)
 			end
 			poseAnterior = pose
 			emPe = tDuelo >= 0.34
