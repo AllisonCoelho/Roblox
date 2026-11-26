@@ -13,6 +13,7 @@ local SECOES = {
 		titulo = "Ritual",
 		opcoes = {
 			{ "sons", "Sons do ritual", "Toca os efeitos sonoros do giro." },
+			{ "musica", "Música", "Música ambiente do Nexo e a trilha do evento." },
 			{
 				"animacoes",
 				"Animações do giro",

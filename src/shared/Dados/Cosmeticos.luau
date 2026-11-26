@@ -36,6 +36,17 @@ local function item(id, tipo, nome, texto, cor, origem, cor2): Item
 end
 
 Cosmeticos.ITENS = {
+	-- Evento Despertar do Sol (só nos baús do evento)
+	item("tit_libertado", "titulo", "Libertado", "Libertado", "FFF6D0", "evento"),
+	item(
+		"ras_nuvem_sol",
+		"rastro",
+		"Rastro Nuvem do Sol",
+		"Nuvens brancas e brilho dourado ao correr",
+		"FFFFFF",
+		"evento",
+		"FFD54A"
+	),
 	-- Pacote do Iniciante
 	item("tit_despertado", "titulo", "Despertado", "Despertado", "B8F2FF", "iniciante"),
 	item("dis_broto", "distintivo", "Broto do Nexo", "🌱", "7BF0A0", "iniciante"),

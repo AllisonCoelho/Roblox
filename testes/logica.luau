@@ -2083,4 +2083,175 @@ do
 	igual("duelo: visão", v.minhaVez == false and v.oponente.vida == D.VIDA, true)
 end
 
+-- ============================================================ evento Despertar do Sol
+do
+	local E = req("EventoSol")
+	local A = req("Auras")
+	-- fases do relógio
+	igual("evento: luta no começo do período", E.estado(0).fase, "luta")
+	igual("evento: luta restante", E.estado(10).restante, E.LUTA - 10)
+	igual("evento: fim depois da luta", E.estado(E.LUTA + 1).fase, "fim")
+	igual("evento: espera", E.estado(E.LUTA + E.FIM + 5).fase, "espera")
+	local av = E.estado(E.PERIODO - 30)
+	igual("evento: aviso no último minuto", av.fase, "aviso")
+	igual("evento: aviso restante", av.restante, 30)
+	igual("evento: aviso é do próximo ciclo", av.ciclo, 1)
+	igual("evento: próximo ciclo começa em luta", E.estado(E.PERIODO).fase, "luta")
+	-- vida
+	igual("evento: vida mínima", E.vida({}), E.VIDA_MINIMA)
+	igual("evento: vida escala", E.vida({ 100, 50 }), 150 * E.GOLPES_DE_VIDA)
+	igual("evento: dano negativo ignorado", E.vida({ -500, 100 }), 100 * E.GOLPES_DE_VIDA)
+	-- ranking e prêmios
+	local r = E.ranking({ [1] = 50, [2] = 90, [3] = 50, [4] = 0 })
+	igual("evento: ranking tamanho (sem zero)", #r, 3)
+	igual("evento: ranking 1º", r[1].id, 2)
+	igual("evento: empate pelo id", r[2].id, 1)
+	local danos = { [1] = 10, [2] = 20, [3] = 30, [4] = 40, [5] = 5 }
+	local pd = E.premios(danos, true)
+	igual("evento: top 3 dourado", pd[4] == "dourado" and pd[3] == "dourado" and pd[2] == "dourado", true)
+	igual("evento: 4º ganha sol", pd[1], "sol")
+	igual("evento: 5º ganha sol", pd[5], "sol")
+	local pe = E.premios(danos, false)
+	igual("evento: sem derrota ninguém ganha dourado", pe[4], "sol")
+	igual("evento: quem não bateu não ganha", E.premios({ [9] = 0 }, true)[9], nil)
+	-- chances somam 1
+	for _, tipo in { "sol", "dourado" } do
+		local soma = 0
+		for _, c in E.chances(tipo) do
+			soma += c
+		end
+		igual("evento: chances somam 1 (" .. tipo .. ")", math.abs(soma - 1) < 1e-9, true)
+	end
+	igual("evento: gear5 1% no sol", E.chances("sol").gear5, 0.01)
+	igual("evento: gear5 5% no dourado", E.chances("dourado").gear5, 0.05)
+	-- normalizar
+	local n = E.normalizar({ sol = 3.7, dourado = -2, abertos = 0 / 0, gear5 = "x" })
+	igual("evento: normaliza inteiro", n.sol, 3)
+	igual("evento: normaliza negativo", n.dourado, 0)
+	igual("evento: normaliza NaN", n.abertos, 0)
+	igual("evento: normaliza tipo errado", n.gear5, 0)
+	igual("evento: normaliza nil", E.normalizar(nil).semGear5, 0)
+	-- abrir
+	local nunca = function()
+		return false
+	end
+	local p = E.padrao()
+	local premio, erro = E.abrir(p, "sol", function()
+		return 0
+	end, nunca)
+	igual("evento: sem baú não abre", premio, nil)
+	igual("evento: motivo", erro, "Você não tem esse baú.")
+	igual("evento: baú desconhecido", select(2, E.abrir(p, "x", math.random, nunca)), "Baú desconhecido.")
+	p.sol = 2
+	igual("evento: sorteio 0 dá gear5", E.abrir(p, "sol", function()
+		return 0
+	end, nunca), "gear5")
+	igual("evento: consumiu baú", p.sol, 1)
+	igual("evento: gear5 contada", p.gear5, 1)
+	igual("evento: garantia zerada", p.semGear5, 0)
+	igual("evento: sorteio alto dá fragmentos", E.abrir(p, "sol", function()
+		return 0.999
+	end, nunca), "fragmentos")
+	-- cosmético repetido vira pontos
+	local q = E.padrao()
+	q.dourado = 1
+	igual("evento: repetido vira pontos", E.abrir(q, "dourado", function()
+		return 0.06 -- cai no rastro (5..30)
+	end, function(id)
+		return id == "ras_nuvem_sol"
+	end), "pontos")
+	-- garantia no 60º baú
+	local g = E.padrao()
+	g.sol = E.GARANTIA
+	local veio = nil
+	for i = 1, E.GARANTIA do
+		local pr = E.abrir(g, "sol", function()
+			return 0.999
+		end, nunca)
+		if pr == "gear5" then
+			veio = i
+			break
+		end
+	end
+	igual("evento: gear5 garantida no baú " .. E.GARANTIA, veio, E.GARANTIA)
+	igual("evento: falta garantia nunca zero", E.faltaGarantia({ semGear5 = 999 } :: any), 1)
+	igual("evento: falta garantia", E.faltaGarantia(E.padrao()), E.GARANTIA)
+	-- recursos
+	igual("evento: pontos mínimos", E.pontosDoBau("sol", 0), 200)
+	igual("evento: pontos dourado triplo", E.pontosDoBau("dourado", 10), 3600)
+	igual("evento: fragmentos", E.fragmentosDoBau("sol", 2), 20)
+	igual("evento: fragmentos dourado", E.fragmentosDoBau("dourado", 99), 120)
+	igual("evento: tempo", E.tempo(125.7), "2:05")
+	igual("evento: tempo negativo", E.tempo(-3), "0:00")
+	-- todo prêmio de baú existe (aura exclusiva ou cosmético ou recurso)
+	local C = req("Cosmeticos")
+	for _, bau in E.BAUS do
+		for _, it in bau.itens do
+			local existe = it.id == "pontos"
+				or it.id == "fragmentos"
+				or A.porId[it.id] ~= nil
+				or (C.porId and C.porId[it.id] ~= nil)
+			igual("evento: prêmio existe " .. it.id, existe, true)
+		end
+	end
+	-- Gear 5: exclusiva do evento, fora do sorteio
+	local g5 = A.porId.gear5
+	igual("gear5: existe em porId", g5 ~= nil, true)
+	igual("gear5: exclusiva", g5 and g5.exclusiva, true)
+	local noSorteio = false
+	for _, a in A.lista do
+		if a.id == "gear5" then
+			noSorteio = true
+		end
+	end
+	igual("gear5: fora do sorteio", noSorteio, false)
+end
+
+-- ============================================================ música procedural
+do
+	local M = req("Musica")
+	igual("musica: modo calmo", M.modo(nil), "calmo")
+	igual("musica: modo aviso", M.modo("aviso"), "aviso")
+	igual("musica: modo evento", M.modo("luta"), "evento")
+	igual("musica: modo fim volta ao calmo", M.modo("fim"), "calmo")
+	igual("musica: tom oitava", M.tom(12), 2)
+	igual("musica: tom uníssono", M.tom(0), 1)
+	igual("musica: evento mais rápido", M.duracaoPasso("evento") < M.duracaoPasso("calmo"), true)
+	local fixo = function()
+		return 0
+	end
+	local primeiro = M.notas("calmo", 0, fixo)
+	igual("musica: baixo no começo do compasso", primeiro[1].som, "baixo")
+	local volumeOk, somOk = true, true
+	for _, modo in { "calmo", "aviso", "evento" } do
+		for passo = 0, 63 do
+			for _, n in M.notas(modo, passo, math.random) do
+				if n.volume <= 0 or n.volume > 0.35 then
+					volumeOk = false
+				end
+				if n.som ~= "ping" and n.som ~= "baixo" and n.som ~= "batida" then
+					somOk = false
+				end
+			end
+		end
+	end
+	igual("musica: volumes baixos (ambiente)", volumeOk, true)
+	igual("musica: só sons conhecidos", somOk, true)
+	igual("musica: evento tem arpejo em todo passo", #M.notas("evento", 1, fixo) >= 2, true)
+end
+
+-- ============================================================ Titã de Borracha (visual gerado)
+do
+	local T = req("TitaVisual")
+	local nomes = {}
+	for _, p in T do
+		nomes[p.nome] = true
+		igual("tita: junta " .. p.nome, #p.junta, 3)
+		igual("tita: camadas " .. p.nome, #p.camadas > 0, true)
+	end
+	for _, n in { "pernaD", "pernaE", "tronco", "cabeca", "cabelo", "halo", "bracoD", "bracoE" } do
+		igual("tita: peça " .. n, nomes[n], true)
+	end
+end
+
 print(string.format("%d testes, %d falhas", total, falhas))

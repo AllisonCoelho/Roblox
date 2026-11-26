@@ -30,6 +30,8 @@ export type Estado = {
 	-- Arena (Dados/ArenaPvP.luau): rating da Rankeada, vitórias, derrotas, vitórias sobre o
 	-- Primeiro Soberano e reinados como Rei do Servidor
 	arena: { [string]: any },
+	-- Evento Despertar do Sol (Dados/EventoSol.luau): baús guardados, abertos e a garantia
+	evento: { [string]: any },
 	-- Tutorial (Dados/Tutorial.luau): passo atual, concluído e presentes entregues. Fica fora do
 	-- padrão de propósito: quem já tinha perfil sem ele e já girou não vê o tutorial
 	tutorial: { [string]: any }?,
@@ -48,6 +50,7 @@ Perfil.CONFIGURACOES = {
 	qualidadeBaixa = true, -- menos anéis, partículas e rastros
 	ocultarEfeitosAlheios = true, -- não mostrar rituais e auras dos outros jogadores
 	pularRepetidas = true, -- animação curta para auras que você já tem
+	musica = true, -- música ambiente e trilha do evento
 }
 
 function Perfil.padrao(): Estado
@@ -66,6 +69,7 @@ function Perfil.padrao(): Estado
 			qualidadeBaixa = false,
 			ocultarEfeitosAlheios = false,
 			pularRepetidas = false,
+			musica = true,
 		},
 		incursoes = { fragmentos = 0, melhor = {}, concluidas = {}, reliquias = {} },
 		inventario = { itens = {}, equipados = {} },
@@ -84,6 +88,7 @@ function Perfil.padrao(): Estado
 		corredor = { fragmentos = 0, concluidas = {}, ultima = {}, bonusAte = 0 },
 		pets = { lista = {}, equipados = {}, contador = 0, vistos = {} },
 		equipamento = { lista = {}, equipados = {}, ocultos = {}, contador = 0 },
+		evento = { sol = 0, dourado = 0, abertos = 0, semGear5 = 0, gear5 = 0, participacoes = 0 },
 		arena = {
 			rating = 1000,
 			vitorias = 0,

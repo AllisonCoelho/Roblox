@@ -26,6 +26,8 @@ local EquipamentoMundo = require(script.Parent:WaitForChild("Mundo"):WaitForChil
 local CicloMundo = require(script.Parent:WaitForChild("Mundo"):WaitForChild("Ciclo"))
 local DropsMundo = require(script.Parent:WaitForChild("Mundo"):WaitForChild("DropsMapa"))
 local CoroaMundo = require(script.Parent:WaitForChild("Mundo"):WaitForChild("Coroa"))
+local EventoSolMundo = require(script.Parent:WaitForChild("Mundo"):WaitForChild("EventoSol"))
+local Musica = require(script.Parent:WaitForChild("Mundo"):WaitForChild("Musica"))
 local EcosTela = require(UI:WaitForChild("Telas"):WaitForChild("Ecos"))
 
 local K_CIRCULO = 0.5523 -- fator de Bézier para 4 arcos formarem um círculo
@@ -184,6 +186,14 @@ local function iniciarVisual(nome: string, iniciar: () -> ())
 	end)
 end
 
+-- a música não espera o mapa (ninguém fica no silêncio enquanto ele carrega)
+task.defer(function()
+	local ok, erro = pcall(Musica.iniciar)
+	if not ok then
+		warn("[Nexo] música: " .. tostring(erro))
+	end
+end)
+
 task.spawn(function()
 	local inicio = os.clock()
 	local ok, resultado, falha = pcall(Montagem.construir, nexo, function(parcial, etapa)
@@ -222,6 +232,7 @@ task.spawn(function()
 	iniciarVisual("Ciclo", CicloMundo.iniciar)
 	iniciarVisual("Drops", DropsMundo.iniciar)
 	iniciarVisual("Coroa", CoroaMundo.iniciar)
+	iniciarVisual("EventoSol", EventoSolMundo.iniciar)
 end)
 
 local BRANCO = Color3.new(1, 1, 1)
@@ -350,6 +361,8 @@ Estado.aoMudar(function(estado)
 		movimentoReduzido = estado.configuracoes.movimentoReduzido == true,
 	})
 	ArenaCorpo.definir({ movimentoReduzido = estado.configuracoes.movimentoReduzido == true })
+	EventoSolMundo.definir({ movimentoReduzido = estado.configuracoes.movimentoReduzido == true })
+	Musica.definir((estado.configuracoes :: any).musica ~= false)
 end)
 
 -- Interações do mapa
