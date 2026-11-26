@@ -17,10 +17,9 @@ Regras puras em `src/shared/Dados/EventoSol.luau` (testadas em `testes/logica.lu
 
 ## Chefe: Titã de Borracha
 
-Personagem **original** (não é o Luffy): boneco cartoon de borracha cor creme, cabelo de
-nuvem, auréola de sol, olhos com anéis dourados, faixa dourada e punhos gigantes. Modelado
-no Blender por `assets/evento/source/generate_tita.py` em 8 peças com junta própria, para o
-cliente esticar e quicar como borracha.
+Personagem **original** (não é o Luffy): um **boneco do Roblox gigante** (escala 5, 26 studs,
+ver `NPCS.md`) todo branco, com cabelo de nuvem, olhos com anéis dourados, sorrisão, gola de
+nuvem, faixa dourada e auréola de sol girando. Estica os braços e achata como borracha.
 
 - Vida = 150 golpes de quem está no servidor (mínimo 3000): ~2 min de luta, forte ou fraco.
 - A aura de quem está a até 42 studs bate sozinha a cada 0,8 s (dano = força da aura × equipamento).
