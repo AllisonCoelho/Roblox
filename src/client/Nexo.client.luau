@@ -149,28 +149,63 @@ RunService.Heartbeat:Connect(function()
 	end
 end)
 
--- Kit 3D da praça (modelado no Blender). Se o motor recusar criar as malhas, o cenário
--- provisório do servidor continua visível: é o fallback temporário desta fase.
+-- Prioridade para cenário estático, já importado/publicado no Studio.
+-- O modelo deve estar em ReplicatedStorage/Nexo3DPrecompilado, com todas as partes
+-- posicionadas em coordenadas mundiais, não colidíveis (colisores são do servidor).
+-- A versão estática evita a conversão EditableMesh para cada jogador no ingresso.
+-- Sem modelo pronto, usa o antigo kit procedural como reserva.
 local kit: Montagem.Resultado? = nil
 nexo:SetAttribute("EstadoKit3D", "Montando")
 task.spawn(function()
-	local ok, resultado = pcall(Montagem.construir, nexo)
-	if not ok then
-		nexo:SetAttribute("EstadoKit3D", "Cenário provisório")
-		warn(
-			"[Nexo] kit 3D indisponível; mantendo o cenário provisório: " .. tostring(resultado)
-		)
-	else
-		kit = resultado
-		-- As peças do servidor mantêm a colisão após a montagem.
-		for _, inst in nexo:GetDescendants() do
-			if inst:IsA("BasePart") and inst:GetAttribute("Provisorio") then
-				inst.Transparency = 1
+	local inicio = os.clock()
+	local pronto = ReplicatedStorage:FindFirstChild("Nexo3DPrecompilado")
+	if pronto and (pronto:IsA("Model") or pronto:IsA("Folder")) then
+		local ok, erro = pcall(function()
+			local visual = pronto:Clone()
+			visual.Name = "Kit3D"
+			for _, inst in visual:GetDescendants() do
+				if inst:IsA("BasePart") then
+					inst.Anchored = true
+					inst.CanCollide = false
+					inst.CanQuery = false
+					inst.CanTouch = false
+				end
 			end
+			visual.Parent = nexo
+		end)
+		if ok then
+			for _, inst in nexo:GetDescendants() do
+				if inst:IsA("BasePart") and inst:GetAttribute("Provisorio") then
+					inst.Transparency = 1
+				end
+			end
+			coracao.Transparency = 1
+			casca.Transparency = 1
+			nexo:SetAttribute("EstadoKit3D", "Carregado")
+			print(string.format("[Nexo] cenário 3D pré-compilado pronto em %.2fs", os.clock() - inicio))
+		else
+			nexo:SetAttribute("EstadoKit3D", "Cenário provisório")
+			warn("[Nexo] falha ao clonar o cenário pré-compilado: " .. tostring(erro))
 		end
-		coracao.Transparency = 1
-		casca.Transparency = 1
-		nexo:SetAttribute("EstadoKit3D", "Carregado")
+	else
+		local ok, resultado = pcall(Montagem.construir, nexo)
+		if not ok then
+			nexo:SetAttribute("EstadoKit3D", "Cenário provisório")
+			warn(
+				"[Nexo] kit 3D indisponível; mantendo o cenário provisório: " .. tostring(resultado)
+			)
+		else
+			kit = resultado
+			for _, inst in nexo:GetDescendants() do
+				if inst:IsA("BasePart") and inst:GetAttribute("Provisorio") then
+					inst.Transparency = 1
+				end
+			end
+			coracao.Transparency = 1
+			casca.Transparency = 1
+			nexo:SetAttribute("EstadoKit3D", "Carregado")
+			print(string.format("[Nexo] cenário 3D gerado no cliente em %.2fs", os.clock() - inicio))
+		end
 	end
 	PrimeiroSoberano.iniciar()
 	montarCorredor()
