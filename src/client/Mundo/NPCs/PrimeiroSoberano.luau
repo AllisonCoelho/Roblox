@@ -147,8 +147,27 @@ function PrimeiroSoberano.iniciar()
 		return
 	end
 	local raiz = modelo:WaitForChild("Raiz") :: BasePart
-	local ok, resultado = pcall(montar, modelo, raiz)
+	-- a armadura tem 19 malhas: se a montagem falhar (memória ou conversão ocupada logo depois do
+	-- mapa), tenta de novo algumas vezes antes de ficar com as peças de reserva
+	local ok, resultado = false, nil :: any
+	for tentativa, espera in { 0, 3, 8, 20 } do
+		if espera > 0 then
+			task.wait(espera)
+		end
+		ok, resultado = pcall(montar, modelo, raiz)
+		if ok then
+			break
+		end
+		warn(
+			string.format(
+				"[Soberano] armadura 3D, tentativa %d: %s",
+				tentativa,
+				tostring(resultado)
+			)
+		)
+	end
 	if not ok then
+		modelo:SetAttribute("ErroArmadura", tostring(resultado))
 		warn("[Soberano] armadura 3D indisponível; mantendo a reserva: " .. tostring(resultado))
 		return
 	end
