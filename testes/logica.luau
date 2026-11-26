@@ -2313,4 +2313,107 @@ do
 	igual("boneco: acenar abre o braço direito", B.pose("acenar", 0).bracoD[3] > 2, true)
 end
 
+-- ============================================================ poderes do ataque automático
+do
+	local P = req("AtaquesAura")
+	local A = req("Auras")
+	local fixo = function()
+		return 0.99 -- nunca crítico
+	end
+	local sempre = function()
+		return 0 -- sempre crítico
+	end
+	-- toda família tem poder e todo poder existe
+	for _, a in A.lista do
+		local poder = P.poderDe(a.id, a.familia)
+		igual("poder: " .. a.id .. " tem poder", poder ~= nil and P.PODERES[poder.id] ~= nil, true)
+		igual("poder: família mapeada " .. tostring(a.familia), P.POR_FAMILIA[a.familia or ""] ~= nil, true)
+	end
+	igual("poder: gear5 é o punho", P.poderDe("gear5", nil).id, "punho")
+	igual("poder: sem aura usa o padrão", P.poderDe(nil, nil).id, P.PADRAO)
+	-- variedade: muitos poderes diferentes em uso
+	local usados = {}
+	local n = 0
+	for _, a in A.lista do
+		local id = P.poderDe(a.id, a.familia).id
+		if not usados[id] then
+			usados[id] = true
+			n += 1
+		end
+	end
+	igual("poder: pelo menos 12 poderes diferentes no sorteio", n >= 12, true)
+	-- balanço no alvo único: 85% (poderes de área) a 145%
+	for id, poder in P.PODERES do
+		local m = P.esperadoAlvoUnico(poder)
+		igual("poder: balanço " .. id, m >= 0.85 and m <= 1.45, true)
+		igual("poder: descrição " .. id, type(poder.descricao) == "string" and #poder.descricao > 10, true)
+	end
+	local origem = { x = 0, z = 0 }
+	local alvo = { id = 1, x = 0, z = 10 }
+	local perto = { id = 2, x = 3, z = 10 }
+	local longe = { id = 3, x = 60, z = 60 }
+	local atras = { id = 4, x = 0, z = 18 }
+	local outros = { alvo, perto, longe, atras }
+	local function soma(r, id)
+		local t = 0
+		for _, a in r.acertos do
+			if id == nil or a.id == id then
+				t += a.dano
+			end
+		end
+		return t
+	end
+	-- área acerta perto e não longe
+	local r = P.resolver(P.PODERES.vazio, 100, 1, origem, alvo, outros, 1, fixo)
+	igual("poder: vazio principal", soma(r, 1), 85)
+	igual("poder: vazio respinga perto", soma(r, 2), 55)
+	igual("poder: vazio não alcança longe", soma(r, 3), 0)
+	-- corrente pula para os mais próximos, nunca repete
+	r = P.resolver(P.PODERES.corrente, 100, 1, origem, alvo, outros, 1, fixo)
+	local ids = {}
+	for _, a in r.acertos do
+		igual("poder: corrente não repete " .. a.id, ids[a.id], nil)
+		ids[a.id] = true
+	end
+	igual("poder: corrente pulou para o perto", ids[2], true)
+	igual("poder: corrente não foi longe", ids[3], nil)
+	-- linha atravessa quem está atrás do alvo
+	r = P.resolver(P.PODERES.mare, 100, 1, origem, alvo, outros, 1, fixo)
+	igual("poder: maré acerta quem está atrás", soma(r, 4) > 0, true)
+	igual("poder: maré não acerta o lado longe", soma(r, 3), 0)
+	-- vários golpes somam o principal
+	r = P.resolver(P.PODERES.espiritos, 90, 1, origem, alvo, {}, 1, fixo)
+	igual("poder: espíritos são 3 acertos", #r.acertos, 3)
+	igual("poder: espíritos chegam em sequência", r.acertos[3].atraso > r.acertos[2].atraso, true)
+	-- crítico
+	r = P.resolver(P.PODERES.garras, 100, 1, origem, alvo, {}, 1, sempre)
+	igual("poder: garras críticas dobram", math.abs(soma(r, 1) - 200) <= 2, true)
+	igual("poder: marca crítico", r.acertos[1].critico, true)
+	-- golpe forte a cada N
+	local normal = soma(P.resolver(P.PODERES.meteoro, 100, 1, origem, alvo, {}, 1, fixo), 1)
+	local forte = P.resolver(P.PODERES.meteoro, 100, 1, origem, alvo, {}, 3, fixo)
+	igual("poder: meteoro forte no 3º", forte.forte, true)
+	igual("poder: meteoro forte bate mais", soma(forte, 1) > normal * 2, true)
+	-- queimadura chega depois
+	r = P.resolver(P.PODERES.brasa, 100, 1, origem, alvo, {}, 1, fixo)
+	local queimou, atrasada = 0, true
+	for _, a in r.acertos do
+		if a.tipo == "queimar" then
+			queimou += a.dano
+			atrasada = atrasada and a.atraso > 0
+		end
+	end
+	igual("poder: brasa queima depois", queimou > 0 and atrasada, true)
+	-- lentidão
+	r = P.resolver(P.PODERES.geada, 100, 1, origem, alvo, {}, 1, fixo)
+	igual("poder: geada deixa lento", r.lentidao ~= nil and r.lentidao.fator > 1, true)
+	-- dano nunca zero e nunca negativo
+	r = P.resolver(P.PODERES.estilhaco, -50, 1, origem, alvo, outros, 1, fixo)
+	for _, a in r.acertos do
+		igual("poder: dano mínimo 1", a.dano >= 1, true)
+	end
+	-- raridade aumenta o raio
+	igual("poder: raridade aumenta o raio", P.raio(8, 7) > P.raio(8, 1), true)
+end
+
 print(string.format("%d testes, %d falhas", total, falhas))

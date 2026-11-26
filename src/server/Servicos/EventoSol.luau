@@ -18,6 +18,8 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local EventoSol = require(Shared.Dados.EventoSol)
 local Cosmeticos = require(Shared.Dados.Cosmeticos)
 local Criaturas = require(Shared.Dados.Criaturas)
+local AtaquesAura = require(Shared.Dados.AtaquesAura)
+local Auras = require(Shared.Dados.Auras)
 local DropsMapa = require(Shared.Dados.DropsMapa)
 local Remotos = require(Shared.Remotos)
 local Acoes = require(script.Parent.Acoes)
@@ -57,6 +59,35 @@ local function danoDe(player: Player): number
 				* Equipamento.multiplicadores(player).dano
 			+ 0.5
 	)
+end
+
+-- Poder do ataque automático (Dados/AtaquesAura): no Titã (alvo único) soma os acertos do poder
+-- (golpes seguidos, crítico, queimadura, golpe forte a cada N)
+local contagem: { [Player]: number } = {}
+local function golpeDoPoder(player: Player): (number, string, boolean, boolean)
+	local estado = Dados.de(player) :: any
+	local aura = estado and estado.equipada and Auras.porId[estado.equipada]
+	local tier = if aura then (if aura.exclusiva then #Auras.Tiers else aura.tier) else 1
+	local poder = AtaquesAura.poderDe(aura and aura.id, aura and aura.familia)
+	contagem[player] = (contagem[player] or 0) + 1
+	local r = AtaquesAura.resolver(
+		poder,
+		danoDe(player),
+		tier,
+		{ x = 0, z = 0 },
+		{ id = 0, x = 0, z = 1 },
+		{},
+		contagem[player],
+		function()
+			return rng:NextNumber()
+		end
+	)
+	local total, critico = 0, false
+	for _, a in r.acertos do
+		total += a.dano
+		critico = critico or a.critico == true
+	end
+	return total, poder.id, critico, r.forte
 end
 
 local function publicarRanking()
@@ -177,13 +208,21 @@ local function lutar()
 			continue
 		end
 		ultimoGolpe[p] = relogio
-		local dano = math.min(vida, danoDe(p))
+		local total, poder, critico, forte = golpeDoPoder(p)
+		local dano = math.min(vida, total)
 		if dano <= 0 then
 			continue
 		end
 		vida -= dano
 		danos[p.UserId] = (danos[p.UserId] or 0) + dano
-		table.insert(golpes, { de = p.UserId, dano = dano })
+		table.insert(golpes, {
+			de = p.UserId,
+			dano = dano,
+			poder = poder,
+			critico = critico,
+			forte = forte,
+			aura = (Dados.de(p) :: any) and (Dados.de(p) :: any).equipada or nil,
+		})
 		if vida <= 0 then
 			break
 		end
@@ -346,6 +385,7 @@ function Servico.iniciar()
 	Acoes.registrar("AbrirBau", abrirBau)
 	Players.PlayerRemoving:Connect(function(player)
 		ultimoGolpe[player] = nil
+		contagem[player] = nil
 	end)
 	task.spawn(function()
 		while true do
