@@ -160,11 +160,29 @@ local function preparar(nome: string): Pronta
 	return { modelo = parte, centro = minimo + tamanho / 2 }
 end
 
+-- Uma conversão de cada vez no cliente todo. Quando o mapa termina, vários visuais (Soberano,
+-- Corredor, criaturas, Ecos, drops...) começam juntos: convertendo em paralelo, as malhas
+-- editáveis somavam e passavam do orçamento de memória do cliente, e a montagem falhava.
+local convertendo = false
+
+local function prepararNaFila(nome: string): Pronta
+	while convertendo do
+		task.wait()
+	end
+	convertendo = true
+	local ok, resultado = pcall(preparar, nome)
+	convertendo = false
+	if not ok then
+		error(resultado, 0)
+	end
+	return resultado
+end
+
 -- As peças repetidas compartilham o conteúdo estático de um único modelo.
 function Malha.criar(nome: string, prontas: Cache): (MeshPart, Vector3)
 	local pronta = prontas[nome]
 	if not pronta then
-		pronta = preparar(nome)
+		pronta = prepararNaFila(nome)
 		prontas[nome] = pronta
 	end
 	return pronta.modelo:Clone(), pronta.centro

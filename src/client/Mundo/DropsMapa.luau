@@ -34,15 +34,19 @@ local pasta: Folder
 
 local ESCALA = { orbe = 1.15, lasca = 1.2, estrela = 1.3 }
 
+local montando: { [number]: boolean } = {}
+
 local function montar(alvo: Instance)
 	if not alvo:IsA("BasePart") then
 		return
 	end
 	local id = alvo:GetAttribute("Id")
 	local tipo = alvo:GetAttribute("Tipo")
-	if type(id) ~= "number" or type(tipo) ~= "string" or itens[id] then
+	if type(id) ~= "number" or type(tipo) ~= "string" or itens[id] or montando[id] then
 		return
 	end
+	-- a conversão das malhas leva alguns quadros: marca para não montar o mesmo drop duas vezes
+	montando[id] = true
 	local item: Item = {
 		alvo = alvo,
 		camadas = {},
@@ -93,6 +97,17 @@ local function montar(alvo: Instance)
 			* CFrame.Angles(0, 0, math.rad(90))
 		feixe.Parent = pasta
 		item.feixe = feixe
+	end
+	montando[id] = nil
+	-- alguém pegou (ou o drop sumiu) enquanto o modelo era montado
+	if not alvo.Parent then
+		for _, c in item.camadas do
+			c.parte:Destroy()
+		end
+		if item.feixe then
+			item.feixe:Destroy()
+		end
+		return
 	end
 	itens[id] = item
 end

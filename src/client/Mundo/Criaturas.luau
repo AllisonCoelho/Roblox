@@ -53,6 +53,9 @@ type Instancia = {
 local DISTANCIA = 230
 local prontas: Malha.Cache = {}
 local instancias: { [BasePart]: Instancia } = {}
+-- criaturas com o modelo sendo montado agora (a conversão das malhas leva alguns quadros:
+-- sem esta marca, cada quadro começava outro modelo e a criatura aparecia duplicada)
+local criando: { [BasePart]: boolean } = {}
 local pasta: Folder
 local meuAlvo: BasePart? = nil
 
@@ -153,7 +156,8 @@ local function barraDeVida(
 	rotulo.TextSize = if chefe then 22 else 15
 	rotulo.TextColor3 = if chefe then Color3.fromHex("FFC83D") else Color3.fromHex("F7F2EC")
 	rotulo.TextStrokeTransparency = 0.3
-	rotulo.Text = if chefe then "♛ " .. nome else nome
+	-- o nome do chefe já vem maior e dourado (a fonte Oswald não tem símbolos como a coroa)
+	rotulo.Text = if chefe then string.upper(nome) else nome
 	rotulo.Parent = gui
 	local fundo = Instance.new("Frame")
 	fundo.BackgroundColor3 = Color3.fromHex("0B0915")
@@ -463,10 +467,24 @@ function Criaturas.iniciar()
 				local perto = (parte.Position - olho).Magnitude < DISTANCIA
 				local i = instancias[parte]
 				if perto and not i then
-					local nova = criar(parte)
-					if nova then
-						instancias[parte] = nova
-						i = nova
+					if not criando[parte] then
+						criando[parte] = true
+						task.spawn(function()
+							local ok, nova = pcall(criar, parte)
+							criando[parte] = nil
+							if not ok then
+								warn("[Criaturas] " .. tostring(nova))
+								return
+							end
+							if nova then
+								if instancias[parte] or not parte.Parent then
+									nova.modelo:Destroy()
+									nova.barra:Destroy()
+								else
+									instancias[parte] = nova
+								end
+							end
+						end)
 					end
 				elseif not perto and i then
 					i.modelo:Destroy()
