@@ -8,6 +8,26 @@ local function igual(nome, obtido, esperado)
 end
 
 local Formato = req("Formato")
+do
+	local C = req("CarregamentoMapa")
+	local cena = req("NexoCena")
+	local praca, mundo = C.dividir(cena.pecas)
+	igual("mapa: preserva todas as peças", #praca + #mundo, #cena.pecas)
+	igual("mapa: praça antes do mundo", #praca > 0 and #mundo > #praca, true)
+	local nucleo, piso = false, false
+	for _, p in praca do
+		nucleo = nucleo or p.grupo == "nucleo"
+		piso = piso or p.malha == "praca_piso"
+		igual("mapa: praça dentro do raio", C.etapa(p), "Praca")
+	end
+	igual("mapa: núcleo na primeira etapa", nucleo, true)
+	igual("mapa: piso na primeira etapa", piso, true)
+	for _, p in mundo do
+		igual("mapa: complemento fora da praça", C.etapa(p), "Mundo")
+	end
+	igual("mapa: limite da praça", C.etapa({posicao = {46, 0, 0}}), "Praca")
+	igual("mapa: caminho fica para depois", C.etapa({posicao = {47, 0, 0}}), "Mundo")
+end
 igual("inteiro", Formato.inteiro(12450), "12.450")
 igual("negativo", Formato.inteiro(-1500), "-1.500")
 igual("abreviado", Formato.curto(15000), "15 mil")

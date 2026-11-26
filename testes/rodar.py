@@ -6,6 +6,8 @@ import sys
 
 ROOT = Path(__file__).resolve().parent.parent
 MODULOS = {
+    "CarregamentoMapa": "src/shared/Dados/CarregamentoMapa.luau",
+    "NexoCena": "src/client/Mundo/Nexo3D/Cena.luau",
     "Formato": "src/shared/Formato.luau",
     "LootIncursoes": "src/shared/Dados/LootIncursoes.luau",
     "Receitas": "src/shared/Dados/Receitas.luau",
@@ -90,6 +92,7 @@ for nome, caminho in MODULOS.items():
     fonte = re.sub(r'require\(script\.Parent\.(\w+)\)', r'req("\1")', fonte)
     codigo.append('MODULOS["' + nome + '"] = function()\n' + fonte + '\nend\n')
 codigo.append((ROOT / "testes/logica.luau").read_text(encoding="utf-8"))
+subprocess.run([sys.executable, str(ROOT / "testes/mapa.py")], check=True)
 saida = ROOT / "dist" / "testes.luau"
 saida.parent.mkdir(parents=True, exist_ok=True)
 saida.write_text("\n".join(codigo), encoding="utf-8")

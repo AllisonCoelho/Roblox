@@ -153,27 +153,75 @@ end)
 -- provisório do servidor continua visível: é o fallback temporário desta fase.
 local kit: Montagem.Resultado? = nil
 nexo:SetAttribute("EstadoKit3D", "Montando")
+local etapasProntas: { [string]: boolean } = {}
+local function ocultarParte(inst: Instance)
+	if inst:IsA("BasePart") and inst:GetAttribute("Provisorio") then
+		local etapa = inst:GetAttribute("EtapaKit3D")
+		if etapasProntas.Mundo or (etapa == "Praca" and etapasProntas.Praca) then
+			inst.LocalTransparencyModifier = 1
+		end
+	end
+end
+nexo.DescendantAdded:Connect(function(inst)
+	-- Também cobre peças do servidor que chegam depois com instance streaming.
+	task.defer(ocultarParte, inst)
+end)
+local function esconderProvisorio(etapa: string)
+	etapasProntas[etapa] = true
+	for _, inst in nexo:GetDescendants() do
+		ocultarParte(inst)
+	end
+	coracao.LocalTransparencyModifier = 1
+	casca.LocalTransparencyModifier = 1
+end
+
+local function iniciarVisual(nome: string, iniciar: () -> ())
+	task.defer(function()
+		local ok, erro = pcall(iniciar)
+		if not ok then
+			warn("[Nexo] visual " .. nome .. ": " .. tostring(erro))
+		end
+	end)
+end
+
 task.spawn(function()
-	local ok, resultado = pcall(Montagem.construir, nexo)
+	local inicio = os.clock()
+	local ok, resultado, falha = pcall(Montagem.construir, nexo, function(parcial, etapa)
+		kit = parcial
+		esconderProvisorio(etapa)
+		local segundos = os.clock() - inicio
+		nexo:SetAttribute(
+			"EstadoKit3D",
+			if etapa == "Praca" then "Praça pronta; montando mundo" else "Carregado"
+		)
+		nexo:SetAttribute("TempoKit3D" .. etapa, segundos)
+		print(string.format("[Nexo] %s pronta em %.2fs", etapa, segundos))
+	end)
 	if not ok then
 		nexo:SetAttribute("EstadoKit3D", "Cenário provisório")
+		nexo:SetAttribute("ErroKit3D", tostring(resultado))
 		warn(
 			"[Nexo] kit 3D indisponível; mantendo o cenário provisório: " .. tostring(resultado)
 		)
 	else
 		kit = resultado
-		-- As peças do servidor mantêm a colisão após a montagem.
-		for _, inst in nexo:GetDescendants() do
-			if inst:IsA("BasePart") and inst:GetAttribute("Provisorio") then
-				inst.Transparency = 1
-			end
+		if falha then
+			nexo:SetAttribute("EstadoKit3D", "Praça pronta; mundo provisório")
+			nexo:SetAttribute("ErroKit3D", falha)
+			warn("[Nexo] preservando a praça 3D; restante provisório: " .. falha)
 		end
-		coracao.Transparency = 1
-		casca.Transparency = 1
-		nexo:SetAttribute("EstadoKit3D", "Carregado")
 	end
-	PrimeiroSoberano.iniciar()
-	montarCorredor()
+	-- O mapa tem prioridade sobre as malhas opcionais na entrada.
+	-- Uma falha no Soberano não impede Corredor, ciclo, drops ou interações.
+	iniciarVisual("Soberano", PrimeiroSoberano.iniciar)
+	iniciarVisual("Corredor", montarCorredor)
+	iniciarVisual("Arena", ArenaCorpo.iniciar)
+	iniciarVisual("Ecos", EcosMundo.iniciar)
+	iniciarVisual("Criaturas", CriaturasMundo.iniciar)
+	iniciarVisual("Equipamento", EquipamentoMundo.iniciar)
+	iniciarVisual("Ciclo", CicloMundo.iniciar)
+	iniciarVisual("Drops", DropsMundo.iniciar)
+	iniciarVisual("Coroa", CoroaMundo.iniciar)
 end)
 
 local BRANCO = Color3.new(1, 1, 1)
@@ -281,13 +329,6 @@ end)
 
 -- Primeiro Soberano: armadura 3D e repouso (o NPC em si é do servidor)
 -- ArenaCorpo: corpo dos jogadores em duelo (todos os clientes veem os mesmos golpes)
-ArenaCorpo.iniciar()
-EcosMundo.iniciar()
-CriaturasMundo.iniciar()
-EquipamentoMundo.iniciar()
-CicloMundo.iniciar()
-DropsMundo.iniciar()
-CoroaMundo.iniciar()
 Estado.aoMudar(function(estado)
 	CriaturasMundo.definir({
 		qualidadeBaixa = estado.configuracoes.qualidadeBaixa == true,

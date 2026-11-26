@@ -3,6 +3,7 @@
 -- repositório: não depende de asset enviado ao Roblox nem de nada colocado à mão no Studio.
 -- Cada cliente converte uma malha editável de cada vez em conteúdo estático.
 local AssetService = game:GetService("AssetService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Malha = {}
 
@@ -53,11 +54,19 @@ Malha.decodificar = decodificar
 
 -- Os vértices separados por face dão o sombreado facetado do kit.
 local function preencher(editavel: EditableMesh, d: Dados, tamanho: Vector3)
+	local ultimoQuadro = os.clock()
+	local function ceder(indice: number)
+		if indice % 256 == 0 and os.clock() - ultimoQuadro >= 0.004 then
+			task.wait()
+			ultimoQuadro = os.clock()
+		end
+	end
 	local nv, nt = d.vertices, d.triangulos
 	local dados = decodificar(d.dados, nv * 9 + nt * 6)
 	local vertices = table.create(nv)
 	local cores = table.create(nv)
 	for i = 0, nv - 1 do
+		ceder(i)
 		local p = i * 6
 		-- posições relativas ao centro da caixa: a peça fica centrada na MeshPart
 		vertices[i + 1] = editavel:AddVertex(
@@ -79,6 +88,7 @@ local function preencher(editavel: EditableMesh, d: Dados, tamanho: Vector3)
 	end
 	local inicio = nv * 9
 	for t = 0, nt - 1 do
+		ceder(t)
 		local p = inicio + t * 6
 		local a = buffer.readu16(dados, p) + 1
 		local b = buffer.readu16(dados, p + 2) + 1
@@ -89,10 +99,39 @@ local function preencher(editavel: EditableMesh, d: Dados, tamanho: Vector3)
 end
 
 local function preparar(nome: string): Pronta
-	local d = require(pasta:WaitForChild(nome)) :: Dados
+	-- MeshParts publicados usam a mesma Cena e as mesmas animações, sem EditableMesh.
+	-- A pasta é versionada pelo Rojo; não depende de uma edição manual perdida no deploy.
+	local publicadas = ReplicatedStorage:FindFirstChild("NexoMalhas")
+	local modelo = if publicadas then publicadas:FindFirstChild(nome) else nil
+	if modelo and modelo:IsA("MeshPart") then
+		local centro = modelo:GetAttribute("CentroMalha")
+		if typeof(centro) == "Vector3" and modelo.MeshId ~= "" then
+			local copia = modelo:Clone()
+			copia.Anchored = true
+			copia.CanCollide = false
+			copia.CanQuery = false
+			copia.CanTouch = false
+			copia:SetAttribute("MalhaPublicada", true)
+			return { modelo = copia, centro = centro }
+		end
+		warn("[Nexo] template inválido: " .. nome .. "; usando geometria local")
+	end
+	local modulo = pasta:FindFirstChild(nome)
+	assert(modulo and modulo:IsA("ModuleScript"), "Dados de malha ausentes: " .. nome)
+	local d = require(modulo) :: Dados
 	local minimo = Vector3.new(d.minimo[1], d.minimo[2], d.minimo[3])
 	local tamanho = Vector3.new(d.tamanho[1], d.tamanho[2], d.tamanho[3])
-	local editavel = AssetService:CreateEditableMesh()
+	local permitido, editavel = pcall(function()
+		return AssetService:CreateEditableMesh()
+	end)
+	if not permitido then
+		error(
+			"EditableMesh indisponível para "
+				.. nome
+				.. ". Verifique Enable Mesh / Image APIs e a versão do cliente/Studio. Detalhe: "
+				.. tostring(editavel)
+		)
+	end
 	if not editavel then
 		error("Limite de memória de EditableMesh ao criar " .. nome)
 	end

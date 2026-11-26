@@ -3,6 +3,9 @@
   "tree": {
     "$className": "DataModel",
     "ReplicatedStorage": {
+      "NexoMalhas": {
+        "$path": "assets/roblox/NexoMalhas"
+      },
       "Shared": {
         "$path": "src/shared"
       },

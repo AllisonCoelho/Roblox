@@ -4,6 +4,9 @@
 -- e do piso/pedestal provisórios do servidor, que continuam lá, só escondidos.
 local Cena = require(script.Parent.Cena)
 local Malha = require(script.Parent.Malha)
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ContentProvider = game:GetService("ContentProvider")
+local Carregamento = require(ReplicatedStorage.Shared.Dados.CarregamentoMapa)
 
 local Montagem = {}
 
@@ -27,7 +30,7 @@ export type Resultado = {
 
 local SEM_SOMBRA = { Neon = true, Glass = true }
 
-local function preencher(pasta: Folder, prontas: Malha.Cache): Resultado
+local function preencher(pasta: Folder, prontas: Malha.Cache, pecas: { any }): Resultado
 	local c = Cena.centroCristal
 	local resultado: Resultado = {
 		pasta = pasta,
@@ -39,9 +42,8 @@ local function preencher(pasta: Folder, prontas: Malha.Cache): Resultado
 		giram = {},
 	}
 
-	for indice, dados in Cena.pecas :: { { [string]: any } } do
+	for indice, dados in pecas do
 		local parte, centroMalha = Malha.criar(dados.malha, prontas)
-		parte.Parent = pasta
 		local escala = dados.escala or 1
 		local pos = dados.posicao
 		local pivo = CFrame.new(pos[1], pos[2], pos[3])
@@ -53,6 +55,7 @@ local function preencher(pasta: Folder, prontas: Malha.Cache): Resultado
 		parte.Material = (Enum.Material :: any)[dados.material] or Enum.Material.Slate
 		parte.Transparency = dados.transparencia or 0
 		parte.CastShadow = not SEM_SOMBRA[dados.material]
+		parte.Parent = pasta
 
 		local peca: Peca =
 			{ parte = parte, pivo = pivo, centro = centro, tamanho = tamanho, dados = dados }
@@ -129,21 +132,95 @@ function Montagem.construirCorredor(pai: Instance): ResultadoCorredor
 	return resultado
 end
 
--- Só coloca a pasta no mundo quando o kit inteiro estiver pronto.
-function Montagem.construir(nexo: Instance): Resultado
+-- Cada etapa é uma transação: uma falha distante preserva a praça já exibida.
+-- O callback só recebe peças completas; não anima referências de uma etapa descartada.
+function Montagem.construir(
+	nexo: Instance,
+	aoEtapa: ((Resultado, string) -> ())?
+): (Resultado, string?)
 	local pasta = Instance.new("Folder")
 	pasta.Name = "Kit3D"
+	pasta.Parent = nexo
 	local prontas: Malha.Cache = {}
-	local ok, resultado = pcall(preencher, pasta, prontas)
+	local praca, mundo = Carregamento.dividir(Cena.pecas)
+	local resultado: Resultado? = nil
+	local falha: string? = nil
+	for i, pecas in { praca, mundo } do
+		local etapa = if i == 1 then "Praca" else "Mundo"
+		local grupo = Instance.new("Folder")
+		grupo.Name = etapa
+		local ok, parcial = pcall(function()
+			local montado = preencher(grupo, prontas, pecas)
+			-- Só os assets publicados da praça são essenciais para a entrada.
+			-- Não pré-carrega Workspace, Corredor, sons ou toda a coleção de auras.
+			if i == 1 then
+				local essenciais = {}
+				for _, parte in grupo:GetChildren() do
+					if parte:GetAttribute("MalhaPublicada") then
+						table.insert(essenciais, parte)
+					end
+				end
+				if #essenciais > 0 then
+					local terminou, erro = false, nil
+					task.spawn(function()
+						local carregou, detalhe = pcall(function()
+							ContentProvider:PreloadAsync(essenciais, function(id, status)
+								if status ~= Enum.AssetFetchStatus.Success then
+									erro = "Asset inacessível: "
+										.. id
+										.. " ("
+										.. status.Name
+										.. ")"
+								end
+							end)
+						end)
+						if not carregou then
+							erro = tostring(detalhe)
+						end
+						terminou = true
+					end)
+					local limite = os.clock() + 8
+					repeat
+						task.wait()
+					until terminou or os.clock() >= limite
+					assert(
+						terminou and not erro,
+						erro or "Tempo limite ao carregar assets da praça"
+					)
+				end
+			end
+			return montado
+		end)
+		if not ok then
+			grupo:Destroy()
+			falha = tostring(parcial)
+			break
+		end
+		grupo.Parent = pasta
+		if resultado then
+			for _, campo in { "estilhacos", "orbitas", "lanternas", "giram" } do
+				for _, peca in (parcial :: any)[campo] do
+					table.insert((resultado :: any)[campo], peca)
+				end
+			end
+		else
+			local primeiro = parcial :: Resultado
+			primeiro.pasta = pasta
+			resultado = primeiro
+		end
+		if aoEtapa then
+			aoEtapa(resultado :: Resultado, etapa)
+		end
+		task.wait()
+	end
 	for _, pronta in prontas do
 		pronta.modelo:Destroy()
 	end
-	if not ok then
+	if not resultado then
 		pasta:Destroy()
-		error(resultado, 0)
+		error(falha or "Praça indisponível", 0)
 	end
-	pasta.Parent = nexo
-	return resultado
+	return resultado, falha
 end
 
 return Montagem
