@@ -41,7 +41,9 @@ Foi feita no Blender (`assets/tutorial/source/generate_lume.py`), com olhos e bo
 ## Segurança e save
 
 - **O que é salvo:** o progresso fica no perfil `Despertar_v1`, no campo `tutorial` (`passo`, `concluido`, `presenteAte`).
-- **Quem vê o tutorial:** só quem nunca girou. Perfis antigos que já giraram não veem, e os presentes contam como entregues.
+- **Quem vê o tutorial:** jogadores novos e também veteranos previamente dispensados automaticamente. A apresentação é oferecida uma única vez; o campo `apresentacaoOferecida` distingue a migração antiga de uma conclusão real.
+- **Contas veteranas:** mantêm `presenteAte` no último passo, portanto não recebem os presentes novamente. Quem concluiu o tutorial de verdade continua com `concluido = true`.
+- **Se não aparecer:** confira `Ajustes → Rever tutorial` e o Output do Roblox Studio; `tutorial.concluido` precisa ser `false` para a caixa aparecer, e o HUD precisa estar visível. Este comportamento deve ser testado com contas novas e veteranas.
 - **Validação:** o servidor só deixa avançar um passo por vez e confere os objetivos que ele consegue ver (giro e evolução).
 - **Presentes:** cada presente é entregue uma única vez. Rever o tutorial (**Ajustes → Rever tutorial**) não repete os presentes.
 - **Ações:**

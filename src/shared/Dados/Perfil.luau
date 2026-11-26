@@ -32,8 +32,8 @@ export type Estado = {
 	arena: { [string]: any },
 	-- Evento Despertar do Sol (Dados/EventoSol.luau): baús guardados, abertos e a garantia
 	evento: { [string]: any },
-	-- Tutorial (Dados/Tutorial.luau): passo atual, concluído e presentes entregues. Fica fora do
-	-- padrão de propósito: quem já tinha perfil sem ele e já girou não vê o tutorial
+	-- Tutorial (Dados/Tutorial.luau): passo atual, conclusão e presentes entregues.
+	-- Fica fora do padrão para normalização por Dados.carregar (inclusive veteranos);
 	tutorial: { [string]: any }?,
 }
 
