@@ -69,6 +69,8 @@ export type Rosto = {
 	boca: "sorriso" | "sorrisao" | "aberta",
 	bochechas: boolean?,
 	corOlhos: string?,
+	corSobrancelha: string?,
+	cilios: boolean?,
 }
 export type Acessorio = {
 	malha: string?, -- malha do Blender presa na cabeça (cabelo)
@@ -84,7 +86,18 @@ export type Definicao = {
 	calca: string,
 	rosto: Rosto,
 	acessorios: { Acessorio },
+	-- Detalhamento (como nos jogos grandes):
+	corpoMalha: boolean?, -- tronco/braços/pernas com a roupa "pintada" do Blender (boneco_<id>_<membro>)
+	efeitos: { string }?, -- partículas e luz: "vapor", "faiscas", "luz"
+	placa: { titulo: string, subtitulo: string?, cor: string }?, -- nome flutuando
 }
+
+-- O que cada NPC detalhado precisa ter (testado): roupa pintada, rosto com sobrancelha e brilho
+-- nos olhos, cabelo e pelo menos 2 acessórios.
+Bonecos.MEMBROS_MALHA = { "tronco", "bracoD", "bracoE", "pernaD", "pernaE" }
+function Bonecos.malhaDoMembro(id: string, membro: string): string
+	return "boneco_" .. id .. "_" .. membro
+end
 
 Bonecos.NPCS = {
 	-- Chefe do evento Despertar do Sol: um boneco gigante todo branco, cabelo de nuvem, olhos com
@@ -95,7 +108,16 @@ Bonecos.NPCS = {
 		pele = "FFF6E8",
 		camisa = "FFFFFF",
 		calca = "FFFFFF",
-		rosto = { olhos = "aneis", boca = "sorrisao", bochechas = true, corOlhos = "FFD54A" },
+		rosto = {
+			olhos = "aneis",
+			boca = "sorrisao",
+			bochechas = true,
+			corOlhos = "FFD54A",
+			corSobrancelha = "C9B79A",
+		},
+		corpoMalha = true,
+		efeitos = { "vapor", "faiscas", "luz" },
+		placa = { titulo = "TITÃ DE BORRACHA", subtitulo = "Chefe do Evento", cor = "FFD54A" },
 		acessorios = {
 			{ malha = "boneco_cabelo_nuvem", material = "SmoothPlastic" },
 			{ peca = "faixa", cor = "FFB52E" },
@@ -110,7 +132,15 @@ Bonecos.NPCS = {
 		pele = "FFDCC4",
 		camisa = "C0ADFF",
 		calca = "F7F2EC",
-		rosto = { olhos = "redondos", boca = "sorriso", bochechas = true, corOlhos = "5B3FB0" },
+		rosto = {
+			olhos = "redondos",
+			boca = "sorriso",
+			bochechas = true,
+			corOlhos = "5B3FB0",
+			corSobrancelha = "6A52B8",
+			cilios = true,
+		},
+		corpoMalha = true,
 		acessorios = {
 			{ malha = "boneco_cabelo_longo", material = "SmoothPlastic" },
 			{ peca = "capa", cor = "8F7BE0" },

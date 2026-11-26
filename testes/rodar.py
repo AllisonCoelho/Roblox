@@ -95,6 +95,20 @@ for nome, caminho in MODULOS.items():
     codigo.append('MODULOS["' + nome + '"] = function()\n' + fonte + '\nend\n')
 codigo.append((ROOT / "testes/logica.luau").read_text(encoding="utf-8"))
 subprocess.run([sys.executable, str(ROOT / "testes/mapa.py")], check=True)
+# NPCs (Dados/Bonecos): toda malha citada (cabeça, cabelo e roupa pintada) existe
+_bonecos = (ROOT / "src/shared/Dados/Bonecos.luau").read_text(encoding="utf-8")
+_dados = ROOT / "src/client/Mundo/Nexo3D/Dados"
+_faltando = []
+for _id in re.findall(r"^\t(\w+) = \{\n\t\tnome =", _bonecos, re.M):
+    _nomes = ["boneco_cabeca_" + _id]
+    _bloco = _bonecos.split("\t" + _id + " = {", 1)[1].split("\n\t},", 1)[0]
+    if "corpoMalha = true" in _bloco:
+        _nomes += ["boneco_%s_%s" % (_id, m) for m in ("tronco", "bracoD", "bracoE", "pernaD", "pernaE")]
+    _nomes += re.findall(r'malha = "(\w+)"', _bloco)
+    _faltando += [n for n in _nomes if not (_dados / (n + ".luau")).exists()]
+if _faltando:
+    sys.exit("Malhas de NPC faltando: " + ", ".join(_faltando))
+print("NPCs: malhas de cabeça, cabelo e roupa presentes")
 saida = ROOT / "dist" / "testes.luau"
 saida.parent.mkdir(parents=True, exist_ok=True)
 saida.write_text("\n".join(codigo), encoding="utf-8")

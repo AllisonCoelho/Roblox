@@ -112,37 +112,165 @@ function Boneco:_bola(grupo: string, d: number, c: Color3, pos: Vector3)
 	self:_peca(grupo, p, CFrame.new(pos))
 end
 
+-- Rosto no estilo dos jogos grandes: olho em camadas (contorno, íris, pupila e DOIS brilhos),
+-- sobrancelha arqueada, cílios opcionais, bochechas e boca desenhada em blocos.
 function Boneco:_rosto()
 	local r = self.def.rosto
 	local escuro = cor("2A1A10")
+	local branco = Color3.new(1, 1, 1)
 	local olhos = cor(r.corOlhos or "2A1A10")
+	local sobrancelha = cor(r.corSobrancelha or "6A4A30")
+	local function traco(
+		x: number,
+		y: number,
+		w: number,
+		h: number,
+		c: Color3,
+		graus: number,
+		z: number,
+		papel: string?
+	)
+		local p = self:_bloco(
+			"cabeca",
+			Vector3.new(w, h, 0.04),
+			c,
+			CFrame.new(x, y, FRENTE + z) * CFrame.Angles(0, 0, math.rad(graus)),
+			{ papel = papel }
+		)
+		p.CastShadow = false
+	end
 	for _, lado in { -1, 1 } do
+		local ex = lado * 0.25
 		if r.olhos == "aneis" then
-			self:_disco(lado * 0.25, 0.1, 0.44, olhos, 0.005, "olho")
-			self:_disco(lado * 0.25, 0.1, 0.32, Color3.new(1, 1, 1), 0, "olho")
-			self:_disco(lado * 0.25, 0.1, 0.16, escuro, -0.005, "olho")
+			self:_disco(ex, 0.08, 0.46, olhos, 0.004, "olho")
+			self:_disco(ex, 0.08, 0.34, branco, 0, "olho")
+			self:_disco(ex, 0.08, 0.17, escuro, -0.004, "olho")
 		else
-			self:_disco(lado * 0.24, 0.0, 0.3, escuro, 0.004, "olho")
-			self:_disco(lado * 0.24, 0.08, 0.26, olhos, 0, "olho")
+			self:_disco(ex, 0.04, 0.3, escuro, 0.004, "olho")
+			self:_disco(ex, 0.03, 0.24, olhos, 0, "olho")
+			self:_disco(ex, 0.02, 0.12, escuro, -0.004, "olho")
 		end
-		self:_disco(lado * 0.24 + 0.05, 0.16, 0.08, Color3.new(1, 1, 1), -0.01, "olho")
+		-- dois brilhos (o que dá "vida" ao olho)
+		self:_disco(ex + 0.05, 0.1, 0.09, branco, -0.008, "olho")
+		self:_disco(ex - 0.05, -0.02, 0.045, branco, -0.008, "olho")
+		-- sobrancelha arqueada: a ponta de fora mais baixa (alegre)
+		traco(ex, 0.29, 0.22, 0.05, sobrancelha, -lado * 12, -0.004)
+		if r.cilios then
+			traco(ex, 0.185, 0.28, 0.03, escuro, 0, -0.006, "olho")
+			traco(ex + lado * 0.15, 0.2, 0.07, 0.025, escuro, lado * 35, -0.006, "olho")
+		end
 		if r.bochechas then
 			self:_disco(lado * 0.42, -0.15, 0.16, cor("FF9E9E"), 0)
 		end
 	end
-	local function boca(tamanho: Vector3, c: Color3, y: number, z: number, papel: string?)
-		local p = self:_bloco("cabeca", tamanho, c, CFrame.new(0, y, FRENTE + z), { papel = papel })
-		p.CastShadow = false
-	end
+	local vermelho = cor("6A1E1E")
 	if r.boca == "sorrisao" then
-		boca(Vector3.new(0.52, 0.24, 0.04), cor("6A1E1E"), -0.24, 0, "boca")
-		boca(Vector3.new(0.48, 0.07, 0.04), Color3.new(1, 1, 1), -0.15, -0.006)
-		boca(Vector3.new(0.26, 0.07, 0.04), cor("FF7A8A"), -0.32, -0.006)
+		traco(0, -0.24, 0.52, 0.24, vermelho, 0, 0, "boca")
+		traco(0, -0.15, 0.48, 0.07, branco, 0, -0.006)
+		traco(0, -0.32, 0.26, 0.07, cor("FF7A8A"), 0, -0.006)
 	elseif r.boca == "aberta" then
-		boca(Vector3.new(0.3, 0.2, 0.04), cor("6A1E1E"), -0.24, 0, "boca")
+		traco(0, -0.24, 0.3, 0.2, vermelho, 0, 0, "boca")
 	else
-		boca(Vector3.new(0.3, 0.06, 0.04), cor("6A1E1E"), -0.24, 0, "boca")
+		-- sorriso em três traços formando a curva
+		traco(0, -0.27, 0.16, 0.05, vermelho, 0, 0, "boca")
+		traco(0.12, -0.245, 0.11, 0.05, vermelho, 28, 0)
+		traco(-0.12, -0.245, 0.11, 0.05, vermelho, -28, 0)
 	end
+end
+
+-- Efeitos de NPC importante (partículas e luz presas ao tronco)
+function Boneco:_efeitos(tronco: BasePart)
+	for _, e in self.def.efeitos or {} do
+		if e == "vapor" then
+			-- nuvenzinhas brancas subindo dos ombros (o corpo "fervendo" de energia)
+			for _, lado in { -1, 1 } do
+				local a = Instance.new("Attachment")
+				a.Position = Vector3.new(lado * 0.9, 1, 0)
+				a.Parent = tronco
+				local p = Instance.new("ParticleEmitter")
+				p.Name = "Vapor"
+				p.Color = ColorSequence.new(Color3.new(1, 1, 1))
+				p.Transparency = NumberSequence.new({
+					NumberSequenceKeypoint.new(0, 0.3),
+					NumberSequenceKeypoint.new(1, 1),
+				})
+				p.Size = NumberSequence.new({
+					NumberSequenceKeypoint.new(0, 2),
+					NumberSequenceKeypoint.new(1, 5),
+				})
+				p.Lifetime = NumberRange.new(1.2, 2)
+				p.Rate = 6
+				p.Speed = NumberRange.new(4, 8)
+				p.SpreadAngle = Vector2.new(25, 25)
+				p.EmissionDirection = Enum.NormalId.Top
+				p.LightEmission = 0.3
+				p.Parent = a
+			end
+		elseif e == "faiscas" then
+			local a = Instance.new("Attachment")
+			a.Parent = tronco
+			local p = Instance.new("ParticleEmitter")
+			p.Name = "Faiscas"
+			p.Color = ColorSequence.new(cor("FFD54A"), Color3.new(1, 1, 1))
+			p.LightEmission = 1
+			p.Size = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, 0.8),
+				NumberSequenceKeypoint.new(1, 0),
+			})
+			p.Lifetime = NumberRange.new(0.8, 1.6)
+			p.Rate = 14
+			p.Speed = NumberRange.new(3, 10)
+			p.SpreadAngle = Vector2.new(180, 180)
+			p.Drag = 2
+			p.Parent = a
+		elseif e == "luz" then
+			local l = Instance.new("PointLight")
+			l.Color = cor("FFE7A0")
+			l.Brightness = 1.5
+			l.Range = 24
+			l.Shadows = false
+			l.Parent = tronco
+		end
+	end
+end
+
+-- Placa com nome e título (como os chefes e NPCs de quest dos jogos grandes)
+function Boneco:_placa(cabeca: BasePart)
+	local placa = self.def.placa
+	if not placa then
+		return
+	end
+	local b = Instance.new("BillboardGui")
+	b.Name = "Placa"
+	b.Size = UDim2.fromOffset(320, 64)
+	b.StudsOffsetWorldSpace = Vector3.new(0, 1.6 * self.def.escala, 0)
+	b.LightInfluence = 0
+	b.MaxDistance = 260
+	b.Adornee = cabeca
+	local titulo = Instance.new("TextLabel")
+	titulo.BackgroundTransparency = 1
+	titulo.Size = UDim2.new(1, 0, 0.62, 0)
+	titulo.Font = Enum.Font.GothamBlack
+	titulo.TextScaled = true
+	titulo.Text = placa.titulo
+	titulo.TextColor3 = cor(placa.cor)
+	titulo.TextStrokeColor3 = cor("3A2200")
+	titulo.TextStrokeTransparency = 0
+	titulo.Parent = b
+	if placa.subtitulo then
+		local sub = Instance.new("TextLabel")
+		sub.BackgroundTransparency = 1
+		sub.Position = UDim2.fromScale(0, 0.62)
+		sub.Size = UDim2.new(1, 0, 0.38, 0)
+		sub.Font = Enum.Font.GothamBold
+		sub.TextScaled = true
+		sub.Text = placa.subtitulo
+		sub.TextColor3 = Color3.new(1, 1, 1)
+		sub.TextStrokeTransparency = 0.2
+		sub.Parent = b
+	end
+	b.Parent = cabeca
+	self.placa = b
 end
 
 function Boneco:_acessorio(a: Bonecos.Acessorio, prontas: Malha.Cache)
@@ -241,13 +369,31 @@ function Boneco.criar(id: string, pai: Instance, prontas: Malha.Cache?): any
 	self.modelo.Name = "Boneco_" .. id
 	local cache = prontas or {}
 	local cores = { pele = cor(def.pele), camisa = cor(def.camisa), calca = cor(def.calca) }
+	local troncoParte: BasePart? = nil
 	for _, m in Bonecos.MEMBROS do
-		local p = novaParte()
-		p.Size = v3(m.tamanho)
-		p.Color = cores[m.cor]
-		self:_peca(m.nome, p, CFrame.new(v3(m.centro)), {
-			papel = if m.nome == "bracoD" or m.nome == "bracoE" then "membro" else nil,
-		})
+		local papel = if m.nome == "bracoD" or m.nome == "bracoE" then "membro" else nil
+		-- roupa "pintada" do Blender (sombra, dobras, costuras e relevos); se não der, bloco liso
+		local parte: BasePart? = nil
+		local deslocamento = Vector3.zero
+		if def.corpoMalha then
+			local ok, malha, centro = pcall(Malha.criar, Bonecos.malhaDoMembro(id, m.nome), cache)
+			if ok then
+				malha.Material = Enum.Material.SmoothPlastic
+				parte = malha
+				deslocamento = centro
+			end
+		end
+		if not parte then
+			local p = novaParte()
+			p.Size = v3(m.tamanho)
+			p.Color = cores[m.cor]
+			parte = p
+		end
+		local final = parte :: BasePart
+		self:_peca(m.nome, final, CFrame.new(v3(m.centro) + deslocamento), { papel = papel })
+		if m.nome == "tronco" then
+			troncoParte = final
+		end
 	end
 	-- cabeça: malha arredondada do Blender; se não der, um bloco (a cara continua igual)
 	local nomeCabeca = "boneco_cabeca_" .. id
@@ -265,6 +411,10 @@ function Boneco.criar(id: string, pai: Instance, prontas: Malha.Cache?): any
 	for _, a in def.acessorios do
 		self:_acessorio(a, cache)
 	end
+	if troncoParte then
+		self:_efeitos(troncoParte)
+	end
+	self:_placa(self.pecas[#Bonecos.MEMBROS + 1].parte)
 	self.modelo.Parent = pai
 	return self
 end
@@ -301,6 +451,7 @@ function Boneco:posicionar(pes: CFrame, pose: Bonecos.Pose, op: Opcoes?)
 		* CFrame.new(esc(v3(Bonecos.CABECA.centro)))
 	local alpha = o.alpha or 0
 	local giro = o.giro or 0
+	self:_extras(alpha < 0.5)
 	local estica = pose.esticaBracos
 	for _, p in self.pecas do
 		local base = grupos[p.grupo]
@@ -336,10 +487,24 @@ function Boneco:posicionar(pes: CFrame, pose: Bonecos.Pose, op: Opcoes?)
 	end
 end
 
+-- Partículas, luz e placa acompanham a visibilidade
+function Boneco:_extras(visivel: boolean)
+	if self.extrasVisiveis == visivel then
+		return
+	end
+	self.extrasVisiveis = visivel
+	for _, d in self.modelo:GetDescendants() do
+		if d:IsA("ParticleEmitter") or d:IsA("PointLight") or d:IsA("BillboardGui") then
+			(d :: any).Enabled = visivel
+		end
+	end
+end
+
 function Boneco:esconder()
 	for _, p in self.pecas do
 		p.parte.LocalTransparencyModifier = 1
 	end
+	self:_extras(false)
 end
 
 function Boneco:destruir()

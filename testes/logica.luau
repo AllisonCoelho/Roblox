@@ -2270,6 +2270,15 @@ do
 		end
 	end
 	igual("boneco: titã tem a altura da peça do servidor", B.NPCS.tita.escala * B.ALTURA, 26)
+	-- detalhamento (padrão dos jogos grandes)
+	for id, d in B.NPCS do
+		igual("detalhe: roupa pintada " .. id, d.corpoMalha, true)
+		igual("detalhe: sobrancelha " .. id, type(d.rosto.corSobrancelha), "string")
+		igual("detalhe: 2+ acessórios " .. id, #d.acessorios >= 2, true)
+	end
+	igual("detalhe: chefe tem placa", B.NPCS.tita.placa ~= nil, true)
+	igual("detalhe: chefe tem efeitos", #(B.NPCS.tita.efeitos or {}) >= 2, true)
+	igual("detalhe: nome da malha do membro", B.malhaDoMembro("tita", "bracoD"), "boneco_tita_bracoD")
 	-- poses
 	local neutra = B.poseNeutra()
 	igual("boneco: pose neutra", neutra.esticaBracos == 1 and neutra.achata == 0, true)
