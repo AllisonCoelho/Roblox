@@ -8,7 +8,7 @@
 -- única vez (o passo fica salvo no perfil). Dá para pular o tutorial a qualquer momento.
 local Tutorial = {}
 
-export type Objetivo = "continuar" | "girar" | "evoluir" | "drop" | "portais"
+export type Objetivo = "continuar" | "girar" | "evoluir" | "drop" | "portais" | "estatua"
 export type Passo = {
 	id: string,
 	falas: { string },
@@ -34,9 +34,11 @@ Tutorial.PASSOS = {
 		falas = {
 			"Oi! Eu sou a Lume, Guardiã do Nexo. Que bom que você acordou!",
 			"Aqui, cada pessoa desperta uma aura. Quanto mais forte a sua, mais longe você chega.",
-			"Vem, eu te mostro o básico em uns minutinhos.",
+			"Olha a trilha ali no canto: GIRAR, EVOLUIR, CORREDOR, ARENA e EVENTO. É o seu caminho!",
+			"Vem, eu te guio pelo começo em uns minutinhos.",
 		},
 		objetivo = "continuar",
+		destaque = "Caminho",
 	},
 	{
 		id = "girar",
@@ -50,7 +52,7 @@ Tutorial.PASSOS = {
 	{
 		id = "pontos",
 		falas = {
-			"Uau, que brilho! Cada aura tem uma raridade: quanto mais rara, mais forte.",
+			"UAU! A sua primeira aura já veio RARA! Quanto mais rara a aura, mais forte ela é.",
 			"E olha ali em cima: a sua aura gera Pontos de Aura sem parar, até parado.",
 			"A Pontuação do lado mostra a força da sua aura. É ela que decide quem vence na Arena!",
 		},
@@ -88,6 +90,18 @@ Tutorial.PASSOS = {
 		paciencia = 45,
 	},
 	{
+		id = "estatua",
+		falas = {
+			"Agora olha só ali na praça: a estátua da Gear 5!",
+			"A Gear 5 é a aura mais cobiçada do Nexo. Ela não sai no giro: só no Baú do Sol.",
+			"A cada 30 minutos o Titã de Borracha cai na praça. Quem ajuda a derrubar ganha o baú!",
+			"Vai lá ver de perto. A placa mostra quanto falta para o próximo evento.",
+		},
+		objetivo = "estatua",
+		dica = "Vá até a estátua da Gear 5 na praça",
+		paciencia = 35,
+	},
+	{
 		id = "portais",
 		falas = {
 			"Por último: os Portais Fragmentados levam ao Corredor dos Perdidos.",
@@ -102,7 +116,8 @@ Tutorial.PASSOS = {
 		id = "final",
 		falas = {
 			"Com Fragmentos você compra Ecos no Cristal do Nexo e aprimora o seu equipamento.",
-			"E quando ficar forte, desafie a Arena do Trono!",
+			"Quando ficar forte, desafie a Arena do Trono, ao sul. Vença o Soberano e vire o Rei do Servidor!",
+			"A trilha no canto mostra sempre o próximo passo. Toque nela se esquecer.",
 			"É isso! Tome mais um presente. Eu fico por aqui, boa jornada!",
 		},
 		objetivo = "continuar",

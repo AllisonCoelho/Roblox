@@ -1939,10 +1939,12 @@ do
 	igual("tutorial: evoluir exige evolução", (T.avancar(p, 4, girou)), false)
 	T.avancar(p, 4, tudo)
 	T.avancar(p, 5, tudo)
-	T.avancar(p, 6, tudo)
-	local _, presenteFinal = T.avancar(p, 7, tudo)
+	for i = 6, #T.PASSOS - 2 do
+		T.avancar(p, i, tudo)
+	end
+	local _, presenteFinal = T.avancar(p, #T.PASSOS - 1, tudo)
 	igual("tutorial: presente final", presenteFinal and presenteFinal.fragmentos, 5)
-	igual("tutorial: concluir no último", (T.avancar(p, 8, tudo)), true)
+	igual("tutorial: concluir no último", (T.avancar(p, #T.PASSOS, tudo)), true)
 	igual("tutorial: concluído", p.concluido, true)
 	igual("tutorial: não avança depois de concluído", (T.avancar(p, 8, tudo)), false)
 	-- rever não repete os presentes
@@ -2287,7 +2289,7 @@ do
 	igual("boneco: titã tem a altura da peça do servidor", B.NPCS.tita.escala * B.ALTURA, 26)
 	-- detalhamento (padrão dos jogos grandes)
 	for id, d in B.NPCS do
-		igual("detalhe: roupa pintada " .. id, d.corpoMalha, true)
+		igual("detalhe: roupa pintada " .. id, d.corpoMalha == true or d.estatua == true, true)
 		igual("detalhe: sobrancelha " .. id, type(d.rosto.corSobrancelha), "string")
 		igual("detalhe: 2+ acessórios " .. id, #d.acessorios >= 2, true)
 	end
@@ -2470,5 +2472,67 @@ do
 	igual("poder: raridade aumenta o raio", P.raio(8, 7) > P.raio(8, 1), true)
 end
 
+
+-- ============================================================ primeiros 5 minutos
+do
+	local M = req("PrimeirosMinutos")
+	local A = req("Auras")
+	local T = req("Tutorial")
+	-- abertura só para quem nunca girou
+	igual("5min: novato vê a abertura", M.deveAbrir({ giros = 0 }), true)
+	igual("5min: quem já girou não vê", M.deveAbrir({ giros = 3 }), false)
+	igual("5min: tutorial concluído não vê", M.deveAbrir({ giros = 0, tutorial = { concluido = true } }), false)
+	igual("5min: sem estado não abre", M.deveAbrir(nil), false)
+	-- primeiro giro Raro ou melhor
+	local comum, epica
+	for _, a in A.lista do
+		if a.tier == 1 and not comum then
+			comum = a
+		elseif a.tier == 4 and not epica then
+			epica = a
+		end
+	end
+	for _, r in { 0, 0.3, 0.999 } do
+		local troca = M.primeiroGiro(0, comum, A.lista, function()
+			return r
+		end)
+		igual("5min: primeiro giro vira Raro (" .. r .. ")", troca.tier, M.TIER_GARANTIDO)
+		igual("5min: nunca a reserva", troca.reserva, false)
+	end
+	igual("5min: épica fica épica", M.primeiroGiro(0, epica, A.lista, math.random).id, epica.id)
+	igual("5min: segundo giro não mexe", M.primeiroGiro(1, comum, A.lista, math.random).id, comum.id)
+	-- trilha
+	igual("5min: trilha com 5 etapas", #M.ETAPAS, 5)
+	local novo = M.progresso({ giros = 0, poder = {}, corredor = { concluidas = {} }, arena = {}, evento = {} })
+	igual("5min: novato começa em GIRAR", novo.atual, 1)
+	igual("5min: nada feito", novo.total, 0)
+	local meio = M.progresso({ giros = 5, poder = { nivel = 1 }, corredor = { concluidas = { ["1"] = 1 } }, arena = {}, evento = {} })
+	igual("5min: próximo é ARENA", meio.atual, 4)
+	igual("5min: 3 feitas", meio.total, 3)
+	local tudo = M.progresso({
+		giros = 9,
+		poder = { sorte = 2 },
+		corredor = { concluidas = { ["2"] = 1 } },
+		arena = { derrotas = 1 },
+		evento = { abertos = 1 },
+	})
+	igual("5min: trilha completa", tudo.completo, true)
+	igual("5min: completa sem atual", tudo.atual, nil)
+	igual("5min: estado lixo não quebra", M.progresso({ poder = "x", corredor = 3 }).atual, 1)
+	-- fora de ordem: a próxima é a primeira que falta
+	local pulou = M.progresso({ giros = 0, evento = { participacoes = 2 } })
+	igual("5min: pulou etapas ainda aponta a primeira", pulou.atual, 1)
+	igual("5min: mas conta o evento", pulou.feitas[5], true)
+	-- estátua
+	igual("5min: estátua fora da praça", M.ESTATUA.x ^ 2 + M.ESTATUA.z ^ 2 > 46 ^ 2, true)
+	igual("5min: texto da espera", M.textoEstatua("espera", 754), "Próximo Despertar do Sol em 12:34")
+	igual("5min: texto da luta", M.textoEstatua("luta", 61), "O TITÃ ESTÁ NA PRAÇA! 1:01")
+	igual("5min: tempo negativo", M.textoEstatua(nil, -5), "Próximo Despertar do Sol em 0:00")
+	-- tutorial segue a trilha: passa pela estátua antes dos Portais
+	igual("5min: tutorial tem a estátua", T.porId.estatua ~= nil, true)
+	igual("5min: estátua antes dos portais", T.porId.estatua < T.porId.portais, true)
+	igual("5min: boas-vindas destaca a trilha", T.PASSOS[1].destaque, "Caminho")
+	igual("5min: estátua é opcional (paciência)", T.PASSOS[T.porId.estatua].paciencia ~= nil, true)
+end
 
 print(string.format("%d testes, %d falhas", total, falhas))

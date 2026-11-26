@@ -275,6 +275,7 @@ def cabelo_longo():
 MALHAS = {
     "boneco_cabeca_tita": lambda: cabeca(hexa("FFF6E8")),
     "boneco_cabeca_lume": lambda: cabeca(hexa("FFDCC4")),
+    "boneco_cabeca_estatua": lambda: cabeca(hexa("F2EEE6")),
     "boneco_cabelo_nuvem": cabelo_nuvem,
     "boneco_cabelo_longo": cabelo_longo,
     "boneco_tita_tronco": tronco_tita,
@@ -343,11 +344,16 @@ def boneco(defn, x, escala):
     p = []
     membros = [("pernaD", (0.5, 0, 1), (1, 1, 2), calca), ("pernaE", (-0.5, 0, 1), (1, 1, 2), calca), ("tronco", (0, 0, 3), (2, 1, 2), camisa),
                ("bracoD", (1.5, 0, 3), (1, 1, 2), pele), ("bracoE", (-1.5, 0, 3), (1, 1, 2), pele)]
+    if defn.get("vitoria"):
+        # pose da estátua: punho direito erguido
+        membros[3] = ("bracoD_erguido", (1.71, 0, 3.95), (1, 1, 2), pele)
     malhas_corpo = []
     for nome, c, tam, cor in membros:
         chave = "boneco_%s_%s" % (defn["id"], nome)
         if chave in MALHAS:
             malhas_corpo.append((chave, c))
+        elif nome == "bracoD_erguido":
+            p.append(bx(c, tam, cor, 0.02, R(-155, "Y")))
         else:
             p.append(bx(c, tam, cor, 0.02))
     brilho = []
@@ -403,6 +409,8 @@ DEFS = {
                  bochechas=True, corSobrancelha="C9B79A", cabeca="boneco_cabeca_tita", cabelo="boneco_cabelo_nuvem", extras=["faixa", "gola", "aureola"]),
     "lume": dict(id="lume", pele="FFDCC4", camisa="C0ADFF", calca="F7F2EC", olhos="redondos", corOlhos="5B3FB0", boca="sorriso",
                  bochechas=True, cilios=True, corSobrancelha="6A52B8", cabeca="boneco_cabeca_lume", cabelo="boneco_cabelo_longo", extras=["capa", "estrela"]),
+    "estatua": dict(id="estatua", pele="F2EEE6", camisa="F7F4EE", calca="ECE6DA", olhos="aneis", corOlhos="FFD54A", boca="sorrisao",
+                    corSobrancelha="D8CFBF", cabeca="boneco_cabeca_estatua", cabelo="boneco_cabelo_nuvem", extras=["faixa", "gola", "aureola"], vitoria=True),
     # jogador comum ao lado, para mostrar a escala (cores clássicas do boneco)
     "jogador": dict(id="jogador", pele="F5CD30", camisa="0D69AC", calca="A4BD47", olhos="redondos", corOlhos="2A1A10", boca="sorriso",
                     cabeca="boneco_cabeca_lume", cabelo=None, extras=[]),
@@ -455,6 +463,18 @@ def renderizar():
         c.collection.objects.link(o)
     foto(c, "tita_boneco.jpg", (20, 46, 14), (2.5, 0, 12))
     foto(c, "tita_detalhe.jpg", (6, 22, 21), (0, 0, 19), lente=50)
+    # 1b) estátua da Gear 5 no pedestal, com um jogador olhando
+    c = cena((0.98, 0.9, 0.7))
+    ped = kit.torno([(0.001, 0), (5.5, 0), (5.5, 0.5), (5.0, 0.5), (5.0, 2.4), (0.001, 2.4)], 32, hexa("E8E2D6"), rng, tinta=1.0)
+    kit.pintar(ped, hexa("E8E2D6"), 1.0, topo_claro=0.3)
+    anel = eq.cilindro((0, 0, 2.45), 5.2, 0.15, hexa("FFC23A"), 32)
+    objp = kit.registrar("pedestal", montar([ped, anel]), kit.criar_material("ped", rugosidade=0.4))
+    c.collection.objects.link(objp)
+    raizes = boneco(DEFS["estatua"], 0, 2.2)
+    raizes[0].location = (0, 0, 2.4)
+    for o in raizes + boneco(DEFS["jogador"], 9, 1):
+        c.collection.objects.link(o)
+    foto(c, "estatua_gear5.jpg", (18, 30, 10), (2, 0, 7))
     # 2) Lume de perto
     c = cena((0.75, 0.7, 0.95))
     for o in boneco(DEFS["lume"], 0, 1) + boneco(DEFS["jogador"], 4.4, 1):

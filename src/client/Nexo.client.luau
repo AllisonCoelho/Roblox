@@ -27,6 +27,7 @@ local CicloMundo = require(script.Parent:WaitForChild("Mundo"):WaitForChild("Cic
 local DropsMundo = require(script.Parent:WaitForChild("Mundo"):WaitForChild("DropsMapa"))
 local CoroaMundo = require(script.Parent:WaitForChild("Mundo"):WaitForChild("Coroa"))
 local EventoSolMundo = require(script.Parent:WaitForChild("Mundo"):WaitForChild("EventoSol"))
+local EstatuaMundo = require(script.Parent:WaitForChild("Mundo"):WaitForChild("Estatua"))
 local Musica = require(script.Parent:WaitForChild("Mundo"):WaitForChild("Musica"))
 local EcosTela = require(UI:WaitForChild("Telas"):WaitForChild("Ecos"))
 
@@ -233,6 +234,7 @@ task.spawn(function()
 	iniciarVisual("Drops", DropsMundo.iniciar)
 	iniciarVisual("Coroa", CoroaMundo.iniciar)
 	iniciarVisual("EventoSol", EventoSolMundo.iniciar)
+	iniciarVisual("Estatua", EstatuaMundo.iniciar)
 end)
 
 local BRANCO = Color3.new(1, 1, 1)
@@ -379,6 +381,8 @@ ProximityPromptService.PromptTriggered:Connect(function(prompt, jogador)
 		Navegacao.abrir("Incursoes")
 	elseif acao == "corredor" then
 		Navegacao.abrir("Corredor")
+	elseif acao == "baus" then
+		Navegacao.abrir("Baus")
 	elseif acao == "nucleos" then
 		EcosTela.abrir("Nucleos")
 	elseif acao == "em_construcao" or acao == "eco" then

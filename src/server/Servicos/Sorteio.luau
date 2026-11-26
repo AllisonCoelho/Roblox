@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Apresentacao = require(Shared.Dados.Apresentacao)
 local Auras = require(Shared.Dados.Auras)
+local PrimeirosMinutos = require(Shared.Dados.PrimeirosMinutos)
 local Config = require(Shared.Config)
 local Conveniencia = require(Shared.Dados.Conveniencia)
 local Monetizacao = require(Shared.Dados.Monetizacao)
@@ -99,6 +100,8 @@ local function despertar(player: Player): (boolean, string?, { [string]: any }?)
 	local sorte = PontosAuraServico.sorte(player)
 	ultimoGiro[player] = agora
 	local aura = Auras.sortear(aleatorio, sorte)
+	-- primeiros minutos: o primeiro giro da vida é Raro ou melhor (Dados/PrimeirosMinutos)
+	aura = PrimeirosMinutos.primeiroGiro(estado.giros, aura, Auras.lista, aleatorio)
 	local ok, id, dados = entregar(player, aura, sorte)
 	-- Auto Inteligente: o servidor pausa o giro automático ao sair aura rara ou nova
 	if ok and dados and Passes.tem(player, "autoInteligente") then

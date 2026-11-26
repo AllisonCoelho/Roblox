@@ -369,6 +369,8 @@ function Boneco.criar(id: string, pai: Instance, prontas: Malha.Cache?): any
 	self.modelo.Name = "Boneco_" .. id
 	local cache = prontas or {}
 	local cores = { pele = cor(def.pele), camisa = cor(def.camisa), calca = cor(def.calca) }
+	local materialCorpo: Enum.Material = (def.material and (Enum.Material :: any)[def.material])
+		or Enum.Material.SmoothPlastic
 	local troncoParte: BasePart? = nil
 	for _, m in Bonecos.MEMBROS do
 		local papel = if m.nome == "bracoD" or m.nome == "bracoE" then "membro" else nil
@@ -384,7 +386,7 @@ function Boneco.criar(id: string, pai: Instance, prontas: Malha.Cache?): any
 			end
 		end
 		if not parte then
-			local p = novaParte()
+			local p = novaParte(nil, materialCorpo)
 			p.Size = v3(m.tamanho)
 			p.Color = cores[m.cor]
 			parte = p
@@ -399,10 +401,10 @@ function Boneco.criar(id: string, pai: Instance, prontas: Malha.Cache?): any
 	local nomeCabeca = "boneco_cabeca_" .. id
 	local ok, cabeca, centro = pcall(Malha.criar, nomeCabeca, cache)
 	if ok then
-		cabeca.Material = Enum.Material.SmoothPlastic
+		cabeca.Material = materialCorpo
 		self:_peca("cabeca", cabeca, CFrame.new(centro))
 	else
-		local bloco = novaParte()
+		local bloco = novaParte(nil, materialCorpo)
 		bloco.Size = Vector3.one * Bonecos.CABECA.tamanho
 		bloco.Color = cores.pele
 		self:_peca("cabeca", bloco, CFrame.identity)

@@ -22,6 +22,7 @@ MODULOS = {
     "Tutorial": "src/shared/Dados/Tutorial.luau",
     "ArenaPvP": "src/shared/Dados/ArenaPvP.luau",
     "Duelo": "src/shared/Dados/Duelo.luau",
+    "PrimeirosMinutos": "src/shared/Dados/PrimeirosMinutos.luau",
     "AtaquesAura": "src/shared/Dados/AtaquesAura.luau",
     "Extravagancia": "src/shared/Dados/Extravagancia.luau",
     "EventoSol": "src/shared/Dados/EventoSol.luau",

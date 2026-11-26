@@ -20,6 +20,8 @@
 >
 > **Evento Despertar do Sol (Gear 5):** a cada 30 min o Titã de Borracha cai na praça; quem ajuda ganha baús com chance da aura Gear 5 (garantida no 60º baú). Música ambiente procedural. Detalhes em `EVENTO_SOL.md`.
 >
+> **Primeiros 5 minutos:** abertura de 8 s, primeiro giro garantido Raro, trilha GIRAR → EVOLUIR → CORREDOR → ARENA → EVENTO, estátua da Gear 5 com contagem e o tutorial da Lume seguindo a trilha. Detalhes em `PRIMEIROS_MINUTOS.md`.
+>
 > **Combate reativo:** turno com defesa em tempo real (Esquivar, Aparar e contra-ataque), golpe no tempo certo, PA e Ruptura, com base na engenharia reversa de Clair Obscur: Expedition 33. Detalhes em `COMBATE_REATIVO.md`.
 
 ## A ideia em uma frase

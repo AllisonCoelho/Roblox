@@ -22,6 +22,8 @@ local Estado = require(script.Parent.Parent.Estado)
 local Kit = require(script.Parent.Parent.Kit)
 local Navegacao = require(script.Parent.Parent.Navegacao)
 local Revelacao = require(script.Parent.Revelacao)
+local Abertura = require(script.Parent.Abertura)
+local PrimeirosMinutos = require(Shared.Dados.PrimeirosMinutos)
 local Mundo = script.Parent.Parent.Parent.Mundo
 local Boneco = require(Mundo.Boneco)
 local Sons = require(Mundo.Sons)
@@ -82,6 +84,12 @@ local function raizPersonagem(): BasePart?
 	return if r and r:IsA("BasePart") then r else nil
 end
 
+-- Estátua da Gear 5 (Dados/PrimeirosMinutos)
+local function estatua(): Vector3
+	local e = PrimeirosMinutos.ESTATUA
+	return Vector3.new(e.x, 2, e.z)
+end
+
 local function portais(): BasePart?
 	local nexo = Workspace:FindFirstChild("Nexo")
 	local veu = nexo and nexo:FindFirstChild("PortalVeu", true)
@@ -107,6 +115,11 @@ local function cumprido(p: Dados.Passo): boolean
 	elseif p.objetivo == "portais" then
 		local r, alvo = raizPersonagem(), portais()
 		return r ~= nil and alvo ~= nil and (r.Position - alvo.Position).Magnitude < RAIO_PORTAIS
+	elseif p.objetivo == "estatua" then
+		local r = raizPersonagem()
+		return r ~= nil
+			and (Vector3.new(r.Position.X, 2, r.Position.Z) - estatua()).Magnitude
+				< PrimeirosMinutos.ESTATUA.raio
 	end
 	return false
 end
@@ -127,6 +140,11 @@ local function textoObjetivo(p: Dados.Passo): string
 		local r, alvo = raizPersonagem(), portais()
 		if r and alvo then
 			dica ..= string.format("  (%d m)", math.floor((r.Position - alvo.Position).Magnitude))
+		end
+	elseif p.objetivo == "estatua" then
+		local r = raizPersonagem()
+		if r then
+			dica ..= string.format("  (%d m)", math.floor((r.Position - estatua()).Magnitude))
 		end
 	end
 	return "◎ " .. dica
@@ -359,8 +377,15 @@ local function montarCaixa()
 	setaDrop.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
 end
 
--- Coluna de luz nos Portais (só para este jogador)
-local function mostrarColuna(ligar: boolean)
+-- Coluna de luz no lugar do objetivo (Portais ou estátua; só para este jogador)
+local colunaDe: string? = nil
+local function mostrarColuna(ligar: boolean, qual: string?)
+	if ligar and coluna and colunaDe ~= qual then
+		coluna:Destroy()
+		coluna = nil
+		rotuloColuna = nil
+	end
+	colunaDe = qual
 	if not ligar then
 		if coluna then
 			coluna:Destroy()
@@ -372,9 +397,15 @@ local function mostrarColuna(ligar: boolean)
 	if coluna then
 		return
 	end
-	local alvo = portais()
-	if not alvo then
-		return
+	local posicao: Vector3
+	if qual == "estatua" then
+		posicao = estatua()
+	else
+		local alvo = portais()
+		if not alvo then
+			return
+		end
+		posicao = alvo.Position
 	end
 	local c = Instance.new("Part")
 	c.Name = "LuzTutorial"
@@ -388,7 +419,7 @@ local function mostrarColuna(ligar: boolean)
 	c.Transparency = 0.45
 	c.Shape = Enum.PartType.Cylinder
 	c.Size = Vector3.new(140, 3, 3)
-	c.CFrame = CFrame.new(alvo.Position.X, 70, alvo.Position.Z) * CFrame.Angles(0, 0, math.rad(90))
+	c.CFrame = CFrame.new(posicao.X, 70, posicao.Z) * CFrame.Angles(0, 0, math.rad(90))
 	c.Parent = Workspace
 	local b = Instance.new("BillboardGui")
 	b.Size = UDim2.fromOffset(260, 50)
@@ -402,7 +433,7 @@ local function mostrarColuna(ligar: boolean)
 	t.TextScaled = true
 	t.TextColor3 = Color3.fromHex("FFE27A")
 	t.TextStrokeTransparency = 0.3
-	t.Text = "▼ Portais Fragmentados"
+	t.Text = if qual == "estatua" then "▼ Estátua da Gear 5" else "▼ Portais Fragmentados"
 	t.Parent = b
 	b.Parent = c
 	coluna = c
@@ -473,7 +504,7 @@ end
 
 local function quadro(dt: number)
 	local prog = progresso()
-	local ativo = prog ~= nil and not prog.concluido and hudQuadro.Visible
+	local ativo = prog ~= nil and not prog.concluido and hudQuadro.Visible and not Abertura.ativa()
 	if not ativo then
 		caixa.quadro.Visible = false
 		contorno.Visible = false
@@ -551,7 +582,13 @@ local function quadro(dt: number)
 		mini
 	)
 	atualizarSetaDrop(aguardandoObjetivo and p.objetivo == "drop")
-	mostrarColuna(passoAtual == Dados.porId.portais)
+	if passoAtual == Dados.porId.portais then
+		mostrarColuna(true, "portais")
+	elseif passoAtual == Dados.porId.estatua then
+		mostrarColuna(true, "estatua")
+	else
+		mostrarColuna(false)
+	end
 	if rotuloColuna then
 		rotuloColuna.Enabled = not mini
 	end
