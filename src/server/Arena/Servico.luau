@@ -166,27 +166,6 @@ local function terminar(d: Sessao, resultado: string)
 	task.delay(MOSTRAR_RESULTADO, encerrar, d)
 end
 
--- Corre até o Soberano e volta: chega no 1º acerto e volta antes do fim do golpe
-local function mover(d: Sessao, avanco: number, ida: number, volta: number)
-	local agora = workspace:GetServerTimeNow()
-	local function tween(alvo: CFrame, duracao: number, estilo: Enum.EasingStyle)
-		if atual ~= d or d.fase == "fim" then
-			return
-		end
-		if d.tween then
-			d.tween:Cancel()
-		end
-		local t = TweenService:Create(d.corpo, TweenInfo.new(duracao, estilo), { CFrame = alvo })
-		d.tween = t
-		t:Play()
-	end
-	local duracaoIda = math.max(0.1, (ida - agora) * 0.92)
-	tween(d.posto * CFrame.new(0, 0, -avanco), duracaoIda, Enum.EasingStyle.Sine)
-	task.delay(math.max(0, volta - agora - 0.35), function()
-		tween(d.posto, 0.35, Enum.EasingStyle.Quad)
-	end)
-end
-
 local function comecar(d: Sessao)
 	if atual ~= d then
 		return
@@ -203,8 +182,16 @@ local function comecar(d: Sessao)
 			animar = function(clipe, quando)
 				animarJogador(d, clipe, quando)
 			end,
-			mover = function(avanco, ida, volta)
-				mover(d, avanco, ida, volta)
+			mover = function(avanco, duracao)
+				if d.tween then
+					d.tween:Cancel()
+				end
+				local tween =
+					TweenService:Create(d.corpo, TweenInfo.new(duracao, Enum.EasingStyle.Sine), {
+						CFrame = d.posto * CFrame.new(0, 0, -avanco),
+					})
+				d.tween = tween
+				tween:Play()
 			end,
 		},
 		b = {

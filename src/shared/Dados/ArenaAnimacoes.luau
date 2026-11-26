@@ -133,7 +133,34 @@ Animacoes.JOGADOR = {
 	},
 	entrada = {
 		duracao = 0.6,
-		chaves = { k(0, NEUTRO_J), k(0.6, POSTURA) },
+		chaves = {
+			k(0, NEUTRO_J),
+			-- Pisa à frente e fecha a guarda, com o rosto voltado ao adversário.
+			k(
+				0.22,
+				J({
+					raiz = { 0.14, -0.15, 0, 0, 22, 0 },
+					cintura = { 5, 12, 0 },
+					pescoco = { 0, -28, 0 },
+					ombroD = { 26, 0, 24 },
+					ombroE = { 34, 0, -20 },
+					peD = { 0, 0.35 },
+					peE = { 0.45, -0.35 },
+				})
+			),
+			k(
+				0.38,
+				J({
+					raiz = { -0.08, -0.48, -0.12, 0, 12, 0 },
+					cintura = { -11, 4, 0 },
+					ombroE = { 76, 0, -12 },
+					peD = { 0, 0.5 },
+					peE = { 0, -0.65 },
+				}),
+				"entrada"
+			),
+			k(0.6, POSTURA),
+		},
 	},
 	-- corre até o Soberano e solta um direto
 	ataque = {
@@ -420,9 +447,31 @@ Animacoes.JOGADOR = {
 				}),
 				"saida"
 			),
-			k(DESCARGA_1, DESCARGA, "saida"),
+			-- Primeira palma com a esquerda. A mão direita fica carregada junto ao peito.
+			k(
+				DESCARGA_1,
+				achatar(DESCARGA, {
+					cintura = { -18, 24, -5 },
+					pescoco = { 0, -18, 0 },
+					ombroD = { 28, 0, 16 },
+					cotoveloD = { 94, 0, 0 },
+					ombroE = { 100, 0, 8 },
+				}),
+				"saida"
+			),
 			k(1.11, RECARGA),
-			k(1.26, DESCARGA, "saida"),
+			-- Gira o tronco para disparar com a direita antes da descarga com as duas mãos.
+			k(
+				1.26,
+				achatar(DESCARGA, {
+					cintura = { -20, -26, 5 },
+					pescoco = { 0, 18, 0 },
+					ombroE = { 28, 0, -16 },
+					cotoveloE = { 94, 0, 0 },
+					ombroD = { 100, 0, -8 },
+				}),
+				"saida"
+			),
 			k(1.41, RECARGA),
 			k(
 				1.56,
@@ -657,6 +706,17 @@ local AVISO_INVESTIDA = S({
 	peD = { 0, 0.55 },
 	peE = { 0, -0.55 },
 })
+-- A Fúria Tripla começa com a lâmina aberta ao lado, pronta para varrer o ringue.
+local AVISO_TRINCA = S({
+	raiz = { 0, -0.58, 0, 0, 0, 0 },
+	torso = { -10, 27, 0 },
+	cabeca = { -4, -22, 0 },
+	bracoD = { -14, 0, 56 },
+	antebracoD = { 38, 0, 0 },
+	bracoE = { 58, 0, -18 },
+	peD = { 0, 0.7 },
+	peE = { 0, -0.65 },
+})
 local AVISO_BALUARTE = S({
 	raiz = { 0, -0.5, 0, 0, 0, 0 },
 	torso = { -4, 0, 0 },
@@ -683,6 +743,7 @@ Animacoes.SOBERANO = {
 		AVISO_INVESTIDA,
 		{ raiz = { 0, -0.46, 0, 0, 0, 0 }, torso = { -10, -18, 0 } }
 	),
+	avisoTrinca = laco(AVISO_TRINCA, { torso = { -14, 32, 0 }, bracoD = { -18, 0, 60 } }),
 	avisoBaluarte = laco(AVISO_BALUARTE, { raiz = { 0, -0.56, 0, 0, 0, 0 } }),
 	-- levanta do trono, se agacha, salta até o ringue e pousa com o espadão no chão
 	entrada = {
@@ -1254,7 +1315,7 @@ Animacoes.JOGADOR.rompido = {
 Animacoes.SOBERANO.trinca = {
 	duracao = 2.1,
 	chaves = {
-		k(0, AVISO_INVESTIDA),
+		k(0, AVISO_TRINCA),
 		k(
 			0.25,
 			S({
@@ -1286,9 +1347,9 @@ Animacoes.SOBERANO.trinca = {
 			0.7,
 			S({
 				raiz = { 0, -0.7, -6.3, 0, 0, 0 },
-				torso = { -18, 34, 0 },
-				cabeca = { -4, -20, 0 },
-				bracoD = { -10, 0, 56 },
+				torso = { -18, -38, 0 },
+				cabeca = { -4, 26, 0 },
+				bracoD = { 96, 0, -45 },
 				antebracoD = { 36, 0, 0 },
 				bracoE = { 50, 0, -20 },
 				peD = { 0, -4.7 },
@@ -1299,9 +1360,9 @@ Animacoes.SOBERANO.trinca = {
 			0.9,
 			S({
 				raiz = { 0, -0.85, -6.5, 0, 0, 0 },
-				torso = { -24, -30, 0 },
-				cabeca = { -4, 22, 0 },
-				bracoD = { 92, 0, -30 },
+				torso = { -24, 32, 0 },
+				cabeca = { -4, -22, 0 },
+				bracoD = { 52, 0, 62 },
 				antebracoD = { 6, 0, 0 },
 				bracoE = { 20, 0, -40 },
 				peD = { 0, -4.9 },

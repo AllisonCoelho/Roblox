@@ -186,6 +186,9 @@ local function iniciarVisual(nome: string, iniciar: () -> ())
 	end)
 end
 
+-- Os avatares já podem duelar enquanto o mapa carrega.
+iniciarVisual("Arena", ArenaCorpo.iniciar)
+
 -- a música não espera o mapa (ninguém fica no silêncio enquanto ele carrega)
 task.defer(function()
 	local ok, erro = pcall(Musica.iniciar)
@@ -225,7 +228,6 @@ task.spawn(function()
 	-- Uma falha no Soberano não impede Corredor, ciclo, drops ou interações.
 	iniciarVisual("Soberano", PrimeiroSoberano.iniciar)
 	iniciarVisual("Corredor", montarCorredor)
-	iniciarVisual("Arena", ArenaCorpo.iniciar)
 	iniciarVisual("Ecos", EcosMundo.iniciar)
 	iniciarVisual("Criaturas", CriaturasMundo.iniciar)
 	iniciarVisual("Equipamento", EquipamentoMundo.iniciar)

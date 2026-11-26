@@ -27,8 +27,8 @@ export type Lutador = {
 	player: Player?, -- nil = Primeiro Soberano
 	nome: string,
 	animar: (clipe: string?, quando: number) -> (),
-	-- corre até o alvo e volta (opcional): avanço em studs, chegada no 1º acerto, volta no fim
-	mover: ((avanco: number, ida: number, volta: number) -> ())?,
+	-- Move em relação ao posto original. Avanço zero devolve o jogador ao posto.
+	mover: ((avanco: number, duracao: number) -> ())?,
 }
 export type Opcoes = {
 	id: number,
@@ -217,9 +217,21 @@ local function golpear(d: Duelo, q: string, id: string, inicio: number): { strin
 		}
 	end)
 	atk.animar(id, inicio)
-	if acao.avanco and atk.mover and #tempos > 0 then
+	local mover = atk.mover
+	local avanco = acao.avanco
+	if avanco and mover and #tempos > 0 then
 		local clipe = clipeDe(atk, id)
-		atk.mover(acao.avanco, tempos[1], inicio + (if clipe then clipe.duracao else 1) - 0.25)
+		local fim = inicio + (if clipe then clipe.duracao else 1)
+		local recuo = math.max(tempos[#tempos] + 0.1, fim - 0.35)
+		local function marcar(quando: number, distancia: number, chegada: number)
+			task.delay(math.max(0, quando - Workspace:GetServerTimeNow()), function()
+				if d.ativo then
+					mover(distancia, math.max(0, chegada - Workspace:GetServerTimeNow()))
+				end
+			end)
+		end
+		marcar(inicio, avanco, tempos[1])
+		marcar(recuo, 0, fim)
 	end
 	local defesas = {}
 	local algum = false
