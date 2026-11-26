@@ -8,13 +8,14 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Visual = require(Shared:WaitForChild("Dados"):WaitForChild("CriaturasVisual"))
 local Remotos = require(Shared:WaitForChild("Remotos"))
 local Malha = require(script.Parent:WaitForChild("Nexo3D"):WaitForChild("Malha"))
+local AtaquesFx = require(script.Parent:WaitForChild("AtaquesAura"))
+local AtaquesAura = require(Shared:WaitForChild("Dados"):WaitForChild("AtaquesAura"))
 
 local Criaturas = {}
 
@@ -23,6 +24,7 @@ local prefs: Preferencias = { qualidadeBaixa = false, movimentoReduzido = false 
 
 function Criaturas.definir(novas: Preferencias)
 	prefs = novas
+	AtaquesFx.definir({ movimentoReduzido = novas.movimentoReduzido })
 end
 
 type Camada = { parte: BasePart, centro: Vector3, rel: CFrame }
@@ -332,23 +334,22 @@ end
 
 -- ===================================================================== golpes da aura
 
-local function corDoGolpe(userId: number): Color3
-	return if userId == Players.LocalPlayer.UserId
-		then Color3.fromHex("C0ADFF")
-		else Color3.fromHex("8C82B4")
+-- Cada aura ataca com o poder da família dela (Dados/AtaquesAura); o visual está em
+-- Mundo/AtaquesAura. O servidor manda todos os acertos (principal, área, corrente...).
+local function parteDoId(id: any): BasePart?
+	for parte in instancias do
+		if parte:GetAttribute("Id") == id then
+			return parte
+		end
+	end
+	return nil
 end
 
 local function golpe(dados: { [string]: any })
 	if type(dados) ~= "table" or dados.tipo ~= "golpe" then
 		return
 	end
-	local alvoParte: BasePart? = nil
-	for parte in instancias do
-		if parte:GetAttribute("Id") == dados.alvo then
-			alvoParte = parte
-			break
-		end
-	end
+	local alvoParte = parteDoId(dados.alvo)
 	local jogador = Players:GetPlayerByUserId(tonumber(dados.de) or 0)
 	local personagem = jogador and jogador.Character
 	local raiz = personagem and personagem:FindFirstChild("HumanoidRootPart") :: BasePart?
@@ -359,71 +360,43 @@ local function golpe(dados: { [string]: any })
 	if camera and (camera.CFrame.Position - alvoParte.Position).Magnitude > DISTANCIA then
 		return
 	end
-	local cor = corDoGolpe(dados.de)
-	local orbe = Instance.new("Part")
-	orbe.Shape = Enum.PartType.Ball
-	orbe.Material = Enum.Material.Neon
-	orbe.Color = cor
-	orbe.Anchored = true
-	orbe.CanCollide = false
-	orbe.CanQuery = false
-	orbe.CanTouch = false
-	orbe.CastShadow = false
-	orbe.Size = Vector3.one * 0.9
-	orbe.CFrame = raiz.CFrame * CFrame.new(0, 1.5, -1)
-	orbe.Parent = pasta
-	local destino = alvoParte.Position
-	local tween = TweenService:Create(
-		orbe,
-		TweenInfo.new(0.18, Enum.EasingStyle.Quad),
-		{ Position = destino }
-	)
-	tween:Play()
-	tween.Completed:Connect(function()
-		orbe.Size = Vector3.one * 1.4
-		TweenService:Create(orbe, TweenInfo.new(0.25), { Size = Vector3.one * 4, Transparency = 1 })
-			:Play()
-		task.delay(0.3, function()
-			orbe:Destroy()
-		end)
-		if prefs.movimentoReduzido then
-			return
+	local meu = dados.de == Players.LocalPlayer.UserId
+	local acertos: { AtaquesFx.Acerto } = {}
+	if type(dados.acertos) == "table" then
+		for _, a in dados.acertos do
+			local parte = if type(a) == "table" then parteDoId(a.alvo) else nil
+			if parte and type(a.dano) == "number" then
+				table.insert(acertos, {
+					pos = parte.Position,
+					atraso = math.clamp(tonumber(a.atraso) or 0, 0, 4),
+					dano = a.dano,
+					critico = a.critico == true,
+					tipo = if type(a.tipo) == "string" then a.tipo else "principal",
+				})
+			end
 		end
-		-- número de dano subindo
-		local ancora = Instance.new("Part")
-		ancora.Anchored = true
-		ancora.CanCollide = false
-		ancora.CanQuery = false
-		ancora.Transparency = 1
-		ancora.Size = Vector3.one * 0.1
-		ancora.Position = destino + Vector3.new(math.random(-10, 10) / 10, alvoParte.Size.Y / 2, 0)
-		ancora.Parent = pasta
-		local gui = Instance.new("BillboardGui")
-		gui.Size = UDim2.fromOffset(120, 40)
-		gui.AlwaysOnTop = true
-		gui.LightInfluence = 0
-		local texto = Instance.new("TextLabel")
-		texto.BackgroundTransparency = 1
-		texto.Size = UDim2.fromScale(1, 1)
-		texto.Font = Enum.Font.Oswald
-		texto.TextSize = if dados.de == Players.LocalPlayer.UserId then 28 else 18
-		texto.TextColor3 = cor
-		texto.TextStrokeTransparency = 0.2
-		texto.Text = tostring(dados.dano)
-		texto.Parent = gui
-		gui.Parent = ancora
-		TweenService:Create(
-			ancora,
-			TweenInfo.new(0.7, Enum.EasingStyle.Quad),
-			{ Position = ancora.Position + Vector3.new(0, 3, 0) }
-		):Play()
-		TweenService
-			:Create(texto, TweenInfo.new(0.7), { TextTransparency = 1, TextStrokeTransparency = 1 })
-			:Play()
-		task.delay(0.75, function()
-			ancora:Destroy()
-		end)
-	end)
+	end
+	if #acertos == 0 and type(dados.dano) == "number" then
+		table.insert(
+			acertos,
+			{ pos = alvoParte.Position, atraso = 0, dano = dados.dano, tipo = "principal" }
+		)
+	end
+	local poderId = if type(dados.poder) == "string" then dados.poder else "estilhaco"
+	local poder = AtaquesAura.PODERES[poderId]
+	local tier = tonumber(dados.tier) or 1
+	local raio = if poder and poder.area then AtaquesAura.raio(poder.area.raio, tier) else nil
+	AtaquesFx.tocar({
+		poder = poderId,
+		origem = raiz.Position + Vector3.new(0, 1.2, 0),
+		alvo = alvoParte.Position,
+		acertos = acertos,
+		aura = if type(dados.aura) == "string" then dados.aura else nil,
+		tier = tier,
+		forte = dados.forte == true,
+		meu = meu,
+		raio = raio,
+	})
 end
 
 -- ===================================================================== ciclo

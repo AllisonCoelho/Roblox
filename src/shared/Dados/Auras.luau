@@ -19,6 +19,7 @@ export type Aura = {
 	tier: number, -- índice em Auras.Tiers
 	ordem: number, -- posição no catálogo (1 = mais comum)
 	exclusiva: boolean?, -- fora do sorteio: só vem de eventos (ex.: Gear 5 no Baú do Sol)
+	familia: string?, -- família do catálogo (define o poder do ataque automático)
 }
 
 export type Tier = { nome: string, minimo: number, cor: string }
@@ -76,6 +77,7 @@ for i, d in Catalogo.lista do
 		estilo = ESTILO_POR_FAMILIA[d.familia] or "brilho",
 		tier = tier,
 		ordem = i,
+		familia = d.familia,
 	}
 	table.insert(Auras.lista, aura)
 	Auras.porId[aura.id] = aura

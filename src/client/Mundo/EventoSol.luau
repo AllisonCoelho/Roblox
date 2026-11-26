@@ -20,11 +20,13 @@ local Remotos = require(Shared:WaitForChild("Remotos"))
 local Boneco = require(script.Parent:WaitForChild("Boneco"))
 local Ciclo = require(script.Parent:WaitForChild("Ciclo"))
 local Sons = require(script.Parent:WaitForChild("Sons"))
+local AtaquesFx = require(script.Parent:WaitForChild("AtaquesAura"))
 
 local Mundo = {}
 
 local OURO = Color3.fromHex("FFD54A")
 local BRANCO = Color3.fromHex("FFFFFF")
+local ALTURA_FRENTE = 3 -- os ataques acertam a frente do corpo do Titã
 local ALTURA = 26 -- altura da peça do servidor (os pés ficam na base dela)
 
 local pasta: Folder
@@ -521,12 +523,39 @@ function Mundo.iniciar()
 				break
 			end
 			if type(g) == "table" and type(g.de) == "number" and type(g.dano) == "number" then
-				orbe(
-					Players:GetPlayerByUserId(g.de),
-					t.Position + Vector3.new(0, 2, 0),
-					g.dano,
-					g.de == eu
-				)
+				local de = Players:GetPlayerByUserId(g.de)
+				local raiz = de and de.Character and de.Character:FindFirstChild("HumanoidRootPart")
+				local meu = g.de == eu
+				-- poder da aura de quem bateu (Dados/AtaquesAura); longe ou muitos: o orbe simples
+				if
+					raiz
+					and raiz:IsA("BasePart")
+					and type(g.poder) == "string"
+					and (meu or i <= 8)
+				then
+					local alvo = t.Position
+						+ t.CFrame.LookVector * ALTURA_FRENTE
+						+ Vector3.new(math.random(-4, 4), math.random(-6, 8), 0)
+					AtaquesFx.tocar({
+						poder = g.poder,
+						origem = raiz.Position + Vector3.new(0, 1.2, 0),
+						alvo = alvo,
+						acertos = {
+							{
+								pos = alvo,
+								atraso = 0,
+								dano = g.dano,
+								critico = g.critico == true,
+								tipo = "principal",
+							},
+						},
+						aura = if type(g.aura) == "string" then g.aura else nil,
+						forte = g.forte == true,
+						meu = meu,
+					})
+				else
+					orbe(de, t.Position + Vector3.new(0, 2, 0), g.dano, meu)
+				end
 			end
 		end
 		Sons.tocar("batida", t, 0.8 + math.random() * 0.4, 0.35)
