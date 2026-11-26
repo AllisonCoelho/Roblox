@@ -42,6 +42,7 @@ local Despertar = require(Mundo:WaitForChild("Despertar"))
 local Artefatos = require(Mundo:WaitForChild("Artefatos"))
 local AurasControlador = require(Mundo:WaitForChild("Auras"):WaitForChild("Controlador"))
 local AurasCaudas = require(Mundo:WaitForChild("Auras"):WaitForChild("Caudas"))
+local AurasExtravagancia = require(Mundo:WaitForChild("Auras"):WaitForChild("Extravagancia"))
 local EfeitosAlheios = require(Mundo:WaitForChild("EfeitosAlheios"))
 
 local App = {}
@@ -427,6 +428,7 @@ function App.iniciar()
 
 	EfeitosAlheios.iniciar()
 	AurasControlador.iniciar()
+	AurasExtravagancia.iniciar()
 	Artefatos.iniciar()
 	Estado.aoMudar(function(estado)
 		hud.atualizar(estado)
@@ -439,6 +441,11 @@ function App.iniciar()
 		EfeitosAlheios.definir(c.ocultarEfeitosAlheios == true)
 		IncursoesUI.definirQualidade(c.qualidadeBaixa == true, c.movimentoReduzido == true)
 		AurasControlador.definir({
+			qualidadeBaixa = c.qualidadeBaixa == true,
+			movimentoReduzido = c.movimentoReduzido == true,
+			ocultarEfeitosAlheios = c.ocultarEfeitosAlheios == true,
+		})
+		AurasExtravagancia.definir({
 			qualidadeBaixa = c.qualidadeBaixa == true,
 			movimentoReduzido = c.movimentoReduzido == true,
 			ocultarEfeitosAlheios = c.ocultarEfeitosAlheios == true,

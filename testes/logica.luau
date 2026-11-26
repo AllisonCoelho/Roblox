@@ -2269,4 +2269,58 @@ do
 	end
 end
 
+-- ============================================================ efeitos extravagantes das auras
+do
+	local X = req("Extravagancia")
+	local A = req("Auras")
+	igual("extra: uma linha por raridade", #X.POR_TIER, #A.Tiers)
+	-- acumula: cada raridade tem tudo da anterior e mais
+	for t = 2, #A.Tiers do
+		igual("extra: raridade " .. t .. " tem mais camadas", #X.camadas(t) > #X.camadas(t - 1), true)
+		for _, c in X.camadas(t - 1) do
+			igual("extra: " .. t .. " mantém " .. c, X.tem(t, c), true)
+		end
+	end
+	igual("extra: comum só brilho", #X.camadas(1), 1)
+	igual("extra: incomum tem anel no chão", X.tem(2, "anelChao"), true)
+	igual("extra: raro tem orbes", X.tem(3, "orbes"), true)
+	igual("extra: épico tem espiral", X.tem(4, "espiral"), true)
+	igual("extra: lendário tem título e pilar", X.tem(5, "titulo") and X.tem(5, "pilar"), true)
+	igual("extra: mítico tem portal e raios", X.tem(6, "portal") and X.tem(6, "raios"), true)
+	igual("extra: divino é cromático", X.tem(7, "cromatico"), true)
+	igual("extra: comum não tem portal", X.tem(1, "portal"), false)
+	-- qualidade baixa tira as pesadas
+	for _, c in X.camadas(7, true) do
+		igual("extra: qualidade baixa sem " .. c, X.PESADAS[c] == nil, true)
+	end
+	igual("extra: qualidade baixa mantém o título", X.tem(7, "titulo", true), true)
+	igual("extra: tier fora do intervalo", #X.camadas(99), #X.camadas(#A.Tiers))
+	igual("extra: tier zero vira comum", #X.camadas(0), 1)
+	-- quantidades crescem
+	igual("extra: orbes crescem", X.orbes(7) > X.orbes(3), true)
+	igual("extra: pulso mais rápido nas raras", X.intervaloPulso(7) < X.intervaloPulso(4), true)
+	igual("extra: pulso nunca frenético", X.intervaloPulso(99) >= 1.2, true)
+	-- temas
+	igual("extra: tema chama", X.tema("chama").textura, "fire_main")
+	igual("extra: tema desconhecido vira brilho", X.tema("x").textura, "sparkles_main")
+	igual("extra: tema nil vira brilho", X.tema(nil).textura, "sparkles_main")
+	-- manifestação
+	local m1, m5, m7 = X.manifestacao(1), X.manifestacao(5), X.manifestacao(7)
+	igual("extra: comum sem tremor nem flash", m1.tremor == 0 and m1.flash == 0, true)
+	igual("extra: lendário com flash", m5.flash > 0, true)
+	igual("extra: divino tinge a tela", m7.tingir, true)
+	igual("extra: flash não cega", m7.flash <= 0.7, true)
+	igual("extra: manifestação cresce", m7.faiscas > m1.faiscas and m7.aneis > m1.aneis, true)
+	-- distância
+	igual("extra: o próprio sempre tudo", X.detalhe(9999, true), 2)
+	igual("extra: perto tudo", X.detalhe(20, false), 2)
+	igual("extra: médio sem pesadas", X.detalhe(100, false), 1)
+	igual("extra: longe só luz", X.detalhe(500, false), 0)
+	igual("extra: matiz entre 0 e 1", X.matiz(123.4) >= 0 and X.matiz(123.4) < 1, true)
+	-- todo estilo de aura tem tema
+	for _, a in A.lista do
+		igual("extra: tema de " .. a.id, X.tema(a.estilo) ~= nil, true)
+	end
+end
+
 print(string.format("%d testes, %d falhas", total, falhas))
