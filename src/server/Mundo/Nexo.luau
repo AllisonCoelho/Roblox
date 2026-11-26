@@ -846,17 +846,18 @@ function Nexo.destinoDev(nome: string): CFrame?
 end
 
 local function configurarCeu()
-	-- Noite estilizada, mas clara: ambiente mais alto e exposição levantada para que o mapa
-	-- seja legível sem depender de muitas PointLights (custo baixo no celular)
+	-- Noite estilizada com valores perto do padrão do Roblox (sem exposição extra nem ambiente
+	-- alto, que lavavam as cores)
 	Lighting.ClockTime = 0
-	Lighting.Brightness = 2.4
-	Lighting.ExposureCompensation = 0.35
-	Lighting.Ambient = Color3.fromHex("5E5584")
-	Lighting.OutdoorAmbient = Color3.fromHex("7C74B4")
-	Lighting.ColorShift_Top = Color3.fromHex("A898F0")
-	Lighting.ColorShift_Bottom = Color3.fromHex("3A3060")
-	Lighting.EnvironmentDiffuseScale = 0.6
-	Lighting.EnvironmentSpecularScale = 0.5
+	-- (mesmos valores da noite de Dados/Ciclo; o cliente ajusta conforme a hora)
+	Lighting.Brightness = 1.5
+	Lighting.ExposureCompensation = 0
+	Lighting.Ambient = Color3.fromHex("3A3550")
+	Lighting.OutdoorAmbient = Color3.fromHex("5A5482")
+	Lighting.ColorShift_Top = Color3.fromHex("8E82C8")
+	Lighting.ColorShift_Bottom = Color3.fromHex("241E3A")
+	Lighting.EnvironmentDiffuseScale = 0.5
+	Lighting.EnvironmentSpecularScale = 0.4
 	Lighting.FogEnd = 100000
 	for _, filho in Lighting:GetChildren() do
 		if
@@ -873,25 +874,26 @@ local function configurarCeu()
 	ceu.CelestialBodiesShown = false
 	ceu.Parent = Lighting
 	local atmosfera = Instance.new("Atmosphere")
-	atmosfera.Density = 0.3
+	atmosfera.Density = 0.32
 	atmosfera.Offset = 0.2
-	atmosfera.Color = Color3.fromHex("6C5FA8")
-	atmosfera.Decay = Color3.fromHex("1A1030")
+	atmosfera.Color = Color3.fromHex("5A4F8E")
+	atmosfera.Decay = Color3.fromHex("140C26")
 	atmosfera.Glare = 0
-	atmosfera.Haze = 2
+	atmosfera.Haze = 1.6
 	atmosfera.Parent = Lighting
 	local bloom = Instance.new("BloomEffect")
 	bloom.Name = "NexoBloom"
-	bloom.Intensity = 0.6
-	bloom.Size = 22
-	bloom.Threshold = 1.1
+	-- só o que é Neon de verdade brilha (antes o limiar baixo fazia o mapa inteiro irradiar)
+	bloom.Intensity = 0.35
+	bloom.Size = 18
+	bloom.Threshold = 1.6
 	bloom.Parent = Lighting
 	-- Leve ganho de brilho e saturação para as cores do mapa não ficarem lavadas
 	local cor = Instance.new("ColorCorrectionEffect")
 	cor.Name = "NexoCor"
-	cor.Brightness = 0.05
-	cor.Contrast = 0.08
-	cor.Saturation = 0.12
+	cor.Brightness = 0
+	cor.Contrast = 0.05
+	cor.Saturation = 0.05
 	cor.Parent = Lighting
 end
 

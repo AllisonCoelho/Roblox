@@ -1841,7 +1841,8 @@ do
 	for _, f in C.FASES do
 		igual("ciclo: início da " .. f.id, C.estado(C.inicioDa(f.id) + 0.5).fase, f.id)
 	end
-	igual("ciclo: noite é a luz original", C.luz(0).brilho, 2.4)
+	igual("ciclo: noite sem exposição extra", C.luz(0).brilho <= 2 and C.luz(0).exposicao <= 0, true)
+	igual("ciclo: dia sem estourar", C.luz(12).brilho <= 2.2 and C.luz(12).exposicao <= 0, true)
 	igual("ciclo: dia mais claro que a noite", C.luz(12).brilho > C.luz(0).brilho, true)
 	igual("ciclo: sem estrelas ao meio-dia", C.luz(12).estrelas, 0)
 	igual("ciclo: luz mistura entre quadros", C.luz(7.5).brilho > C.luz(6).brilho - 1e-9, true)
