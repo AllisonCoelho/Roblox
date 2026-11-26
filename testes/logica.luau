@@ -1911,8 +1911,22 @@ do
 		end
 	end
 	igual("tutorial: novato começa", T.normalizar(nil, 0).concluido, false)
-	igual("tutorial: veterano não vê", T.normalizar(nil, 12).concluido, true)
-	igual("tutorial: veterano já ganhou os presentes", T.normalizar(nil, 12).presenteAte, #T.PASSOS)
+	local veterano = T.normalizar(nil, 12)
+	igual("tutorial: veterano agora vê a Lume", veterano.concluido, false)
+	igual("tutorial: veterano já recebeu os presentes", veterano.presenteAte, #T.PASSOS)
+	igual("tutorial: veterano é marcado após oferecer", veterano.apresentacaoOferecida, true)
+	local dispensadoAntigo = { passo = 1, concluido = true, presenteAte = #T.PASSOS }
+	local migrado = T.normalizar(dispensadoAntigo, 12)
+	igual("tutorial: dispensa antiga migra para tutorial visível", migrado.concluido, false)
+	igual("tutorial: migração não reabre presentes", migrado.presenteAte, #T.PASSOS)
+	local reentrada = T.normalizar(migrado, 12)
+	igual("tutorial: oferecimento não se repete", reentrada.apresentacaoOferecida, true)
+	T.pular(reentrada)
+	igual("tutorial: após pular não reaparece ao retornar", T.normalizar(reentrada, 12).concluido, true)
+	local concluidoAntes = { passo = #T.PASSOS, concluido = true, presenteAte = #T.PASSOS }
+	igual("tutorial: conclusão real é preservada", T.normalizar(concluidoAntes, 12).concluido, true)
+	local _, semPresente = T.avancar(migrado, 1, { giros = 12, evolucoes = 2 })
+	igual("tutorial: veterano revendo não recebe presentes", semPresente, nil)
 	igual("tutorial: passo inválido vira 1", T.normalizar({ passo = "x" }).passo, 1)
 	igual("tutorial: passo acima do total", T.normalizar({ passo = 99 }).passo, #T.PASSOS)
 	local nada = { giros = 0, evolucoes = 0 }
