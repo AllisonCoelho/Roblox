@@ -267,6 +267,8 @@ end
 local function construirNucleo(pasta: Instance)
 	local nucleo = Instance.new("Model")
 	nucleo.Name = "Nucleo"
+	-- Pequeno marco central usado continuamente pelo cliente, inclusive longe do spawn.
+	nucleo.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
 	nucleo.Parent = pasta
 	cilindro(nucleo, Vector3.new(0, 1, 0), 8, 1.2, { Name = "Base", Color = COR.pedra })
 	cilindro(
@@ -907,6 +909,16 @@ function Nexo.construir(): Folder
 	construirBordaProvisoria(pasta)
 	construirPraca(pasta)
 	construirNucleo(pasta)
+	for _, inst in pasta:GetDescendants() do
+		if
+			inst:IsA("BasePart")
+			and inst.Name ~= "Chao"
+			and inst.Name ~= "BordaProvisoria"
+			and inst.Name ~= "ParedeLimite"
+		then
+			inst:SetAttribute("EtapaKit3D", "Praca")
+		end
+	end
 	construirCaminhos(pasta)
 	construirObelisco(pasta)
 	construirArquivo(pasta)
