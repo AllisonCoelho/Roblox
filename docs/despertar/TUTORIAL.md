@@ -4,12 +4,7 @@
 
 ## A Lume, Guardiã do Nexo
 
-A Lume é uma personagem original, no estilo blocado do Roblox:
-- capuz lilás e olhos de luz menta;
-- um cristal do Nexo flutuando sobre a cabeça;
-- um aro de energia nos ombros.
-
-Foi feita no Blender (`assets/tutorial/source/generate_lume.py`), com olhos e boca em peças separadas para animar.
+A Lume é uma personagem original. É um **boneco no estilo do Roblox** (ver `NPCS.md`): corpo de blocos, cabelo lilás comprido, capa e uma estrela menta flutuando. Pisca, mexe a boca e gesticula enquanto fala.
 
 **Como ela aparece**
 - Uma caixa de diálogo na parte de baixo da tela, logo acima do DESPERTAR, com a Lume em 3D (ViewportFrame).
@@ -64,7 +59,7 @@ Foi feita no Blender (`assets/tutorial/source/generate_lume.py`), com olhos e bo
 | `src/shared/Dados/Tutorial.luau` | Passos, falas, objetivos, presentes, avançar, pular e rever (regras puras, testadas) |
 | `src/server/Servicos/Tutorial.luau` | Ações do tutorial, conferência e presentes |
 | `src/client/UI/Telas/Tutorial.luau` | Caixa da Lume, digitação, animação, destaques, seta do drop e coluna dos Portais |
-| `src/shared/Dados/LumeVisual.luau` | Peças da Lume (gerado) |
+| `src/shared/Dados/Bonecos.luau` | Aparência da Lume (boneco) |
 | `src/client/UI/Telas/HUD.luau` | `HUD.escalaDoHud()` e o HUD menor no toque |
 | `src/client/UI/Telas/Ajustes.luau` | "Rever tutorial" |
 

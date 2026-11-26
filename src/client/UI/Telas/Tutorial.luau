@@ -13,7 +13,7 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage.Shared
 local Dados = require(Shared.Dados.Tutorial)
-local LumeVisual = require(Shared.Dados.LumeVisual)
+local Bonecos = require(Shared.Dados.Bonecos)
 local PontosAura = require(Shared.Dados.PontosAura)
 local Remotos = require(Shared.Remotos)
 local Cores = require(Shared.Tema).Orbita
@@ -23,15 +23,13 @@ local Kit = require(script.Parent.Parent.Kit)
 local Navegacao = require(script.Parent.Parent.Navegacao)
 local Revelacao = require(script.Parent.Revelacao)
 local Mundo = script.Parent.Parent.Parent.Mundo
-local Malha = require(Mundo.Nexo3D.Malha)
+local Boneco = require(Mundo.Boneco)
 local Sons = require(Mundo.Sons)
 
 local Tela = {}
 
 local LETRAS_POR_SEGUNDO = 42
 local RAIO_PORTAIS = 30
-
-type Parte = { parte: MeshPart, papel: string, tamanho: Vector3 }
 
 local raiz: Frame
 local hudQuadro: GuiObject
@@ -41,7 +39,7 @@ local caixa: Kit.Placa
 local escalaCaixa: UIScale
 local retrato: ViewportFrame
 local camera: Camera
-local partes: { Parte } = {}
+local lume: any = nil -- Mundo/Boneco
 local fala: TextLabel
 local objetivoTexto: TextLabel
 local seguir: Kit.BotaoPlaca
@@ -207,18 +205,17 @@ local function montarRetrato(pai: Instance)
 		ZIndex = 6,
 		Parent = pai,
 	}) :: ViewportFrame
-	local modelo = Instance.new("Model")
-	local prontas: Malha.Cache = {}
-	for _, m in LumeVisual :: { any } do
-		local ok, parte, centro = pcall(Malha.criar, m.malha, prontas)
+	-- a Lume é um boneco do Roblox (Dados/Bonecos): monta em segundo plano (malhas em fila)
+	task.spawn(function()
+		local mundo = Instance.new("WorldModel")
+		mundo.Parent = retrato
+		local ok, b = pcall(Boneco.criar, "lume", mundo)
 		if ok then
-			parte.Material = (Enum.Material :: any)[m.material] or Enum.Material.SmoothPlastic
-			parte.CFrame = CFrame.new(centro)
-			parte.Parent = modelo
-			table.insert(partes, { parte = parte, papel = m.papel, tamanho = parte.Size })
+			lume = b
+		else
+			warn("[Tutorial] Lume: " .. tostring(b))
 		end
-	end
-	modelo.Parent = retrato
+	end)
 	camera = Instance.new("Camera")
 	camera.FieldOfView = 34
 	camera.Parent = retrato
@@ -458,32 +455,20 @@ end
 -- ============================================================ quadro a quadro
 
 local function animarRetrato(t: number)
-	-- respiração (câmera) e um leve virar de cabeça
-	local y = math.sin(t * 2) * 0.05
-	local lado = math.sin(t * 0.7) * 0.35
-	camera.CFrame = CFrame.lookAt(Vector3.new(lado + 0.6, 0.25 + y, -6.2), Vector3.new(0, 0.05, 0))
+	-- câmera no busto; ela respira, olha em volta, pisca e gesticula enquanto fala
+	camera.CFrame = CFrame.lookAt(Vector3.new(1.1, 4.5, -5.4), Vector3.new(0.15, 3.85, 0))
+	if not lume then
+		return
+	end
 	if t >= proximaPiscada then
 		proximaPiscada = t + 2.5 + math.random() * 2.5
 	end
-	local fechado = (proximaPiscada - t) < 0.12
 	local falando = digitando and math.floor(t * 11) % 2 == 0
-	for _, p in partes do
-		if p.papel == "olhos" then
-			local alvo = if fechado
-				then Vector3.new(p.tamanho.X, p.tamanho.Y * 0.15, p.tamanho.Z)
-				else p.tamanho
-			if p.parte.Size ~= alvo then
-				p.parte.Size = alvo
-			end
-		elseif p.papel == "boca" then
-			local alvo = if falando
-				then Vector3.new(p.tamanho.X, p.tamanho.Y * 2.4, p.tamanho.Z)
-				else p.tamanho
-			if p.parte.Size ~= alvo then
-				p.parte.Size = alvo
-			end
-		end
-	end
+	lume:posicionar(CFrame.new(), Bonecos.pose(if digitando then "falar" else "parado", t), {
+		piscando = (proximaPiscada - t) < 0.12,
+		falando = falando,
+		giro = t,
+	})
 end
 
 local function quadro(dt: number)

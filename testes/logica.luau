@@ -1896,12 +1896,7 @@ end
 -- Tutorial (Lume)
 do
 	local T = req("Tutorial")
-	local L = req("LumeVisual")
-	local papeis = {}
-	for _, p in L do
-		papeis[p.papel] = true
-	end
-	igual("tutorial: retrato tem olhos e boca separados", papeis.olhos == true and papeis.boca == true, true)
+	igual("tutorial: a Lume é um boneco", req("Bonecos").NPCS.lume ~= nil, true)
 	for i, p in T.PASSOS do
 		igual("tutorial: passo " .. p.id .. " tem falas", #p.falas > 0, true)
 		igual("tutorial: índice de " .. p.id, T.porId[p.id], i)
@@ -2240,18 +2235,58 @@ do
 	igual("musica: evento tem arpejo em todo passo", #M.notas("evento", 1, fixo) >= 2, true)
 end
 
--- ============================================================ Titã de Borracha (visual gerado)
+-- ============================================================ NPCs no estilo boneco do Roblox
 do
-	local T = req("TitaVisual")
-	local nomes = {}
-	for _, p in T do
-		nomes[p.nome] = true
-		igual("tita: junta " .. p.nome, #p.junta, 3)
-		igual("tita: camadas " .. p.nome, #p.camadas > 0, true)
+	local B = req("Bonecos")
+	-- proporções do boneco clássico: tronco 2×2×1, membros 1×2×1
+	local porNome = {}
+	for _, m in B.MEMBROS do
+		porNome[m.nome] = m
 	end
-	for _, n in { "pernaD", "pernaE", "tronco", "cabeca", "cabelo", "halo", "bracoD", "bracoE" } do
-		igual("tita: peça " .. n, nomes[n], true)
+	igual("boneco: tronco 2x2x1", table.concat(porNome.tronco.tamanho, ","), "2,2,1")
+	for _, n in { "bracoD", "bracoE", "pernaD", "pernaE" } do
+		igual("boneco: membro 1x2x1 " .. n, table.concat(porNome[n].tamanho, ","), "1,2,1")
 	end
+	igual("boneco: pernas tocam o chão", porNome.pernaD.junta[2] + porNome.pernaD.centro[2] - 1, 0)
+	igual("boneco: braços simétricos", porNome.bracoD.junta[1], -porNome.bracoE.junta[1])
+	-- malhas de cada NPC existem (cabeça e cabelo)
+	local raiz = "src/client/Mundo/Nexo3D/Dados/"
+	local function existe(nome)
+		local f = io and io.open and io.open(raiz .. nome .. ".luau", "r")
+		if f then
+			f:close()
+			return true
+		end
+		return io == nil -- sem io (luau puro) não dá para conferir aqui
+	end
+	for id, d in B.NPCS do
+		igual("boneco: escala positiva " .. id, d.escala > 0, true)
+		igual("boneco: cabeça " .. id, existe("boneco_cabeca_" .. id), true)
+		for _, a in d.acessorios do
+			igual("boneco: acessório válido " .. id, a.malha ~= nil or a.peca ~= nil, true)
+			if a.malha then
+				igual("boneco: malha " .. a.malha, existe(a.malha), true)
+			end
+		end
+	end
+	igual("boneco: titã tem a altura da peça do servidor", B.NPCS.tita.escala * B.ALTURA, 26)
+	-- poses
+	local neutra = B.poseNeutra()
+	igual("boneco: pose neutra", neutra.esticaBracos == 1 and neutra.achata == 0, true)
+	for _, estado in { "parado", "falar", "acenar", "erguer", "bater", "comemorar", "desconhecido" } do
+		local p = B.pose(estado, 1.3, 0.5)
+		local ok = true
+		for _, k in { "pescoco", "tronco", "bracoD", "bracoE", "pernaD", "pernaE" } do
+			if #p[k] ~= 3 then
+				ok = false
+			end
+		end
+		igual("boneco: pose completa " .. estado, ok, true)
+	end
+	igual("boneco: erguer leva os braços para cima", B.pose("erguer", 0, 1).bracoD[1] > 2.5, true)
+	igual("boneco: erguer estica", B.pose("erguer", 0, 1).esticaBracos, 1.8)
+	igual("boneco: bater achata no meio", B.pose("bater", 0, 0.5).achata > 0.1, true)
+	igual("boneco: acenar abre o braço direito", B.pose("acenar", 0).bracoD[3] > 2, true)
 end
 
 print(string.format("%d testes, %d falhas", total, falhas))

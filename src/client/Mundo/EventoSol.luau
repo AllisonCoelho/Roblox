@@ -1,7 +1,7 @@
 -- Evento Despertar do Sol no mundo (só visual; regras em Shared/Dados/EventoSol e o chefe no
 -- servidor). O servidor cria uma peça invisível "Tita" em Workspace.EventoSol com os atributos
 -- Vida, VidaMax, SurgiuEm, AtingidoEm, AtaqueEm, Derrotado e FimEm. Aqui cada cliente monta o
--- Titã de Borracha feito no Blender (Dados/TitaVisual) em cima dela e anima:
+-- Titã de Borracha como um boneco do Roblox gigante (Mundo/Boneco, "tita" em Dados/Bonecos) e anima:
 --   chegada    cai do céu e quica, com onda de choque
 --   parado     respira, balança, a auréola gira (esticado como borracha)
 --   golpe      achata e estica quando leva dano; orbes saem de quem bateu
@@ -15,27 +15,20 @@ local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
-local Visual = require(Shared:WaitForChild("Dados"):WaitForChild("TitaVisual"))
+local Bonecos = require(Shared:WaitForChild("Dados"):WaitForChild("Bonecos"))
 local Remotos = require(Shared:WaitForChild("Remotos"))
-local Malha = require(script.Parent:WaitForChild("Nexo3D"):WaitForChild("Malha"))
+local Boneco = require(script.Parent:WaitForChild("Boneco"))
 local Ciclo = require(script.Parent:WaitForChild("Ciclo"))
 local Sons = require(script.Parent:WaitForChild("Sons"))
 
 local Mundo = {}
-
-type Peca = {
-	nome: string,
-	junta: Vector3,
-	camadas: { { parte: MeshPart, centro: Vector3, tamanho: Vector3 } },
-}
 
 local OURO = Color3.fromHex("FFD54A")
 local BRANCO = Color3.fromHex("FFFFFF")
 local ALTURA = 26 -- altura da peça do servidor (os pés ficam na base dela)
 
 local pasta: Folder
-local modelo: Model? = nil
-local pecas: { [string]: Peca } = {}
+local boneco: any = nil
 local contorno: Highlight? = nil
 local tita: BasePart? = nil
 local movimentoReduzido = false
@@ -43,89 +36,28 @@ local movimentoReduzido = false
 -- ============================================================ montagem do Titã
 
 local function montar(): boolean
-	if modelo then
+	if boneco then
 		return true
 	end
-	local prontas: Malha.Cache = {}
-	local m = Instance.new("Model")
-	m.Name = "TitaDeBorracha"
-	for _, p in Visual :: { any } do
-		local peca: Peca = {
-			nome = p.nome,
-			junta = Vector3.new(p.junta[1], p.junta[2], p.junta[3]),
-			camadas = {},
-		}
-		for _, c in p.camadas do
-			local ok, parte, centro = pcall(Malha.criar, c.malha, prontas)
-			if ok then
-				parte.Material = (Enum.Material :: any)[c.material] or Enum.Material.SmoothPlastic
-				parte.Anchored = true
-				parte.CanCollide = false
-				parte.CanQuery = false
-				parte.CanTouch = false
-				parte.CastShadow = c.material ~= "Neon"
-				parte.Parent = m
-				table.insert(peca.camadas, { parte = parte, centro = centro, tamanho = parte.Size })
-			else
-				warn("[EventoSol] malha " .. tostring(c.malha) .. ": " .. tostring(parte))
-			end
-		end
-		pecas[p.nome] = peca
-	end
-	if next(m:GetChildren()) == nil then
-		m:Destroy()
-		return false
-	end
+	local b = Boneco.criar("tita", pasta)
 	local h = Instance.new("Highlight")
 	h.FillTransparency = 1
 	h.OutlineColor = OURO
 	h.OutlineTransparency = 0.15
 	h.DepthMode = Enum.HighlightDepthMode.Occluded
-	h.Parent = m
+	h.Parent = b.modelo
 	contorno = h
-	m.Parent = pasta
-	modelo = m
+	b:esconder()
+	boneco = b
 	return true
 end
 
 local function esconder()
-	if modelo then
-		for _, d in modelo:GetDescendants() do
-			if d:IsA("BasePart") then
-				d.LocalTransparencyModifier = 1
-			end
-		end
+	if boneco then
+		boneco:esconder()
 		if contorno then
 			contorno.Enabled = false
 		end
-	end
-end
-
--- Põe a peça no lugar: `base` = pés do Titã; `escala` estica o corpo todo como borracha
-local function posicionar(
-	nome: string,
-	base: CFrame,
-	escala: Vector3,
-	giro: CFrame,
-	esticar: number?,
-	alpha: number
-)
-	local peca = pecas[nome]
-	if not peca then
-		return
-	end
-	local junta = peca.junta * escala
-	local estica = esticar or 1
-	for _, c in peca.camadas do
-		local tamanho = c.tamanho * escala * Vector3.new(1, estica, 1)
-		if (c.parte.Size - tamanho).Magnitude > 0.01 then
-			c.parte.Size = tamanho
-		end
-		c.parte.CFrame = base
-			* CFrame.new(junta)
-			* giro
-			* CFrame.new(c.centro * escala * Vector3.new(1, estica, 1))
-		c.parte.LocalTransparencyModifier = alpha
 	end
 end
 
@@ -434,7 +366,7 @@ local montando = false
 -- Converter as malhas espera na fila do Malha: fora do RenderStep. Começa já no aviso, para o
 -- Titã estar pronto quando cair do céu.
 local function prepararModelo()
-	if not modelo then
+	if not boneco then
 		if not montando then
 			montando = true
 			task.spawn(function()
@@ -449,8 +381,10 @@ local function prepararModelo()
 	end
 end
 
+local proximaPiscada = 0
+
 local function animar(t: BasePart, agora: number, servidor: number)
-	if not modelo then
+	if not boneco then
 		prepararModelo()
 		return
 	end
@@ -464,22 +398,19 @@ local function animar(t: BasePart, agora: number, servidor: number)
 	local derrotado = t:GetAttribute("Derrotado") == true
 
 	local pes = t.CFrame * CFrame.new(0, -ALTURA / 2, 0)
-	local escala = Vector3.one
+	local pose = Bonecos.pose("parado", agora)
 	local alpha = 0
 	local queda = 0
 	local giroCorpo = CFrame.identity
-	local bracoD, bracoE = CFrame.Angles(0, 0, math.rad(-12)), CFrame.Angles(0, 0, math.rad(12))
-	local esticaBraco = 1
 
-	-- chegada: cai do céu e quica
+	-- chegada: cai do céu e quica (achata e estica como borracha)
 	local dChegada = servidor - surgiu
 	if dChegada < 1.4 then
 		local q = math.clamp(dChegada / 0.7, 0, 1)
 		queda = (1 - q * q) * 90
 		if dChegada > 0.7 then
 			local b = (dChegada - 0.7) / 0.7
-			local quique = math.sin(b * math.pi * 2.5) * (1 - b)
-			escala = Vector3.new(1 + 0.25 * quique, 1 - 0.3 * quique, 1 + 0.25 * quique)
+			pose.achata = 0.3 * math.sin(b * math.pi * 2.5) * (1 - b)
 			if ultimaChegada ~= surgiu then
 				ultimaChegada = surgiu
 				anel(pes.Position, 46, OURO, 0.9)
@@ -488,48 +419,25 @@ local function animar(t: BasePart, agora: number, servidor: number)
 				Sons.tocar("ruptura", t, 0.6, 0.9)
 				tremer(1.2, 0.6)
 			end
+		else
+			pose = Bonecos.pose("comemorar", agora)
+			pose.altura = 0
 		end
-	else
-		-- respirando, balançando como borracha
-		local r = math.sin(agora * 2.4)
-		escala = Vector3.new(1 + 0.03 * r, 1 - 0.04 * r, 1 + 0.03 * r)
-		giroCorpo = CFrame.Angles(0, math.sin(agora * 0.7) * 0.18, math.sin(agora * 1.2) * 0.05)
-		bracoD = CFrame.Angles(
-			math.sin(agora * 2.4) * 0.25,
-			0,
-			math.rad(-14) + math.sin(agora * 1.7) * 0.12
-		)
-		bracoE = CFrame.Angles(
-			-math.sin(agora * 2.4) * 0.25,
-			0,
-			math.rad(14) - math.sin(agora * 1.7) * 0.12
-		)
 	end
 
-	-- levou golpe: achata e volta (borracha)
+	-- levou golpe: achata e volta
 	local dGolpe = servidor - atingido
 	if dGolpe >= 0 and dGolpe < 0.35 and not movimentoReduzido then
-		local s = math.sin(dGolpe / 0.35 * math.pi) * 0.12
-		escala *= Vector3.new(1 + s, 1 - s, 1 + s)
+		pose.achata += math.sin(dGolpe / 0.35 * math.pi) * 0.12
 	end
 
 	-- onda: 1 s erguendo os braços esticados, depois bate no chão
 	local dAtaque = servidor - ataque
-	if dAtaque > -1 and dAtaque < 0.6 then
+	if dAtaque > -1 and dAtaque < 0.6 and dChegada >= 1.4 then
 		if dAtaque < 0 then
-			local p = 1 + dAtaque -- 0..1
-			local sobe = math.rad(170) * p
-			bracoD = CFrame.Angles(sobe, 0, math.rad(-10))
-			bracoE = CFrame.Angles(sobe, 0, math.rad(10))
-			esticaBraco = 1 + 0.8 * p
-			escala *= Vector3.new(1 - 0.06 * p, 1 + 0.1 * p, 1 - 0.06 * p)
+			pose = Bonecos.pose("erguer", agora, 1 + dAtaque)
 		else
-			local p = math.clamp(dAtaque / 0.15, 0, 1)
-			local desce = math.rad(170) * (1 - p) + math.rad(40) * p
-			bracoD = CFrame.Angles(desce, 0, math.rad(-10))
-			bracoE = CFrame.Angles(desce, 0, math.rad(10))
-			esticaBraco = 1.8 - 0.8 * math.clamp(dAtaque / 0.6, 0, 1)
-			escala *= Vector3.new(1.1, 0.88, 1.1)
+			pose = Bonecos.pose("bater", agora, dAtaque / 0.6)
 		end
 		if dAtaque >= 0 and ultimoAtaque ~= ataque then
 			ultimoAtaque = ataque
@@ -548,10 +456,11 @@ local function animar(t: BasePart, agora: number, servidor: number)
 	end
 
 	-- derrota: gira, encolhe e some numa chuva de luz
+	local tamanho = 1
 	if derrotado and fimEm > 0 then
 		local d = math.clamp((servidor - fimEm) / 2.5, 0, 1)
 		giroCorpo = CFrame.Angles(0, d * math.pi * 6, 0)
-		escala *= (1 - d * 0.9)
+		tamanho = 1 - d * 0.9
 		alpha = d
 		if derrotaVista ~= fimEm then
 			derrotaVista = fimEm
@@ -569,50 +478,19 @@ local function animar(t: BasePart, agora: number, servidor: number)
 		alpha = d
 	end
 
-	local base = pes * CFrame.new(0, queda, 0) * giroCorpo
-	local pulo =
-		Vector3.new(0, math.abs(math.sin(agora * 2.4)) * 0.6 * (if dChegada > 1.4 then 1 else 0), 0)
-	base *= CFrame.new(pulo)
-	local cabecaGiro = CFrame.Angles(
-		math.sin(agora * 1.1) * 0.06,
-		math.sin(agora * 0.8) * 0.15,
-		math.sin(agora * 1.6) * 0.08
-	)
-	posicionar(
-		"pernaD",
-		base,
-		escala,
-		CFrame.Angles(math.sin(agora * 2.4) * 0.08, 0, 0),
-		nil,
-		alpha
-	)
-	posicionar(
-		"pernaE",
-		base,
-		escala,
-		CFrame.Angles(-math.sin(agora * 2.4) * 0.08, 0, 0),
-		nil,
-		alpha
-	)
-	posicionar("tronco", base, escala, CFrame.identity, nil, alpha)
-	posicionar("cabeca", base, escala, cabecaGiro, nil, alpha)
-	posicionar(
-		"cabelo",
-		base,
-		escala,
-		cabecaGiro * CFrame.Angles(0, 0, math.sin(agora * 3) * 0.04),
-		nil,
-		alpha
-	)
-	local halo = pecas.halo
-	if halo then
-		-- a auréola gira em volta do centro da cabeça
-		local giroHalo = cabecaGiro
-			* CFrame.Angles(0, 0, if movimentoReduzido then 0 else agora * 0.8)
-		posicionar("halo", base, escala, giroHalo, nil, alpha)
+	if movimentoReduzido then
+		pose.altura = 0
 	end
-	posicionar("bracoD", base, escala, bracoD, esticaBraco, alpha)
-	posicionar("bracoE", base, escala, bracoE, esticaBraco, alpha)
+	if agora >= proximaPiscada then
+		proximaPiscada = agora + 2.5 + math.random() * 2.5
+	end
+	boneco:posicionar(pes * CFrame.new(0, queda, 0) * giroCorpo, pose, {
+		escala = tamanho,
+		alpha = alpha,
+		piscando = (proximaPiscada - agora) < 0.15,
+		falando = dAtaque > -1 and dAtaque < 0.6,
+		giro = if movimentoReduzido then 0 else agora * 0.6,
+	})
 end
 
 -- ============================================================ ciclo
