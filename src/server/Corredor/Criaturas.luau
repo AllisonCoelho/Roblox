@@ -12,6 +12,8 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Criaturas = require(Shared.Dados.Criaturas)
+local AtaquesAura = require(Shared.Dados.AtaquesAura)
+local Auras = require(Shared.Dados.Auras)
 local Visual = require(Shared.Dados.CriaturasVisual)
 local Mapa = require(Shared.Dados.CorredorMapa)
 local Remotos = require(Shared.Remotos)
@@ -36,12 +38,15 @@ type Criatura = {
 	renasceEm: number,
 	ultimoAtaque: number,
 	ajudaram: { [Player]: number },
+	lentoAte: number?, -- congelada/presa: ataca mais devagar até aqui
+	lentoFator: number?,
 }
 
 local criaturas: { Criatura } = {}
 local porParte: { [BasePart]: Criatura } = {}
 local alvo: { [Player]: Criatura } = {}
 local ultimoGolpe: { [Player]: number } = {}
+local contagemGolpes: { [Player]: number } = {} -- para os poderes "a cada N golpes"
 -- Quem ajudou a derrubar o chefe de cada fase (vale até sair da fase)
 local credito: { [Player]: { [number]: boolean } } = {}
 local rng = Random.new()
@@ -148,26 +153,92 @@ local function renascer(c: Criatura)
 	c.parte:SetAttribute("Vida", c.vida)
 end
 
-local function golpear(player: Player, c: Criatura, agora: number)
-	ultimoGolpe[player] = agora
-	local dano = math.floor(
-		Criaturas.danoJogador(PontosAura.pontuacao(player))
-				* EquipamentoServico.multiplicadores(player).dano
-			+ 0.5
-	)
+-- Poder do ataque automático pela aura equipada (Dados/AtaquesAura)
+local function poderDe(player: Player): (AtaquesAura.Poder, number)
+	local estado = Dados.de(player) :: any
+	local aura = estado and estado.equipada and Auras.porId[estado.equipada]
+	if not aura then
+		return AtaquesAura.poderDe(nil, nil), 1
+	end
+	local tier = if aura.exclusiva then #Auras.Tiers else aura.tier
+	return AtaquesAura.poderDe(aura.id, aura.familia), tier
+end
+
+local function aplicarDano(player: Player, c: Criatura, dano: number)
+	if not c.viva then
+		return
+	end
 	c.vida = math.max(0, c.vida - dano)
 	c.ajudaram[player] = (c.ajudaram[player] or 0) + dano
 	c.parte:SetAttribute("Vida", c.vida)
 	c.parte:SetAttribute("AtingidoEm", Workspace:GetServerTimeNow())
+	if c.vida <= 0 then
+		morrer(c, os.clock())
+	end
+end
+
+local function golpear(player: Player, c: Criatura, agora: number)
+	ultimoGolpe[player] = agora
+	contagemGolpes[player] = (contagemGolpes[player] or 0) + 1
+	local danoBase = Criaturas.danoJogador(PontosAura.pontuacao(player))
+		* EquipamentoServico.multiplicadores(player).dano
+	local poder, tier = poderDe(player)
+	local raiz = raizDe(player)
+	local origem = if raiz then { x = raiz.Position.X, z = raiz.Position.Z } else { x = 0, z = 0 }
+	local outros = {}
+	local porId: { [number]: Criatura } = { [c.id] = c }
+	for _, o in criaturas do
+		if o.viva and o.fase == c.fase and o ~= c then
+			table.insert(outros, { id = o.id, x = o.parte.Position.X, z = o.parte.Position.Z })
+			porId[o.id] = o
+		end
+	end
+	local r = AtaquesAura.resolver(
+		poder,
+		danoBase,
+		tier,
+		origem,
+		{ id = c.id, x = c.parte.Position.X, z = c.parte.Position.Z },
+		outros,
+		contagemGolpes[player],
+		function()
+			return rng:NextNumber()
+		end
+	)
+	local lista = {}
+	for _, a in r.acertos do
+		local alvoC = porId[a.id]
+		if alvoC then
+			table.insert(lista, {
+				alvo = a.id,
+				dano = a.dano,
+				atraso = a.atraso,
+				critico = a.critico,
+				tipo = a.tipo,
+			})
+			if a.atraso <= 0 then
+				aplicarDano(player, alvoC, a.dano)
+			else
+				task.delay(a.atraso, aplicarDano, player, alvoC, a.dano)
+			end
+		end
+	end
+	if r.lentidao then
+		c.lentoAte = agora + r.lentidao.duracao
+		c.lentoFator = r.lentidao.fator
+		c.parte:SetAttribute("LentoAte", Workspace:GetServerTimeNow() + r.lentidao.duracao)
+	end
 	Remotos.evento("Corredor"):FireAllClients({
 		tipo = "golpe",
 		de = player.UserId,
 		alvo = c.id,
-		dano = dano,
+		dano = if lista[1] then lista[1].dano else 0,
+		poder = poder.id,
+		tier = tier,
+		aura = (Dados.de(player) :: any) and (Dados.de(player) :: any).equipada or nil,
+		forte = r.forte,
+		acertos = lista,
 	})
-	if c.vida <= 0 then
-		morrer(c, agora)
-	end
 end
 
 -- Um passo da simulação: golpes da aura, criaturas virando e atacando, renascer
@@ -242,7 +313,10 @@ local function passo()
 				end
 				if
 					menor <= regras.alcance + c.parte.Size.X / 2
-					and agora - c.ultimoAtaque >= regras.espera
+					and agora - c.ultimoAtaque
+						>= regras.espera * (if c.lentoAte and agora < c.lentoAte
+							then c.lentoFator or 1
+							else 1)
 				then
 					c.ultimoAtaque = agora
 					c.parte:SetAttribute("AtacouEm", Workspace:GetServerTimeNow())
@@ -336,6 +410,7 @@ function Servico.iniciar()
 	Players.PlayerRemoving:Connect(function(player)
 		alvo[player] = nil
 		ultimoGolpe[player] = nil
+		contagemGolpes[player] = nil
 		credito[player] = nil
 		for _, c in criaturas do
 			c.ajudaram[player] = nil
