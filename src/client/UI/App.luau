@@ -37,6 +37,8 @@ local Revelacao = require(Telas.Revelacao)
 local TutorialTela = require(Telas.Tutorial)
 local ArenaLobby = require(Telas.ArenaLobby)
 local EventoTela = require(Telas.Evento)
+local AberturaTela = require(Telas.Abertura)
+local CaminhoTela = require(Telas.Caminho)
 local Mundo = script.Parent.Parent:WaitForChild("Mundo")
 local Despertar = require(Mundo:WaitForChild("Despertar"))
 local Artefatos = require(Mundo:WaitForChild("Artefatos"))
@@ -361,6 +363,13 @@ function App.iniciar()
 	TutorialTela.montar(raiz, hud.quadro, Avisos.toast)
 	ArenaLobby.montar(raiz, Avisos.toast)
 	EventoTela.montar(raiz, hud.quadro, Avisos.toast)
+	-- primeiros minutos: trilha do caminho no HUD e abertura para quem nunca girou
+	CaminhoTela.montar(hud.quadro, Avisos.toast, {
+		evoluir = Evoluir.abrir,
+		corredor = CorredorTela.abrir,
+		evento = EventoTela.abrir,
+	})
+	Estado.aoMudar(AberturaTela.talvez)
 	Indice.montar(Avisos.toast)
 	Evoluir.montar(Avisos.toast)
 	CorredorTela.montar(Avisos.toast)

@@ -90,6 +90,8 @@ export type Definicao = {
 	corpoMalha: boolean?, -- tronco/braços/pernas com a roupa "pintada" do Blender (boneco_<id>_<membro>)
 	efeitos: { string }?, -- partículas e luz: "vapor", "faiscas", "luz"
 	placa: { titulo: string, subtitulo: string?, cor: string }?, -- nome flutuando
+	estatua: boolean?, -- estátua: corpo de blocos no material abaixo (sem roupa pintada)
+	material: string?, -- material do corpo e da cabeça (ex.: "Marble")
 }
 
 -- O que cada NPC detalhado precisa ter (testado): roupa pintada, rosto com sobrancelha e brilho
@@ -145,6 +147,30 @@ Bonecos.NPCS = {
 			{ malha = "boneco_cabelo_longo", material = "SmoothPlastic" },
 			{ peca = "capa", cor = "8F7BE0" },
 			{ peca = "estrela", cor = "B7FFD9" },
+		},
+	},
+	-- Estátua da Gear 5 na praça (Dados/PrimeirosMinutos): mármore branco com detalhes dourados,
+	-- cabelo de nuvem e auréola de sol, braço erguido em vitória. Mostra o prêmio do evento.
+	estatua = {
+		nome = "Estátua da Gear 5",
+		escala = 2.2,
+		pele = "F2EEE6",
+		camisa = "F7F4EE",
+		calca = "ECE6DA",
+		rosto = {
+			olhos = "aneis",
+			boca = "sorrisao",
+			corOlhos = "FFD54A",
+			corSobrancelha = "D8CFBF",
+		},
+		estatua = true,
+		material = "Marble",
+		efeitos = { "faiscas", "luz" },
+		acessorios = {
+			{ malha = "boneco_cabelo_nuvem", material = "SmoothPlastic" },
+			{ peca = "faixa", cor = "FFC23A" },
+			{ peca = "gola", cor = "FFFFFF" },
+			{ peca = "aureola", cor = "FFD54A" },
 		},
 	},
 } :: { [string]: Definicao }
@@ -223,6 +249,15 @@ function Bonecos.pose(estado: string, t: number, fase: number?): Pose
 		p.esticaBracos = 1.8 - 0.8 * f
 		p.achata = 0.18 * math.sin(f * math.pi)
 		p.pescoco[1] = 0.2 * desce
+	elseif estado == "vitoria" then
+		-- pose de estátua: punho direito erguido, mão esquerda na cintura, queixo para cima
+		p.altura = 0
+		p.tronco = { -0.05, 0.15, 0 }
+		p.bracoD = { 0.25, 0, 2.75 }
+		p.bracoE = { -0.35, 0, -0.75 }
+		p.pescoco = { -0.18, 0.2, 0 }
+		p.pernaD = { 0, 0, 0.12 }
+		p.pernaE = { 0, 0, -0.12 }
 	elseif estado == "comemorar" then
 		local pulo = math.abs(math.sin(t * 6))
 		p.altura = 0.6 * pulo
