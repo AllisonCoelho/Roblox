@@ -2009,6 +2009,20 @@ do
 	for i = 1, 8 do
 		igual("duelo: intenção do Soberano tem clipe " .. i, A.SOBERANO[D.intencao(i)] ~= nil, true)
 	end
+	-- Conferir os pontos de contato com o relógio do duelo, inclusive nos combos.
+	local descargas = D.ACOES.despertar.acertos
+	local esquerda = A.amostrar(A.JOGADOR.despertar, descargas[1])
+	local direita = A.amostrar(A.JOGADOR.despertar, descargas[2])
+	local dupla = A.amostrar(A.JOGADOR.despertar, descargas[3])
+	igual("despertar: primeira palma esquerda", esquerda.cotoveloE1 < 10 and esquerda.cotoveloD1 > 60, true)
+	igual("despertar: segunda palma direita", direita.cotoveloD1 < 10 and direita.cotoveloE1 > 60, true)
+	igual("despertar: final com as duas palmas", dupla.cotoveloD1 < 10 and dupla.cotoveloE1 < 10, true)
+	local tripla = A.SOBERANO.trinca
+	local aviso = A.amostrar(A.SOBERANO.avisoTrinca, 0)
+	igual("trinca: começa na postura anunciada", A.amostrar(tripla, 0).torso2, aviso.torso2)
+	local tempos = D.ACOES.trinca.acertos
+	igual("trinca: segundo corte inverte a lâmina", A.amostrar(tripla, tempos[1]).bracoD3 < 0 and A.amostrar(tripla, tempos[2]).bracoD3 > 0, true)
+	igual("trinca: golpe final desce até o chão", A.amostrar(tripla, tempos[3]).raiz2 < -1, true)
 	-- notas
 	igual("duelo: toque perfeito", D.notaQte(0.05), "perfeito")
 	igual("duelo: toque bom", D.notaQte(-0.15), "bom")

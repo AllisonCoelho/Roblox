@@ -227,25 +227,6 @@ local function terminar(d: Sessao, vencedor: Lutador?, motivo: string)
 	task.delay(MOSTRAR_RESULTADO, encerrar, d)
 end
 
--- Corre até o oponente e volta: chega no 1º acerto e volta antes do fim do golpe
-local function correr(d: Sessao, l: Lutador, avanco: number, ida: number, volta: number)
-	local agora = Workspace:GetServerTimeNow()
-	local function tween(alvo: CFrame, duracao: number, estilo: Enum.EasingStyle)
-		if atual ~= d or d.terminado then
-			return
-		end
-		mover(l, alvo, duracao, estilo)
-	end
-	tween(
-		l.posto * CFrame.new(0, 0, -avanco),
-		math.max(0.1, (ida - agora) * 0.92),
-		Enum.EasingStyle.Sine
-	)
-	task.delay(math.max(0, volta - agora - 0.35), function()
-		tween(l.posto, 0.35, Enum.EasingStyle.Quad)
-	end)
-end
-
 local function ladoDe(d: Sessao, player: Player): Lutador?
 	return if d.a.player == player then d.a elseif d.b.player == player then d.b else nil
 end
@@ -284,8 +265,8 @@ local function comecar(d: Sessao)
 			animar = function(clipe, quando)
 				animar(l, clipe, quando)
 			end,
-			mover = function(avanco, ida, volta)
-				correr(d, l, avanco, ida, volta)
+			mover = function(avanco, duracao)
+				mover(l, l.posto * CFrame.new(0, 0, -avanco), duracao, Enum.EasingStyle.Sine)
 			end,
 		}
 	end

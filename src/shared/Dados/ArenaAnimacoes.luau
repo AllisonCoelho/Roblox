@@ -133,7 +133,34 @@ Animacoes.JOGADOR = {
 	},
 	entrada = {
 		duracao = 0.6,
-		chaves = { k(0, NEUTRO_J), k(0.6, POSTURA) },
+		chaves = {
+			k(0, NEUTRO_J),
+			-- Pisa à frente e fecha a guarda, com o rosto voltado ao adversário.
+			k(
+				0.22,
+				J({
+					raiz = { 0.14, -0.15, 0, 0, 22, 0 },
+					cintura = { 5, 12, 0 },
+					pescoco = { 0, -28, 0 },
+					ombroD = { 26, 0, 24 },
+					ombroE = { 34, 0, -20 },
+					peD = { 0, 0.35 },
+					peE = { 0.45, -0.35 },
+				})
+			),
+			k(
+				0.38,
+				J({
+					raiz = { -0.08, -0.48, -0.12, 0, 12, 0 },
+					cintura = { -11, 4, 0 },
+					ombroE = { 76, 0, -12 },
+					peD = { 0, 0.5 },
+					peE = { 0, -0.65 },
+				}),
+				"entrada"
+			),
+			k(0.6, POSTURA),
+		},
 	},
 	-- corre até o Soberano e solta um direto
 	ataque = {
@@ -420,9 +447,31 @@ Animacoes.JOGADOR = {
 				}),
 				"saida"
 			),
-			k(DESCARGA_1, DESCARGA, "saida"),
+			-- Primeira palma com a esquerda. A mão direita fica carregada junto ao peito.
+			k(
+				DESCARGA_1,
+				achatar(DESCARGA, {
+					cintura = { -18, 24, -5 },
+					pescoco = { 0, -18, 0 },
+					ombroD = { 28, 0, 16 },
+					cotoveloD = { 94, 0, 0 },
+					ombroE = { 100, 0, 8 },
+				}),
+				"saida"
+			),
 			k(1.11, RECARGA),
-			k(1.26, DESCARGA, "saida"),
+			-- Gira o tronco para disparar com a direita antes da descarga com as duas mãos.
+			k(
+				1.26,
+				achatar(DESCARGA, {
+					cintura = { -20, -26, 5 },
+					pescoco = { 0, 18, 0 },
+					ombroE = { 28, 0, -16 },
+					cotoveloE = { 94, 0, 0 },
+					ombroD = { 100, 0, -8 },
+				}),
+				"saida"
+			),
 			k(1.41, RECARGA),
 			k(
 				1.56,
@@ -657,6 +706,17 @@ local AVISO_INVESTIDA = S({
 	peD = { 0, 0.55 },
 	peE = { 0, -0.55 },
 })
+-- A Fúria Tripla começa com a lâmina aberta ao lado, pronta para varrer o ringue.
+local AVISO_TRINCA = S({
+	raiz = { 0, -0.58, 0, 0, 0, 0 },
+	torso = { -10, 27, 0 },
+	cabeca = { -4, -22, 0 },
+	bracoD = { -14, 0, 56 },
+	antebracoD = { 38, 0, 0 },
+	bracoE = { 58, 0, -18 },
+	peD = { 0, 0.7 },
+	peE = { 0, -0.65 },
+})
 local AVISO_BALUARTE = S({
 	raiz = { 0, -0.5, 0, 0, 0, 0 },
 	torso = { -4, 0, 0 },
@@ -683,6 +743,7 @@ Animacoes.SOBERANO = {
 		AVISO_INVESTIDA,
 		{ raiz = { 0, -0.46, 0, 0, 0, 0 }, torso = { -10, -18, 0 } }
 	),
+	avisoTrinca = laco(AVISO_TRINCA, { torso = { -14, 32, 0 }, bracoD = { -18, 0, 60 } }),
 	avisoBaluarte = laco(AVISO_BALUARTE, { raiz = { 0, -0.56, 0, 0, 0, 0 } }),
 	-- levanta do trono, se agacha, salta até o ringue e pousa com o espadão no chão
 	entrada = {
@@ -759,8 +820,19 @@ Animacoes.SOBERANO = {
 				"entrada"
 			),
 			k(
-				1.9,
+				1.73,
 				S({ raiz = { 0, -0.7, 0, 0, 0, 0 }, torso = { -16, 0, 0 }, bracoD = { 34, 0, 14 } })
+			),
+			k(
+				1.85,
+				S({
+					raiz = { 0, -0.76, 0, 0, 0, 0 },
+					torso = { -18, 8, 0 },
+					cabeca = { 4, -7, 0 },
+					bracoD = { 42, 0, 16 },
+					peD = { 0, 0.7 },
+					peE = { 0, -0.7 },
+				})
 			),
 			k(2.4, GUARDA_S),
 		},
@@ -831,6 +903,16 @@ Animacoes.SOBERANO = {
 					peE = { 1.1, -3.6 },
 				})
 			),
+			k(
+				0.92,
+				S({
+					raiz = { 0, -0.51, -0.55, 0, 0, 0 },
+					torso = { -12, -7, 0 },
+					bracoD = { 58, 0, -7 },
+					peD = { 0.45, -0.2 },
+					peE = { 0, -1.1 },
+				})
+			),
 			k(1.02, GUARDA_S),
 		},
 	},
@@ -894,6 +976,18 @@ Animacoes.SOBERANO = {
 				})
 			),
 			k(
+				1.12,
+				S({
+					raiz = { 0, -0.82, -6.9, 0, 0, 0 },
+					torso = { -24, 14, 0 },
+					cabeca = { 8, -10, 0 },
+					bracoD = { 62, 0, 14 },
+					antebracoD = { 34, 0, 0 },
+					peD = { 0.45, -6.1 },
+					peE = { 0, -8.6 },
+				})
+			),
+			k(
 				1.25,
 				S({
 					raiz = { 0, -0.2, -3.6, 0, 0, 0 },
@@ -937,6 +1031,18 @@ Animacoes.SOBERANO = {
 					peE = { 0, -0.75 },
 				})
 			),
+			k(
+				0.72,
+				S({
+					raiz = { 0, -0.63, 0, 0, 0, 0 },
+					torso = { -5, 9, 0 },
+					cabeca = { -3, -8, 0 },
+					bracoD = { 76, 0, -22 },
+					bracoE = { 52, 0, -10 },
+					peD = { 0, 0.7 },
+					peE = { 0, -0.75 },
+				})
+			),
 			k(0.86, GUARDA_S),
 		},
 	},
@@ -956,6 +1062,17 @@ Animacoes.SOBERANO = {
 					peE = { 0, 0 },
 				}),
 				"saida"
+			),
+			k(
+				0.19,
+				S({
+					raiz = { 0, -0.48, 0.38, 0, 0, 0 },
+					torso = { 6, -8, 2 },
+					cabeca = { 8, 0, 0 },
+					bracoD = { 43, 0, 23 },
+					peD = { 0, 0.65 },
+					peE = { 0, -0.12 },
+				})
 			),
 			k(0.5, GUARDA_S),
 		},
@@ -988,6 +1105,17 @@ Animacoes.SOBERANO = {
 					peE = { 0, 1.6 },
 				}),
 				"entrada"
+			),
+			k(
+				0.65,
+				S({
+					raiz = { 0, -0.62, 1.1, 0, 0, 0 },
+					torso = { -10, 9, 0 },
+					cabeca = { -4, -7, 0 },
+					bracoE = { 64, 0, -34 },
+					peD = { 0.6, 1.2 },
+					peE = { 0, 1.6 },
+				})
 			),
 			k(0.95, GUARDA_S),
 		},
@@ -1022,6 +1150,19 @@ Animacoes.SOBERANO = {
 				"entrada"
 			),
 			k(
+				0.94,
+				S({
+					raiz = { 0, -1.8, 0.6, 0, 0, 0 },
+					torso = { -34, 2, 9 },
+					cabeca = { -32, 0, 0 },
+					bracoD = { 36, 0, 11 },
+					antebracoD = { 46, 0, 0 },
+					bracoE = { -8, 0, -14 },
+					peD = { 0, 1.8 },
+					peE = { 0, -0.4 },
+				})
+			),
+			k(
 				1.2,
 				S({
 					raiz = { 0, -1.65, 0.6, 0, 0, 0 },
@@ -1042,6 +1183,18 @@ Animacoes.SOBERANO = {
 		segurar = true,
 		chaves = {
 			k(0, GUARDA_S),
+			k(
+				0.32,
+				S({
+					raiz = { 0, -0.48, 0, 0, 0, 0 },
+					torso = { -9, 14, 0 },
+					cabeca = { -8, -10, 0 },
+					bracoD = { 68, 0, -18 },
+					antebracoD = { 62, 0, 0 },
+					peD = { 0, 0.45 },
+					peE = { 0, -0.5 },
+				})
+			),
 			k(
 				0.8,
 				S({
@@ -1254,7 +1407,7 @@ Animacoes.JOGADOR.rompido = {
 Animacoes.SOBERANO.trinca = {
 	duracao = 2.1,
 	chaves = {
-		k(0, AVISO_INVESTIDA),
+		k(0, AVISO_TRINCA),
 		k(
 			0.25,
 			S({
@@ -1286,9 +1439,9 @@ Animacoes.SOBERANO.trinca = {
 			0.7,
 			S({
 				raiz = { 0, -0.7, -6.3, 0, 0, 0 },
-				torso = { -18, 34, 0 },
-				cabeca = { -4, -20, 0 },
-				bracoD = { -10, 0, 56 },
+				torso = { -18, -38, 0 },
+				cabeca = { -4, 26, 0 },
+				bracoD = { 96, 0, -45 },
 				antebracoD = { 36, 0, 0 },
 				bracoE = { 50, 0, -20 },
 				peD = { 0, -4.7 },
@@ -1299,9 +1452,9 @@ Animacoes.SOBERANO.trinca = {
 			0.9,
 			S({
 				raiz = { 0, -0.85, -6.5, 0, 0, 0 },
-				torso = { -24, -30, 0 },
-				cabeca = { -4, 22, 0 },
-				bracoD = { 92, 0, -30 },
+				torso = { -24, 32, 0 },
+				cabeca = { -4, -22, 0 },
+				bracoD = { 52, 0, 62 },
 				antebracoD = { 6, 0, 0 },
 				bracoE = { 20, 0, -40 },
 				peD = { 0, -4.9 },
@@ -1380,6 +1533,19 @@ Animacoes.SOBERANO.finta = {
 				bracoE = { 116, 0, -12 },
 				peD = { 0, -1.4 },
 				peE = { 0, -3.0 },
+			})
+		),
+		k(
+			0.70,
+			S({
+				raiz = { 0, -0.53, -2.2, 0, 0, 0 },
+				torso = { -10, 2, 0 },
+				cabeca = { -5, 0, 0 },
+				bracoD = { 117, 0, 6 },
+				antebracoD = { -4, 0, 0 },
+				bracoE = { 112, 0, -12 },
+				peD = { 0, -1.4 },
+				peE = { 0, -3 },
 			})
 		),
 		k(
@@ -1464,6 +1630,17 @@ Animacoes.SOBERANO.rompido = {
 	segurar = true,
 	chaves = {
 		k(0, GUARDA_S),
+		k(
+			0.16,
+			S({
+				raiz = { 0, -0.63, 0.35, 0, 0, 5 },
+				torso = { 10, -14, 7 },
+				cabeca = { 12, 8, 0 },
+				bracoD = { 53, 0, 32 },
+				bracoE = { 30, 0, -36 },
+				peD = { 0.45, 0.6 },
+			})
+		),
 		k(
 			0.5,
 			S({

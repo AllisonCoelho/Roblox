@@ -40,7 +40,8 @@ type Juntas = {
 
 type Ativo = {
 	personagem: Model,
-	juntas: Juntas,
+	juntas: Juntas?,
+	novaJunta: RBXScriptConnection,
 	pose: Animacoes.Pose?, -- pose mostrada no quadro anterior (para suavizar)
 	inicio: number, -- os.clock() de quando o duelo começou neste cliente
 }
@@ -175,12 +176,20 @@ local function reduzir(p: Animacoes.Pose): Animacoes.Pose
 	return r
 end
 
+local function soltar(jogador: Player)
+	local a = ativos[jogador]
+	if a then
+		a.novaJunta:Disconnect()
+		ativos[jogador] = nil
+	end
+end
+
 local function atualizar(dt: number)
 	local camera = Workspace.CurrentCamera
 	for jogador, a in ativos do
 		local personagem = jogador.Character
 		if not personagem or personagem ~= a.personagem or not personagem.Parent then
-			ativos[jogador] = nil
+			soltar(jogador)
 			continue
 		end
 		local raiz = personagem:FindFirstChild("HumanoidRootPart")
@@ -192,12 +201,18 @@ local function atualizar(dt: number)
 		then
 			continue
 		end
+		local juntas = a.juntas or lerJuntas(personagem)
+		a.juntas = juntas
 		local alvo, emClipe = poseAlvo(jogador, a)
 		if prefs.movimentoReduzido then
 			alvo = reduzir(alvo)
 		end
 		-- suavização curta: troca de clipe e chegada da reação sem estalo
 		local anterior = a.pose
+		if anterior and not emClipe then
+			local yaw = alvo.raiz5 or 0
+			anterior.raiz5 = yaw + ((anterior.raiz5 or 0) - yaw + 180) % 360 - 180
+		end
 		local pose = if anterior
 			then Animacoes.misturar(
 				anterior,
@@ -208,10 +223,10 @@ local function atualizar(dt: number)
 		a.pose = pose
 		local final =
 			Animacoes.resolverPernas(table.clone(pose), Animacoes.PERNA_R15, Animacoes.PERNA_R15)
-		if a.juntas.r15 then
-			aplicarR15(a.juntas, final)
+		if juntas.r15 then
+			aplicarR15(juntas, final)
 		else
-			aplicarR6(a.juntas, final)
+			aplicarR6(juntas, final)
 		end
 	end
 end
@@ -222,20 +237,28 @@ local function acompanhar(jogador: Player)
 		if jogador:GetAttribute("EmDueloArena") and personagem then
 			local a = ativos[jogador]
 			if not a or a.personagem ~= personagem then
+				soltar(jogador)
 				ativos[jogador] = {
 					personagem = personagem,
-					juntas = lerJuntas(personagem),
+					juntas = nil,
+					-- Em outro cliente o atributo pode chegar antes dos membros do avatar.
+					novaJunta = personagem.DescendantAdded:Connect(function(inst)
+						local atual = ativos[jogador]
+						if atual and atual.personagem == personagem and inst:IsA("Motor6D") then
+							atual.juntas = nil
+						end
+					end),
 					pose = nil,
 					inicio = os.clock(),
 				}
 			end
 		else
-			ativos[jogador] = nil
+			soltar(jogador)
 		end
 	end
 	jogador:GetAttributeChangedSignal("EmDueloArena"):Connect(revisar)
 	jogador.CharacterAdded:Connect(function()
-		ativos[jogador] = nil
+		soltar(jogador)
 		task.defer(revisar)
 	end)
 	revisar()
@@ -246,9 +269,7 @@ function ArenaCorpo.iniciar()
 		acompanhar(jogador)
 	end
 	Players.PlayerAdded:Connect(acompanhar)
-	Players.PlayerRemoving:Connect(function(jogador)
-		ativos[jogador] = nil
-	end)
+	Players.PlayerRemoving:Connect(soltar)
 	-- PreSimulation: depois que o Animator escreveu o quadro, antes da física
 	RunService.PreSimulation:Connect(atualizar)
 end

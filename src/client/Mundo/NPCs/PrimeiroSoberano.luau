@@ -28,7 +28,7 @@ local DURACAO_ALERTA = 1.6
 local DISTANCIA_ANIMAR = 220
 
 type Peca = {
-	parte: MeshPart,
+	parte: BasePart,
 	centro: Vector3, -- centro da malha no espaço do NPC
 	junta: Vector3?,
 	pai: Peca?,
@@ -53,7 +53,7 @@ local AVISOS = {
 	pesado = "avisoPesado",
 	investida = "avisoInvestida",
 	baluarte = "avisoBaluarte",
-	trinca = "avisoInvestida",
+	trinca = "avisoTrinca",
 	finta = "avisoPesado", -- a finta começa igual ao golpe pesado (é o truque)
 }
 local ATAQUES = { investida = true, pesado = true, baluarte = true, trinca = true, finta = true }
@@ -84,7 +84,7 @@ local function poseDuelo(raiz: BasePart): (Animacoes.Pose?, number, string?, num
 	local intencao = raiz:GetAttribute("DueloIntencao")
 	local aviso = if type(intencao) == "string" then AVISOS[intencao] else nil
 	local laco = Animacoes.SOBERANO[aviso or "espera"]
-	return Animacoes.amostrar(laco, os.clock()), if intencao == "pesado" then 0.5 else 0, nil, 0, t
+	return Animacoes.amostrar(laco, t), if intencao == "pesado" then 0.5 else 0, nil, 0, t
 end
 
 local PERNAS = { "quadril_duelo", "coxa_dir", "coxa_esq", "canela_dir", "canela_esq" }
@@ -93,7 +93,38 @@ for _, d in Pecas.duelo :: { { [string]: any } } do
 	DUELO[d.nome] = true
 end
 
-local function montar(modelo: Model, raiz: BasePart): { [string]: Peca }
+-- Usa os mesmos centros e pivôs das malhas. Assim a espada acompanha o antebraço
+-- mesmo enquanto o cliente carrega a armadura, ou se faltar memória para EditableMesh.
+local dadosMalhas = script.Parent.Parent.Nexo3D.Dados
+local function criarBloco(nome: string): (BasePart, Vector3)
+	local d = require(dadosMalhas:FindFirstChild(nome) :: ModuleScript) :: Malha.Dados
+	local tamanho = Vector3.new(d.tamanho[1], d.tamanho[2], d.tamanho[3])
+	local centro = Vector3.new(d.minimo[1], d.minimo[2], d.minimo[3]) + tamanho / 2
+	local parte = Instance.new("Part")
+	parte.Anchored = true
+	parte.CanCollide = false
+	parte.CanTouch = false
+	parte.CanQuery = false
+	parte.Color = Color3.fromHex("393447")
+	parte.Size = tamanho * 0.8
+	if nome == "soberano_lamina_duelo" or nome == "soberano_espada" then
+		parte.Size = tamanho * Vector3.new(0.38, 1, 0.72)
+		parte.Color = Color3.fromHex("B8A787")
+	elseif nome == "soberano_olhos" or nome == "soberano_nucleo" then
+		centro -= Vector3.new(0, 0, 0.16)
+	elseif nome == "soberano_capa_dir" or nome == "soberano_capa_esq" then
+		parte.Size = tamanho * Vector3.new(0.6, 0.95, 0.16)
+		parte.Color = Color3.fromHex("482C40")
+		centro += Vector3.new(0, 0, 1.1)
+	end
+	return parte, centro
+end
+
+local function montar(
+	modelo: Model,
+	raiz: BasePart,
+	detalhado: boolean
+): ({ [string]: Peca }, Folder)
 	local prontas: Malha.Cache = {}
 	local pasta = Instance.new("Folder")
 	pasta.Name = "Armadura"
@@ -104,7 +135,12 @@ local function montar(modelo: Model, raiz: BasePart): { [string]: Peca }
 			table.insert(descricoes, d)
 		end
 		for _, d in descricoes do
-			local parte, centro = Malha.criar(d.malha, prontas)
+			local parte: BasePart, centro: Vector3
+			if detalhado then
+				parte, centro = Malha.criar(d.malha, prontas)
+			else
+				parte, centro = criarBloco(d.malha)
+			end
 			parte.Name = d.nome
 			parte.Material = (Enum.Material :: any)[d.material] or Enum.Material.Metal
 			parte.CastShadow = d.material ~= "Neon"
@@ -137,7 +173,7 @@ local function montar(modelo: Model, raiz: BasePart): { [string]: Peca }
 		p.parte.CFrame = raiz.CFrame * CFrame.new(p.centro)
 	end
 	pasta.Parent = modelo
-	return pecas
+	return pecas, pasta
 end
 
 function PrimeiroSoberano.iniciar()
@@ -147,31 +183,7 @@ function PrimeiroSoberano.iniciar()
 		return
 	end
 	local raiz = modelo:WaitForChild("Raiz") :: BasePart
-	-- a armadura tem 19 malhas: se a montagem falhar (memória ou conversão ocupada logo depois do
-	-- mapa), tenta de novo algumas vezes antes de ficar com as peças de reserva
-	local ok, resultado = false, nil :: any
-	for tentativa, espera in { 0, 3, 8, 20 } do
-		if espera > 0 then
-			task.wait(espera)
-		end
-		ok, resultado = pcall(montar, modelo, raiz)
-		if ok then
-			break
-		end
-		warn(
-			string.format(
-				"[Soberano] armadura 3D, tentativa %d: %s",
-				tentativa,
-				tostring(resultado)
-			)
-		)
-	end
-	if not ok then
-		modelo:SetAttribute("ErroArmadura", tostring(resultado))
-		warn("[Soberano] armadura 3D indisponível; mantendo a reserva: " .. tostring(resultado))
-		return
-	end
-	local pecas = resultado :: { [string]: Peca }
+	local pecas, blocos = montar(modelo, raiz, false)
 	for _, inst in modelo:GetDescendants() do
 		if inst:IsA("BasePart") and inst:GetAttribute("ReservaNPC") then
 			inst.LocalTransparencyModifier = 1
@@ -357,12 +369,20 @@ function PrimeiroSoberano.iniciar()
 				pose.peE1 = math.min(pose.peE1 or 0, 0.8)
 			end
 			local anterior = poseAnterior
-			if anterior and clipeNome ~= "entrada" then
+			if anterior and clipeNome ~= "entrada" and (not clipeNome or tClipe < 0.09) then
 				pose = Animacoes.misturar(
 					anterior,
 					pose,
 					1 - math.exp(-dt * (if clipeNome then 26 else 8))
 				)
+			end
+			-- A capa acompanha a torção do tronco e abre durante o salto.
+			if capa > 0 then
+				local giro = math.rad(math.clamp(-(pose.torso2 or 0) * 0.42, -20, 20))
+				local abrir =
+					math.rad(math.clamp((pose.raiz2 or 0) * 4 - (pose.torso1 or 0) * 0.24, 0, 22))
+				pecas.capa_dir.giro *= CFrame.Angles(-abrir, giro, abrir * 0.35)
+				pecas.capa_esq.giro *= CFrame.Angles(-abrir, giro, -abrir * 0.35)
 			end
 			poseAnterior = pose
 			emPe = tDuelo >= 0.34
@@ -490,6 +510,42 @@ function PrimeiroSoberano.iniciar()
 			onda.Transparency = 1
 		end
 	end)
+
+	-- O render já está ativo. Só troca a geometria quando todas as peças ficam prontas.
+	for tentativa, espera in { 0, 3, 8, 20 } do
+		if espera > 0 then
+			task.wait(espera)
+		end
+		if not modelo.Parent then
+			return
+		end
+		local ok, detalhadas, pasta = pcall(montar, modelo, raiz, true)
+		if ok then
+			if not modelo.Parent then
+				pasta:Destroy()
+				return
+			end
+			luz.Parent = detalhadas.nucleo.parte
+			for nome, atual in pecas do
+				local nova = detalhadas[nome]
+				nova.parte.CFrame = atual.parte.CFrame * CFrame.new(nova.centro - atual.centro)
+				nova.parte.Transparency = atual.parte.Transparency
+				atual.parte = nova.parte
+				atual.centro = nova.centro
+			end
+			blocos:Destroy()
+			modelo:SetAttribute("ErroArmadura", nil)
+			return
+		end
+		modelo:SetAttribute("ErroArmadura", tostring(detalhadas))
+		warn(
+			string.format(
+				"[Soberano] armadura 3D, tentativa %d: %s",
+				tentativa,
+				tostring(detalhadas)
+			)
+		)
+	end
 end
 
 return PrimeiroSoberano
